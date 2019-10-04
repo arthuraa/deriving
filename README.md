@@ -30,7 +30,7 @@ types.
 
 - `coq-mathcomp-ssreflect` 1.9
 
-- `coq-void` (https://github.com/arthuraa/coq-void`)
+- `coq-void` (https://github.com/arthuraa/coq-void)
 
 ## TODO
 
@@ -39,4 +39,3 @@ types.
 - Clean up code
 
 - Support mutually inductive types
-
