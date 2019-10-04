@@ -5,6 +5,8 @@ From void Require Import void.
 
 From deriving Require Import base.
 
+From Coq Require Import ZArith NArith.
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -834,6 +836,78 @@ Definition bool_coqIndMixin :=
   Eval simpl in [coqIndMixin for bool_rect].
 Canonical bool_coqIndType :=
   Eval hnf in CoqIndType _ bool bool_coqIndMixin.
+
+Definition comparison_coqIndMixin :=
+  Eval simpl in [coqIndMixin for comparison_rect].
+Canonical comparison_coqIndType :=
+  Eval hnf in CoqIndType _ comparison comparison_coqIndMixin.
+Definition comparison_eqMixin :=
+  Eval simpl in [indEqMixin for comparison].
+Canonical comparison_eqType :=
+  Eval hnf in EqType comparison comparison_eqMixin.
+Definition comparison_choiceMixin :=
+  Eval simpl in [indChoiceMixin for comparison].
+Canonical comparison_choiceType :=
+  Eval hnf in ChoiceType comparison comparison_choiceMixin.
+Definition comparison_countMixin :=
+  Eval simpl in [indCountMixin for comparison].
+Canonical comparison_countType :=
+  Eval hnf in CountType comparison comparison_countMixin.
+Definition comparison_finMixin :=
+  Eval simpl in [indFinMixin for comparison].
+Canonical comparison_finType :=
+  Eval hnf in FinType comparison comparison_finMixin.
+
+Definition positive_coqIndMixin :=
+  Eval simpl in [coqIndMixin for positive_rect].
+Canonical positive_coqIndType :=
+  Eval hnf in CoqIndType _ positive positive_coqIndMixin.
+Definition positive_eqMixin :=
+  Eval simpl in [indEqMixin for positive].
+Canonical positive_eqType :=
+  Eval hnf in EqType positive positive_eqMixin.
+Definition positive_choiceMixin :=
+  Eval simpl in [indChoiceMixin for positive].
+Canonical positive_choiceType :=
+  Eval hnf in ChoiceType positive positive_choiceMixin.
+Definition positive_countMixin :=
+  Eval simpl in [indCountMixin for positive].
+Canonical positive_countType :=
+  Eval hnf in CountType positive positive_countMixin.
+
+Definition N_coqIndMixin :=
+  Eval simpl in [coqIndMixin for N_rect].
+Canonical N_coqIndType :=
+  Eval hnf in CoqIndType _ N N_coqIndMixin.
+Definition N_eqMixin :=
+  Eval simpl in [indEqMixin for N].
+Canonical N_eqType :=
+  Eval hnf in EqType N N_eqMixin.
+Definition N_choiceMixin :=
+  Eval simpl in [indChoiceMixin for N].
+Canonical N_choiceType :=
+  Eval hnf in ChoiceType N N_choiceMixin.
+Definition N_countMixin :=
+  Eval simpl in [indCountMixin for N].
+Canonical N_countType :=
+  Eval hnf in CountType N N_countMixin.
+
+Definition Z_coqIndMixin :=
+  Eval simpl in [coqIndMixin for Z_rect].
+Canonical Z_coqIndType :=
+  Eval hnf in CoqIndType _ Z Z_coqIndMixin.
+Definition Z_eqMixin :=
+  Eval simpl in [indEqMixin for Z].
+Canonical Z_eqType :=
+  Eval hnf in EqType Z Z_eqMixin.
+Definition Z_choiceMixin :=
+  Eval simpl in [indChoiceMixin for Z].
+Canonical Z_choiceType :=
+  Eval hnf in ChoiceType Z Z_choiceMixin.
+Definition Z_countMixin :=
+  Eval simpl in [indCountMixin for Z].
+Canonical Z_countType :=
+  Eval hnf in CountType Z Z_countMixin.
 
 Definition nat_coqIndMixin :=
   Eval simpl in [coqIndMixin for nat_rect].
