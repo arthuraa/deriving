@@ -5,7 +5,7 @@ From void Require Import void.
 
 From deriving Require Import base.
 
-From Coq Require Import ZArith NArith.
+From Coq Require Import ZArith NArith String Ascii.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -837,6 +837,31 @@ Definition bool_coqIndMixin :=
 Canonical bool_coqIndType :=
   Eval hnf in CoqIndType _ bool bool_coqIndMixin.
 
+Definition nat_coqIndMixin :=
+  Eval simpl in [coqIndMixin for nat_rect].
+Canonical nat_coqIndType :=
+  Eval hnf in CoqIndType _ nat nat_coqIndMixin.
+
+Definition option_coqIndMixin :=
+  Eval simpl in [coqIndMixin for @option_rect T].
+Canonical option_coqIndType :=
+  Eval hnf in CoqIndType _ (option T) option_coqIndMixin.
+
+Definition sum_coqIndMixin :=
+  Eval simpl in [coqIndMixin for @sum_rect T1 T2].
+Canonical sum_coqIndType :=
+  Eval hnf in CoqIndType _ _ sum_coqIndMixin.
+
+Definition prod_coqIndMixin :=
+  Eval simpl in [coqIndMixin for @prod_rect T1 T2].
+Canonical prod_coqIndType :=
+  Eval hnf in CoqIndType _ _ prod_coqIndMixin.
+
+Definition seq_coqIndMixin :=
+  Eval simpl in [coqIndMixin for @list_rect T].
+Canonical seq_coqIndType :=
+  Eval hnf in CoqIndType _ _ seq_coqIndMixin.
+
 Definition comparison_coqIndMixin :=
   Eval simpl in [coqIndMixin for comparison_rect].
 Canonical comparison_coqIndType :=
@@ -909,29 +934,42 @@ Definition Z_countMixin :=
 Canonical Z_countType :=
   Eval hnf in CountType Z Z_countMixin.
 
-Definition nat_coqIndMixin :=
-  Eval simpl in [coqIndMixin for nat_rect].
-Canonical nat_coqIndType :=
-  Eval hnf in CoqIndType _ nat nat_coqIndMixin.
+Definition ascii_coqIndMixin :=
+  Eval simpl in [coqIndMixin for ascii_rect].
+Canonical ascii_coqIndType :=
+  Eval hnf in CoqIndType _ ascii ascii_coqIndMixin.
+Definition ascii_eqMixin :=
+  Eval simpl in [indEqMixin for ascii].
+Canonical ascii_eqType :=
+  Eval hnf in EqType ascii ascii_eqMixin.
+Definition ascii_choiceMixin :=
+  Eval simpl in [indChoiceMixin for ascii].
+Canonical ascii_choiceType :=
+  Eval hnf in ChoiceType ascii ascii_choiceMixin.
+Definition ascii_countMixin :=
+  Eval simpl in [indCountMixin for ascii].
+Canonical ascii_countType :=
+  Eval hnf in CountType ascii ascii_countMixin.
+Definition ascii_finMixin :=
+  Eval simpl in [indFinMixin for ascii].
+Canonical ascii_finType :=
+  Eval hnf in FinType ascii ascii_finMixin.
 
-Definition option_coqIndMixin :=
-  Eval simpl in [coqIndMixin for @option_rect T].
-Canonical option_coqIndType :=
-  Eval hnf in CoqIndType _ (option T) option_coqIndMixin.
-
-Definition sum_coqIndMixin :=
-  Eval simpl in [coqIndMixin for @sum_rect T1 T2].
-Canonical sum_coqIndType :=
-  Eval hnf in CoqIndType _ _ sum_coqIndMixin.
-
-Definition prod_coqIndMixin :=
-  Eval simpl in [coqIndMixin for @prod_rect T1 T2].
-Canonical prod_coqIndType :=
-  Eval hnf in CoqIndType _ _ prod_coqIndMixin.
-
-Definition seq_coqIndMixin :=
-  Eval simpl in [coqIndMixin for @list_rect T].
-Canonical seq_coqIndType :=
-  Eval hnf in CoqIndType _ _ seq_coqIndMixin.
+Definition string_coqIndMixin :=
+  Eval simpl in [coqIndMixin for string_rect].
+Canonical string_coqIndType :=
+  Eval hnf in CoqIndType _ string string_coqIndMixin.
+Definition string_eqMixin :=
+  Eval simpl in [indEqMixin for string].
+Canonical string_eqType :=
+  Eval hnf in EqType string string_eqMixin.
+Definition string_choiceMixin :=
+  Eval simpl in [indChoiceMixin for string].
+Canonical string_choiceType :=
+  Eval hnf in ChoiceType string string_choiceMixin.
+Definition string_countMixin :=
+  Eval simpl in [indCountMixin for string].
+Canonical string_countType :=
+  Eval hnf in CountType string string_countMixin.
 
 End Instances.
