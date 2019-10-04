@@ -1,0 +1,5 @@
+*.vo
+*.glob
+*.d
+*.aux
+Makefile*
