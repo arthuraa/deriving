@@ -32,6 +32,20 @@ types.
 
 - `coq-void` (https://github.com/arthuraa/coq-void)
 
+## Build instructions
+
+To compile, do
+
+```shell
+make
+```
+
+To install, do
+
+```shell
+make install
+```
+
 ## TODO
 
 - Documentation
