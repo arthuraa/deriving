@@ -2,4 +2,5 @@
 *.glob
 *.d
 *.aux
-Makefile*
+CoqMakefile
+CoqMakefile.conf
