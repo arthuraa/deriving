@@ -12,12 +12,12 @@ Definition cast T (P : T -> Type) x y (e : x = y) : P x -> P y :=
 
 Arguments cast {_} _ {_ _} _.
 
-Delimit Scope path_scope with path.
+Delimit Scope deriving_scope with deriving.
 
-Notation "e1 * e2" := (etrans e1 e2) : path_scope.
-Notation "e ^-1" := (esym e) : path_scope.
+Local Open Scope deriving_scope.
 
-Local Open Scope path_scope.
+Notation "e1 * e2" := (etrans e1 e2) : deriving_scope.
+Notation "e ^-1" := (esym e) : deriving_scope.
 
 Fixpoint fin n :=
   if n is n.+1 then option (fin n) else void.

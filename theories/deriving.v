@@ -11,7 +11,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Local Open Scope path_scope.
+Local Open Scope deriving_scope.
 
 (* The SSReflect definition is opaque, which interferes with certain reductions
    below. *)
