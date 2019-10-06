@@ -900,22 +900,18 @@ Definition positive_countMixin :=
 Canonical positive_countType :=
   Eval hnf in CountType positive positive_countMixin.
 
-Definition N_coqIndMixin :=
+Definition bin_nat_coqIndMixin :=
   Eval simpl in [coqIndMixin for N_rect].
-Canonical N_coqIndType :=
-  Eval hnf in CoqIndType _ N N_coqIndMixin.
-Definition N_eqMixin :=
-  Eval simpl in [indEqMixin for N].
-Canonical N_eqType :=
-  Eval hnf in EqType N N_eqMixin.
-Definition N_choiceMixin :=
+Canonical bin_nat_coqIndType :=
+  Eval hnf in CoqIndType _ N bin_nat_coqIndMixin.
+Definition bin_nat_choiceMixin :=
   Eval simpl in [indChoiceMixin for N].
-Canonical N_choiceType :=
-  Eval hnf in ChoiceType N N_choiceMixin.
-Definition N_countMixin :=
+Canonical bin_nat_choiceType :=
+  Eval hnf in ChoiceType N bin_nat_choiceMixin.
+Definition bin_nat_countMixin :=
   Eval simpl in [indCountMixin for N].
-Canonical N_countType :=
-  Eval hnf in CountType N N_countMixin.
+Canonical bin_nat_countType :=
+  Eval hnf in CountType N bin_nat_countMixin.
 
 Definition Z_coqIndMixin :=
   Eval simpl in [coqIndMixin for Z_rect].
