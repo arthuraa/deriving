@@ -6,6 +6,7 @@ From void Require Import void.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
+Set Universe Polymorphism.
 
 Definition cast T (P : T -> Type) x y (e : x = y) : P x -> P y :=
   match e with erefl => id end.
@@ -18,6 +19,52 @@ Local Open Scope deriving_scope.
 
 Notation "e1 * e2" := (etrans e1 e2) : deriving_scope.
 Notation "e ^-1" := (esym e) : deriving_scope.
+
+Inductive seq T := nil | cons of T & seq T.
+Arguments nil {_}.
+
+Infix "::" := cons : deriving_scope.
+
+Notation "[ :: ]" := nil : deriving_scope.
+
+Notation "[ :: x1 ]" := (cons x1 nil) : deriving_scope.
+
+Fixpoint list_of_seq T (xs : seq T) : seq.seq T :=
+  if xs is x :: xs then (x :: list_of_seq xs)%SEQ else [::]%SEQ.
+
+Fixpoint seq_of_list T (xs : seq.seq T) : seq T :=
+  if xs is (x :: xs)%SEQ then x :: seq_of_list xs else [::].
+
+Lemma list_of_seqK T : cancel (@list_of_seq T) (@seq_of_list T).
+Proof. by elim=> //= ?? ->. Qed.
+
+Lemma seq_of_listK T : cancel (@seq_of_list T) (@list_of_seq T).
+Proof. by elim=> //= ?? ->. Qed.
+
+Fixpoint size T (xs : seq T) :=
+  if xs is x :: xs then (size xs).+1 else 0.
+
+Definition map T S (f : T -> S) :=
+  fix map xs := if xs is x :: xs then f x :: map xs else [::].
+
+Definition foldr T S (f : T -> S -> S) (x : S) :=
+  fix foldr xs := if xs is x' :: xs then f x' (foldr xs) else x.
+
+Fixpoint cat T (xs ys : seq T) :=
+  if xs is x :: xs then x :: cat xs ys else ys.
+
+Infix "++" := cat : deriving_scope.
+
+Lemma seq_of_list_map T S (f : T -> S) (xs : seq.seq T) :
+  seq_of_list (seq.map f xs) = map f (seq_of_list xs).
+Proof. by elim: xs=> //= x xs ->. Qed.
+
+Lemma list_of_seq_map T S (f : T -> S) (xs : seq T) :
+  list_of_seq (map f xs) = seq.map f (list_of_seq xs).
+Proof. by elim: xs=> //= x xs ->. Qed.
+
+Fixpoint all T (P : pred T) (xs : seq T) :=
+  if xs is x :: xs then P x && all P xs else true.
 
 Fixpoint fin n :=
   if n is n.+1 then option (fin n) else void.
@@ -110,10 +157,10 @@ Qed.
 Fixpoint enum_fin n : seq (fin n) :=
   match n with
   | 0 => [::]
-  | n.+1 => None :: [seq Some i | i <- enum_fin n]
+  | n.+1 => None :: map Some (enum_fin n)
   end.
 
-Fixpoint size_map T S (f : T -> S) (s : seq T) : size [seq f i | i <- s] = size s :=
+Fixpoint size_map T S (f : T -> S) (s : seq T) : size (map f s) = size s :=
   match s with
   | [::] => erefl
   | i :: s => congr1 succn (size_map f s)
@@ -126,7 +173,7 @@ Fixpoint size_enum_fin n : size (enum_fin n) = n :=
   end.
 
 Definition map_fin (n : nat) T (f : fin n -> T) : seq T :=
-  [seq f i | i <- enum_fin n].
+  map f (enum_fin n).
 
 Definition cast_fin n m (e : n = m) : forall (i : fin n.+1),
   cast fin (congr1 succn e) i =
@@ -373,7 +420,7 @@ Qed.
 
 Lemma hlist_of_seq_in_map
   S R ix (f : forall n : fin (size ix), R -> option (T_ (nth_fin n))) (g : S -> R) (xs : seq S) :
-  hlist_of_seq_in f [seq g x | x <- xs] = hlist_of_seq_in (fun n x => f n (g x)) xs.
+  hlist_of_seq_in f (map g xs) = hlist_of_seq_in (fun n x => f n (g x)) xs.
 Proof.
 elim: ix f xs=> [|i ix IH] /= f [|x xs] //=.
 by case: (f None (g x))=> [y|] //=; rewrite IH.
@@ -464,7 +511,7 @@ Lemma hmap_pinK I (T_ S_ : I -> Type) ix
   (g : forall n : fin (size ix), S_ (nth_fin n) -> option (T_ (nth_fin n))) :
   (forall n, pcancel (f n) (g n)) -> pcancel (hmap_in f) (hpmap_in g).
 Proof.
-rewrite /hmap_in; elim: ix f g=> [|i ix IH] //= f g fK => [[]|[x xs]] //=.
+unfold hmap_in; elim: ix f g=> [|i ix IH] //= f g fK => [[]|[x xs]] //=.
 rewrite fK (IH (fun n => f (Some n)) (fun n => g (Some n))) //.
 move=> n; exact: (fK (Some n)).
 Qed.
@@ -477,14 +524,14 @@ Fixpoint hzip I (T_ S_ : I -> Type) ix :
   end.
 
 Fixpoint hlist_map I J (T_ : J -> Type) (f : I -> J) (ix : seq I) :
-  hlist T_ [seq f i | i <- ix] = hlist (T_ \o f) ix :=
+  hlist T_ (map f ix) = hlist (T_ \o f) ix :=
   match ix with
   | [::]    => erefl
   | i :: ix => congr1 (prod (T_ (f i))) (hlist_map T_ f ix)
   end.
 
 Fixpoint hfun_map I J (T_ : J -> Type) (f : I -> J) S (ix : seq I) :
-  hfun T_ [seq f i | i <- ix] S = hfun (T_ \o f) ix S :=
+  hfun T_ (map f ix) S = hfun (T_ \o f) ix S :=
   match ix with
   | [::]    => erefl
   | i :: ix => congr1 (fun R => T_ (f i) -> R) (hfun_map T_ f S ix)

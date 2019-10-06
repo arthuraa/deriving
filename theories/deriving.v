@@ -664,15 +664,15 @@ Definition tree_of_coq_ind (x : T) : tree coq_ind_arg :=
   rec (fun x =>
          let i := CoqIndFunctor.constr x in
          Node (nat_of_fin i)
-           (seq_of_hlist_in (@wrap i)
-              (hmap (type_of_kind_map snd) (CoqIndFunctor.args x)))) x.
+           (list_of_seq (seq_of_hlist_in (@wrap i)
+              (hmap (type_of_kind_map snd) (CoqIndFunctor.args x))))) x.
 
 Fixpoint coq_ind_of_tree (x : tree coq_ind_arg) : option T :=
   match x with
   | Leaf _ => None
   | Node c args =>
     if fin_of_nat (size s) c is Some i then
-      let args := [seq (t, coq_ind_of_tree t) | t <- args] in
+      let args := seq_of_list [seq (t, coq_ind_of_tree t) | t <- args] in
       if hlist_of_seq_in (fun j ts =>
                             match nth_fin j as k
                                   return (coq_ind_arg -> option (type_of_kind void k)) ->
@@ -692,7 +692,7 @@ rewrite /tree_of_coq_ind recE /= -[rec _]/(tree_of_coq_ind).
 rewrite nat_of_finK !hmap_comp /=.
 set args' := hlist_of_seq_in _ _.
 suffices -> : args' = Some (hmap (type_of_kind_map tag) args) by [].
-rewrite {}/args' hlist_of_seq_in_map /= /wrap.
+rewrite {}/args' seq_of_list_map list_of_seqK hlist_of_seq_in_map /= /wrap.
 move: (@mk_coq_ind_arg i) (@proj_coq_ind_arg i) (@mk_coq_ind_argK i).
 elim: {i} (nth_fin i) args=> [|[R|] a IH] //= args C p CK.
   by rewrite CK IH //= => j x; rewrite CK.
@@ -740,24 +740,24 @@ Hypothesis not_rec : all (all is_other) sig.
 
 Definition enum_branch :=
   @arity_rec
-    _ _ (fun a => all is_other a -> seq (hlist (type_of_kind T) a))
-    (fun _ => [:: tt])
+    _ _ (fun a => all is_other a -> seq.seq (hlist (type_of_kind T) a))
+    (fun _ => [:: tt]%SEQ)
     (fun (R : finType) a rec P => allpairs pair (Finite.enum R) (rec P))
     (fun               a rec P => ltac:(done)).
 
 Definition enum_ind :=
   flatten [seq [seq Roll (CoqIndFunctor.CoqInd args)
                | args <- enum_branch (nth_hlist (sig_inst_class sig) i) (allP not_rec i)]
-          | i <- enum_fin (size sig)].
+          | i <- list_of_seq (enum_fin (size sig))].
 
 Lemma enum_indP : Finite.axiom enum_ind.
 Proof.
 move=> x; rewrite -[x]unrollK; case: {x} (unroll x)=> i args.
 rewrite /enum_ind count_flatten -!map_comp /comp /=.
-have <- : sumn [seq i == j : nat | j <- enum_fin (size sig)] = 1.
+have <- : sumn [seq i == j : nat | j <- list_of_seq (enum_fin (size sig))] = 1.
   elim: (size sig) i {args}=> [|n IH] //= [i|] /=.
-    by rewrite -map_comp /comp /= -(IH i) add0n.
-  rewrite -map_comp /comp /=; congr addn; apply/eqP/natnseq0P.
+    by rewrite list_of_seq_map -map_comp /comp /= -(IH i) add0n.
+  rewrite list_of_seq_map -map_comp /comp /=; congr addn; apply/eqP/natnseq0P.
   by elim: (enum_fin n)=> {IH} // m ms /= <-.
 congr sumn; apply/eq_map=> j /=; rewrite count_map.
 have [<- {j}|ne] /= := altP (i =P j).
