@@ -263,12 +263,12 @@ Definition recursor_eq Σ (Cs : constructors Σ) (r : recursor Σ) :=
 Definition destructor Σ :=
   forall S, hfun (fun As => hfun (type_of_arg T) As S) Σ (T -> S).
 
-Definition destructor_eq s (cs : constructors s) (d : destructor s) :=
+Definition destructor_eq Σ (Cs : constructors Σ) (d : destructor Σ) :=
   forall S,
-  all_hlist (fun bs : hlist (fun ks => hfun (type_of_arg T) ks S) s =>
-  all_fin   (fun i  : fin (size s) =>
+  all_hlist (fun bs : hlist (fun ks => hfun (type_of_arg T) ks S) Σ =>
+  all_fin   (fun i  : fin (size Σ) =>
   all_hlist (fun xs : hlist (type_of_arg T) (nth_fin i) =>
-    d S bs (nth_hlist cs i xs) = nth_hlist bs i xs))).
+    d S bs (nth_hlist Cs i xs) = nth_hlist bs i xs))).
 
 Definition destructor_of_recursor Σ (r : recursor Σ) : destructor Σ :=
   fun S => hcurry (
@@ -284,9 +284,9 @@ Fixpoint ind_branch (P : T -> Type) As : hfun (type_of_arg T) As T -> Type :=
   | [::]           => fun C => P C
   end.
 
-Fixpoint ind_at (P : T -> Type) Σ : constructors Σ -> Type :=
+Fixpoint induction (P : T -> Type) Σ : constructors Σ -> Type :=
   match Σ with
-  | As :: Σ => fun Cs => ind_branch P Cs.1 -> ind_at P Cs.2
+  | As :: Σ => fun Cs => ind_branch P Cs.1 -> induction P Cs.2
   | [::]    => fun Cs => forall x, P x
   end.
 
@@ -302,7 +302,7 @@ Record mixin_of T := Mixin {
   case      : destructor T Σ;
   _         : recursor_eq Cons rec;
   _         : destructor_eq Cons case;
-  _         : forall P, ind_at P Cons;
+  _         : forall P, induction P Cons;
 }.
 
 Record type := Pack {sort : Type; class : mixin_of sort}.
@@ -313,7 +313,7 @@ Definition caseE (m : mixin_of T) : destructor_eq (Cons m) (case m) :=
   let: Mixin _ _ _ _ caseE _ := m in caseE.
 Definition indP (m : mixin_of T) :=
   let: Mixin _ _ _ _ _ indP := m
-  return forall P : T -> Type, ind_at P (Cons m)
+  return forall P : T -> Type, induction P (Cons m)
   in indP.
 
 End ClassDef.
