@@ -215,76 +215,75 @@ Module CoqInd.
 
 Section Basic.
 
-Variable (T : Type).
+Implicit Types (A : arg) (As : arity) (Σ : signature) (T S : Type).
 
-Implicit Types (A : arg) (As : arity) (Σ : signature).
-
-Definition constructors Σ :=
+Definition constructors Σ T :=
   hlist (fun As => hfun (type_of_arg T) As T) Σ.
 
-Fixpoint branch S As : Type :=
+Fixpoint branch T S As : Type :=
   match As with
-  | NonRec R :: As => R      -> branch S As
-  | Rec      :: As => T -> S -> branch S As
+  | NonRec R :: As => R      -> branch T S As
+  | Rec      :: As => T -> S -> branch T S As
   | [::]           => S
   end.
 
-Definition recursor Σ := forall S, hfun (branch S) Σ (T -> S).
+Definition recursor Σ T := forall S, hfun (branch T S) Σ (T -> S).
 
-Fixpoint branch_of_hfun S As :
-  hfun (type_of_arg (T * S)) As S -> branch S As :=
+Fixpoint branch_of_hfun T S As :
+  hfun (type_of_arg (T * S)) As S -> branch T S As :=
   match As with
   | NonRec R :: As => fun f x   => branch_of_hfun (f x)
   | Rec      :: As => fun f x y => branch_of_hfun (f (x, y))
   | [::]           => fun f     => f
   end.
 
-Fixpoint hfun_of_branch S As :
-  branch S As -> hfun (type_of_arg (T * S)) As S :=
+Fixpoint hfun_of_branch T S As :
+  branch T S As -> hfun (type_of_arg (T * S)) As S :=
   match As with
   | NonRec R :: As => fun f x => hfun_of_branch (f x)
   | Rec      :: As => fun f p => hfun_of_branch (f p.1 p.2)
   | [::]           => fun f   => f
   end.
 
-Lemma branch_of_hfunK S As f xs :
-  hfun_of_branch (@branch_of_hfun S As f) xs = f xs.
+Lemma branch_of_hfunK T S As f xs :
+  hfun_of_branch (@branch_of_hfun T S As f) xs = f xs.
 Proof. by elim: As f xs=> [|[R|] As IH] f //= [[x y] xs]. Qed.
 
-Definition recursor_eq Σ (Cs : constructors Σ) (r : recursor Σ) :=
+Definition recursor_eq Σ T (Cs : constructors Σ T) (r : recursor Σ T) :=
   forall S,
-  all_hlist (fun bs : hlist (branch S) Σ =>
+  all_hlist (fun bs : hlist (branch T S) Σ =>
   all_fin   (fun i  : fin (size Σ) =>
   all_hlist (fun xs : hlist (type_of_arg T) (nth_fin i) =>
     r S bs (nth_hlist Cs i xs) =
     hfun_of_branch (nth_hlist bs i)
                    (hmap (type_of_arg_map (fun x => (x, r S bs x))) xs)))).
 
-Definition destructor Σ :=
+Definition destructor Σ T :=
   forall S, hfun (fun As => hfun (type_of_arg T) As S) Σ (T -> S).
 
-Definition destructor_eq Σ (Cs : constructors Σ) (d : destructor Σ) :=
+Definition destructor_eq Σ T (Cs : constructors Σ T) (d : destructor Σ T) :=
   forall S,
   all_hlist (fun bs : hlist (fun ks => hfun (type_of_arg T) ks S) Σ =>
   all_fin   (fun i  : fin (size Σ) =>
   all_hlist (fun xs : hlist (type_of_arg T) (nth_fin i) =>
     d S bs (nth_hlist Cs i xs) = nth_hlist bs i xs))).
 
-Definition destructor_of_recursor Σ (r : recursor Σ) : destructor Σ :=
+Definition destructor_of_recursor Σ T (r : recursor Σ T) : destructor Σ T :=
   fun S => hcurry (
   fun bs : hlist (fun As => hfun (type_of_arg T) As S) Σ =>
     r S (hmap (fun As (b : hfun (type_of_arg T) As S) =>
-           branch_of_hfun (hcurry (fun xs => b (hmap (type_of_arg_map fst) xs)))) bs)
+           branch_of_hfun
+             (hcurry (fun xs => b (hmap (type_of_arg_map fst) xs)))) bs)
 ).
 
-Fixpoint ind_branch (P : T -> Type) As : hfun (type_of_arg T) As T -> Type :=
+Fixpoint ind_branch T (P : T -> Type) As : hfun (type_of_arg T) As T -> Type :=
   match As with
   | NonRec R :: As => fun C => forall x : R,        ind_branch P (C x)
   | Rec      :: As => fun C => forall x : T, P x -> ind_branch P (C x)
   | [::]           => fun C => P C
   end.
 
-Fixpoint induction (P : T -> Type) Σ : constructors Σ -> Type :=
+Fixpoint induction T (P : T -> Type) Σ : constructors Σ T -> Type :=
   match Σ with
   | As :: Σ => fun Cs => ind_branch P Cs.1 -> induction P Cs.2
   | [::]    => fun Cs => forall x, P x
@@ -297,9 +296,9 @@ Section ClassDef.
 Variables (Σ : signature).
 
 Record mixin_of T := Mixin {
-  Cons      : constructors T Σ;
-  rec       : recursor T Σ;
-  case      : destructor T Σ;
+  Cons      : constructors Σ T;
+  rec       : recursor Σ T;
+  case      : destructor Σ T;
   _         : recursor_eq Cons rec;
   _         : destructor_eq Cons case;
   _         : forall P, induction P Cons;
@@ -351,7 +350,7 @@ Instance infer_arity_nonrec
   infer_arity T P (forall x, branchT x) (NonRec S :: As) C.
 
 Class infer_sig
-  T (P : T -> Type) (elimT : Type) Σ (Cs : CoqInd.constructors T Σ).
+  T (P : T -> Type) (elimT : Type) Σ (Cs : CoqInd.constructors Σ T).
 Arguments infer_sig : clear implicits.
 
 Instance infer_sig_end T (P : T -> Type) :
@@ -379,7 +378,7 @@ Ltac coq_ind_mixin rec :=
     let Σ    := eval simpl in ΣCs.1 in
     let Cs   := eval simpl in ΣCs.2 in
     let case := constr:(ltac:(intros P; simpl; unwind_recursor (Rec P)) : forall P, elimT P) in
-    let case := eval compute in (@CoqInd.destructor_of_recursor T Σ (fun S => case (fun _ => S))) in
+    let case := eval compute in (@CoqInd.destructor_of_recursor Σ T (fun S => case (fun _ => S))) in
     refine (@CoqInd.Mixin Σ T Cs (fun S => Rec (fun _ => S)) case _ _ _);
     try by [abstract done|exact rec]
   end.
