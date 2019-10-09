@@ -16,10 +16,10 @@ Inductive tree (T : Type) :=
 | Node of T & tree T & tree T.
 Arguments Leaf {_} _.
 
-Definition tree_coqIndMixin T :=
-  Eval simpl in [coqIndMixin for @tree_rect T].
-Canonical tree_coqIndType T :=
-  Eval hnf in CoqIndType _ _ (tree_coqIndMixin T).
+Definition tree_indMixin T :=
+  Eval simpl in [indMixin for @tree_rect T].
+Canonical tree_indType T :=
+  Eval hnf in IndType _ _ (tree_indMixin T).
 
 Definition tree_eqMixin (T : eqType) :=
   Eval simpl in [indEqMixin for tree T].
@@ -40,10 +40,10 @@ Module FiniteExample.
 
 Inductive three := A of unit & bool | B | C.
 
-Definition three_coqIndMixin :=
-  Eval simpl in [coqIndMixin for three_rect].
-Canonical three_coqIndType :=
-  Eval hnf in CoqIndType _ _ three_coqIndMixin.
+Definition three_indMixin :=
+  Eval simpl in [indMixin for three_rect].
+Canonical three_indType :=
+  Eval hnf in IndType _ _ three_indMixin.
 
 Definition three_eqMixin :=
   Eval simpl in [indEqMixin for three].
