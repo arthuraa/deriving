@@ -516,6 +516,12 @@ rewrite fK (IH (fun n => f (Some n)) (fun n => g (Some n))) //.
 move=> n; exact: (fK (Some n)).
 Qed.
 
+Lemma nth_hlist_hmap I (T_ S_ : I -> Type) (f : forall i, T_ i -> S_ i) ix :
+  forall (l : hlist T_ ix) i, nth_hlist (hmap f l) i = f _ (nth_hlist l i).
+Proof.
+by elim: ix=> [[] []|i ix IH] /= [x xs] [j|] //=.
+Qed.
+
 Fixpoint hzip I (T_ S_ : I -> Type) ix :
   hlist T_ ix -> hlist S_ ix -> hlist (fun i => T_ i * S_ i)%type ix :=
   match ix with
