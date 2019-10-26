@@ -26,7 +26,7 @@ types.
 
 ## Requirements
 
-- Coq 8.9
+- Coq 8.10
 
 - `coq-mathcomp-ssreflect` 1.9
 

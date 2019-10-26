@@ -336,18 +336,21 @@ Arguments infer_arity : clear implicits.
 Instance infer_arity_end
   T (P : T -> Type) (x : T) :
   infer_arity T P (P x) [::] x.
+Defined.
 
 Instance infer_arity_rec
   T (P : T -> Type)
   (branchT : T -> Type) (As : arity) (C : T -> hfun (type_of_arg T) As T)
   (_ : forall x, infer_arity T P (branchT x) As (C x)) :
   infer_arity T P (forall x, P x -> branchT x) (Rec :: As) C.
+Defined.
 
 Instance infer_arity_nonrec
   T (P : T -> Type)
   S (branchT : S -> Type) As (C : S -> hfun (type_of_arg T) As T)
   (_ : forall x, infer_arity T P (branchT x) As (C x)) :
   infer_arity T P (forall x, branchT x) (NonRec S :: As) C.
+Defined.
 
 Class infer_sig
   T (P : T -> Type) (elimT : Type) Σ (Cs : Ind.constructors Σ T).
@@ -355,12 +358,14 @@ Arguments infer_sig : clear implicits.
 
 Instance infer_sig_end T (P : T -> Type) :
   infer_sig T P (forall x : T, P x) [::] tt.
+Defined.
 
 Instance infer_sig_branch
   T (P : T -> Type)
   (branchT : Type) As C (_ : infer_arity T P branchT As C)
   (elimT : Type) (Σ : signature) Cs (_ : infer_sig T P elimT Σ Cs) :
   infer_sig T P (branchT -> elimT) (As :: Σ) (C, Cs).
+Defined.
 
 Ltac unwind_recursor rec :=
   match goal with
