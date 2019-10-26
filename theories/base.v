@@ -17,8 +17,8 @@ Definition cast T (P : T -> Type) x y (e : x = y) : P x -> P y :=
 
 Arguments cast {_} _ {_ _} _.
 
+Declare Scope deriving_scope.
 Delimit Scope deriving_scope with deriving.
-
 Local Open Scope deriving_scope.
 
 Notation "e1 * e2" := (etrans e1 e2) : deriving_scope.

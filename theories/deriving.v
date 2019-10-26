@@ -484,13 +484,13 @@ Lemma indP P :
   forall x, P x.
 Proof.
 rewrite /Roll; case: (T) P => S [/= Cs _ _ _ _ indP] P.
-have {indP} indP:
+have {}indP:
     (forall i, Ind.ind_branch P (nth_hlist Cs i)) ->
     (forall x, P x).
   elim: (Σ) Cs {indP} (indP P) => //= As Σ' IH [C Cs] /= indP hyps.
   move/indP/IH: (hyps None); apply=> i; exact: (hyps (Some i)).
 move=> hyps; apply: indP=> j.
-have {hyps} hyps:
+have {}hyps:
   forall args : hlist (type_of_arg {x : S & P x}) (nth_fin j),
     P (nth_hlist Cs j (hmap (type_of_arg_map tag) args)).
   by move=> args; move: (hyps (Cons j args)).
