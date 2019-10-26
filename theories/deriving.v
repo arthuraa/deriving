@@ -13,10 +13,6 @@ Unset Printing Implicit Defensive.
 
 Local Open Scope deriving_scope.
 
-(* The SSReflect definition is opaque, which interferes with certain reductions
-   below. *)
-Local Notation svalP := proj2_sig.
-
 Record functor := Functor {
   fobj      :> Type -> Type;
   fmap      :  forall T S, (T -> S) -> (fobj T -> fobj S);

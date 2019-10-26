@@ -8,6 +8,10 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 Set Universe Polymorphism.
 
+(* The SSReflect definition is opaque, which interferes with certain reductions
+   below. *)
+Notation svalP := proj2_sig.
+
 Definition cast T (P : T -> Type) x y (e : x = y) : P x -> P y :=
   match e with erefl => id end.
 
