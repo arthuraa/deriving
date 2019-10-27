@@ -17,28 +17,25 @@ Definition cast T (P : T -> Type) x y (e : x = y) : P x -> P y :=
 
 Arguments cast {_} _ {_ _} _.
 
-Notation "e1 ** e2" := (etrans e1 e2) (at level 30) : deriving_scope.
+Notation "e1 * e2" := (etrans e1 e2) : deriving_scope.
 Notation "e ^-1" := (esym e) : deriving_scope.
+
+Record hcons T S := HCons { hd : T; tl : S }.
+
+Arguments HCons {_ _}.
+Arguments hd {_ _}.
+Arguments tl {_ _}.
+
+Notation "x ::: y" := (HCons x y) (at level 60) : deriving_scope.
+
+Module PolyType.
 
 Record sig T (P : T -> Prop) := exist { sval : T; svalP : P sval }.
 
 Arguments exist {T} P sval svalP.
 
-Notation "{ x | P }" := (sig (fun x => P)) : deriving_scope.
-Notation "{ x : T | P }" := (sig (fun x : T => P)) : deriving_scope.
-
-Record prod A B := pair { fst : A; snd : B }.
-
-Arguments pair {_ _}.
-Arguments fst {_ _}.
-Arguments snd {_ _}.
-
-Notation "( x , y , .. , z )" := (pair .. (pair x y) .. z) : core_scope.
-
-Notation "x .1" := (fst x) : deriving_scope.
-Notation "x .2" := (snd x) : deriving_scope.
-
-Notation "T * S" := (prod T S) : deriving_scope.
+Notation "{ x | P }" := (sig (fun x => P)) : type_scope.
+Notation "{ x : T | P }" := (sig (fun x : T => P)) : type_scope.
 
 Inductive seq T := nil | cons of T & seq T.
 Arguments nil {_}.
@@ -85,6 +82,10 @@ Proof. by elim: xs=> //= x xs ->. Qed.
 
 Fixpoint all T (P : pred T) (xs : seq T) :=
   if xs is x :: xs then P x && all P xs else true.
+
+End PolyType.
+
+Import PolyType.
 
 Fixpoint fin n :=
   if n is n.+1 then option (fin n) else void.
@@ -189,7 +190,7 @@ Fixpoint size_map T S (f : T -> S) (s : seq T) : size (map f s) = size s :=
 Fixpoint size_enum_fin n : size (enum_fin n) = n :=
   match n with
   | 0 => erefl
-  | n.+1 => congr1 succn (size_map Some (enum_fin n) ** size_enum_fin n)
+  | n.+1 => congr1 succn (size_map Some (enum_fin n) * size_enum_fin n)
   end.
 
 Definition map_fin (n : nat) T (f : fin n -> T) : seq T :=
@@ -330,7 +331,7 @@ Variables (I : Type) (T_ : I -> Type).
 Implicit Types (i : I) (ix : seq I).
 
 Definition hlist ix : Type :=
-  foldr (fun i => prod (T_ i)) unit ix.
+  foldr (fun i => hcons (T_ i)) unit ix.
 
 Definition hfun ix S : Type :=
   foldr (fun i R => T_ i -> R) S ix.
@@ -338,13 +339,13 @@ Definition hfun ix S : Type :=
 Fixpoint happ ix S : hfun ix S -> hlist ix -> S :=
   match ix with
   | [::]    => fun f _    => f
-  | i :: ix => fun f args => happ (f args.1) args.2
+  | i :: ix => fun f args => happ (f args.(hd)) args.(tl)
   end.
 
 Fixpoint hcurry ix S : (hlist ix -> S) -> hfun ix S :=
   match ix with
   | [::]    => fun f   => f tt
-  | i :: ix => fun f x => hcurry (fun args=> f (x, args))
+  | i :: ix => fun f x => hcurry (fun args=> f (x ::: args))
   end.
 
 Lemma hcurryK ix S (f : hlist ix -> S) l : happ (hcurry f) l = f l.
@@ -355,8 +356,8 @@ Qed.
 Fixpoint hcat (ix1 ix2 : seq I) :
   hlist ix1 -> hlist ix2 -> hlist (ix1 ++ ix2) :=
   match ix1 with
-  | [::] => fun _ l2 => l2
-  | i :: ix1 => fun l1 l2 => (l1.1, hcat l1.2 l2)
+  | [::]     => fun _ l2 => l2
+  | i :: ix1 => fun l1 l2 => l1.(hd) ::: hcat l1.(tl) l2
   end.
 
 Fixpoint nth_hlist (ix : seq I) :
@@ -364,8 +365,8 @@ Fixpoint nth_hlist (ix : seq I) :
   match ix with
   | [::]    => fun l n => match n with end
   | i :: ix => fun l n => match n with
-                          | Some n => nth_hlist l.2 n
-                          | None   => l.1
+                          | Some n => nth_hlist l.(tl) n
+                          | None   => l.(hd)
                           end
   end.
 
@@ -381,7 +382,7 @@ Proof. elim: ix n=> /= [|i ix IH] // [n|]; by rewrite ?IH. Qed.
 Fixpoint seq_of_hlist S ix (f : forall i, T_ i -> S) : hlist ix -> seq S :=
   match ix with
   | [::] => fun _ => [::]
-  | i :: ix => fun l => f i l.1 :: seq_of_hlist f l.2
+  | i :: ix => fun l => f i l.(hd) :: seq_of_hlist f l.(tl)
   end.
 
 Fixpoint hlist_of_seq S ix (f : forall i, S -> option (T_ i)) : seq S -> option (hlist ix) :=
@@ -389,7 +390,7 @@ Fixpoint hlist_of_seq S ix (f : forall i, S -> option (T_ i)) : seq S -> option 
   | [::] => fun xs => Some tt
   | i :: ix => fun xs => if xs is x :: xs then
                            match f i x, hlist_of_seq ix f xs with
-                           | Some y, Some l => Some (y, l)
+                           | Some y, Some l => Some (y ::: l)
                            | _ , _ => None
                            end
                          else None
@@ -407,7 +408,7 @@ Fixpoint seq_of_hlist_in S ix :
   (forall n : fin (size ix), T_ (nth_fin n) -> S) ->
   hlist ix -> seq S :=
   if ix is i :: ix then
-    fun f xs => f None xs.1 :: seq_of_hlist_in (fun n => f (Some n)) xs.2
+    fun f xs => f None xs.(hd) :: seq_of_hlist_in (fun n => f (Some n)) xs.(tl)
   else fun _ _ => [::].
 
 Fixpoint hlist_of_seq_in S ix (f : forall n : fin (size ix), S -> option (T_ (nth_fin n))) (xs : seq S) {struct xs} : option (hlist ix) :=
@@ -422,7 +423,7 @@ Fixpoint hlist_of_seq_in S ix (f : forall n : fin (size ix), S -> option (T_ (nt
     | [::] => fun _ => None
     | i :: ix => fun f =>
                    match f None x, hlist_of_seq_in (fun n => f (Some n)) xs with
-                   | Some y, Some ys => Some (y, ys)
+                   | Some y, Some ys => Some (y ::: ys)
                    | _, _ => None
                    end
     end f
@@ -449,7 +450,7 @@ Qed.
 Fixpoint hlist_of_fun ix : forall (f : forall n : fin (size ix), T_ (nth_fin n)), hlist ix :=
   match ix with
   | [::]    => fun _ => tt
-  | i :: ix => fun f => (f None, hlist_of_fun (fun n => f (Some n)))
+  | i :: ix => fun f => f None ::: hlist_of_fun (fun n => f (Some n))
   end.
 
 Lemma nth_hlist_of_fun ix f n : nth_hlist (@hlist_of_fun ix f) n = f n.
@@ -459,7 +460,7 @@ Qed.
 
 Fixpoint all_hlist ix : (hlist ix -> Prop) -> Prop :=
   match ix with
-  | i :: ix => fun P => forall x, all_hlist (fun l => P (x, l))
+  | i :: ix => fun P => forall x, all_hlist (fun l => P (x ::: l))
   | [::]    => fun P => P tt
   end.
 
@@ -473,7 +474,7 @@ Qed.
 Fixpoint hfold S (f : forall i, T_ i -> S -> S) a ix : hlist ix -> S :=
   match ix with
   | [::] => fun _ => a
-  | i :: ix => fun l => f i l.1 (hfold f a l.2)
+  | i :: ix => fun l => f i l.(hd) (hfold f a l.(tl))
   end.
 
 End Hlist.
@@ -484,7 +485,7 @@ Fixpoint hmap I (T_ S_ : I -> Type) (f : forall i, T_ i -> S_ i) ix :
   hlist T_ ix -> hlist S_ ix :=
   match ix with
   | [::]    => fun _ => tt
-  | i :: ix => fun l => (f i l.1, hmap f l.2)
+  | i :: ix => fun l => f i l.(hd) ::: hmap f l.(tl)
   end.
 
 Lemma hmap_eq I (T_ S_ : I -> Type) (f g : forall i, T_ i -> S_ i) :
@@ -519,9 +520,9 @@ Fixpoint hpmap_in I (T_ S_ : I -> Type) ix :
   | [::] =>
     fun f l => Some tt
   | i :: ix =>
-    fun f l => if hpmap_in (fun n => f (Some n)) l.2 is Some l' then
-                 if f None l.1 is Some x then
-                   Some (x, l')
+    fun f l => if hpmap_in (fun n => f (Some n)) l.(tl) is Some l' then
+                 if f None l.(hd) is Some x then
+                   Some (x ::: l')
                  else None
                else None
   end.
@@ -543,17 +544,17 @@ by elim: ix=> [[] []|i ix IH] /= [x xs] [j|] //=.
 Qed.
 
 Fixpoint hzip I (T_ S_ : I -> Type) ix :
-  hlist T_ ix -> hlist S_ ix -> hlist (fun i => T_ i * S_ i) ix :=
+  hlist T_ ix -> hlist S_ ix -> hlist (fun i => T_ i * S_ i)%type ix :=
   match ix with
-  | [::] => fun _ _ => tt
-  | i :: ix => fun lx ly => ((lx.1, ly.1), hzip lx.2 ly.2)
+  | [::]    => fun _  _  => tt
+  | i :: ix => fun lx ly => (lx.(hd), ly.(hd)) ::: hzip lx.(tl) ly.(tl)
   end.
 
 Fixpoint hlist_map I J (T_ : J -> Type) (f : I -> J) (ix : seq I) :
   hlist T_ (map f ix) = hlist (T_ \o f) ix :=
   match ix with
   | [::]    => erefl
-  | i :: ix => congr1 (prod (T_ (f i))) (hlist_map T_ f ix)
+  | i :: ix => congr1 (hcons (T_ (f i))) (hlist_map T_ f ix)
   end.
 
 Fixpoint hfun_map I J (T_ : J -> Type) (f : I -> J) S (ix : seq I) :
@@ -567,7 +568,7 @@ Fixpoint hlist_eq I (T_ S_ : I -> Type) (e : forall i, T_ i = S_ i) ix :
   hlist T_ ix = hlist S_ ix :=
   match ix with
   | [::]    => erefl
-  | i :: ix => congr2 prod (e i) (hlist_eq e ix)
+  | i :: ix => congr2 hcons (e i) (hlist_eq e ix)
   end.
 
 Fixpoint hfun_eq I (T_ S_ : I -> Type) (e : forall i, T_ i = S_ i) ix R :
