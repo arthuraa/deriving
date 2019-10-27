@@ -10,7 +10,7 @@ Set Universe Polymorphism.
 
 Declare Scope deriving_scope.
 Delimit Scope deriving_scope with deriving.
-Local Open Scope deriving_scope.
+Open Scope deriving_scope.
 
 Definition cast T (P : T -> Type) x y (e : x = y) : P x -> P y :=
   match e with erefl => id end.

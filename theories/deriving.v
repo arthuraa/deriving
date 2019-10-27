@@ -11,7 +11,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Local Open Scope deriving_scope.
+Open Scope deriving_scope.
 
 Record functor := Functor {
   fobj      :> Type -> Type;
