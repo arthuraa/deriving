@@ -104,6 +104,7 @@ Proof. exact: can_inj unrollK. Qed.
 
 End InitAlgTheory.
 
+Set Universe Polymorphism.
 Variant arg := NonRec of Type | Rec.
 
 Definition is_rec A := if A is Rec then true else false.
@@ -206,6 +207,7 @@ Definition type_of_arg T (A : arg) : Type :=
 Definition type_of_arg_map T S (f : T -> S) A :
   type_of_arg T A -> type_of_arg S A :=
   if A is Rec then f else id.
+Unset Universe Polymorphism.
 
 Module Ind.
 
