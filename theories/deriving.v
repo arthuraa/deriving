@@ -29,7 +29,7 @@ Section ClassDef.
 Record mixin_of T (F : functor) := Mixin {
   Roll     :  F T -> T;
   case     :  forall S, (F T -> S) -> T -> S;
-  rec      :  forall S, (F (T * S)%type -> S) -> T -> S;
+  rec      :  forall S, (F (T * S) -> S) -> T -> S;
   _        :  forall S f a, rec f (Roll a) =
                             f (fmap (fun x => (x, rec f x)) a) :> S;
   _        :  forall S f a, case f (Roll a) = f a :> S;
@@ -226,7 +226,7 @@ Fixpoint branch T S As : Type :=
 Definition recursor Σ T := forall S, hfun (branch T S) Σ (T -> S).
 
 Fixpoint branch_of_hfun T S As :
-  hfun (type_of_arg (T * S)) As S -> branch T S As :=
+  hfun (type_of_arg (prod T S)) As S -> branch T S As :=
   match As with
   | NonRec R :: As => fun f x   => branch_of_hfun (f x)
   | Rec      :: As => fun f x y => branch_of_hfun (f (x, y))
@@ -234,7 +234,7 @@ Fixpoint branch_of_hfun T S As :
   end.
 
 Fixpoint hfun_of_branch T S As :
-  branch T S As -> hfun (type_of_arg (T * S)) As S :=
+  branch T S As -> hfun (type_of_arg (prod T S)) As S :=
   match As with
   | NonRec R :: As => fun f x => hfun_of_branch (f x)
   | Rec      :: As => fun f p => hfun_of_branch (f p.1 p.2)
@@ -441,13 +441,13 @@ Variable T : indType Σ.
 Definition Roll (x : F T) : T :=
   nth_hlist (@Ind.Cons _ _ T) (constr x) (args x).
 
-Definition branches_of_fun S (body : F (T * S)%type -> S) :=
+Definition branches_of_fun S (body : F (T * S)%deriving -> S) :=
   hlist_of_fun (fun i =>
     Ind.branch_of_hfun
       (hcurry
          (fun l => body (Cons i l)))).
 
-Definition rec S (body : F (T * S)%type -> S) :=
+Definition rec S (body : F (T * S)%deriving -> S) :=
   happ (@Ind.rec _ _ T S) (branches_of_fun body).
 
 Definition case S (body : F T -> S) :=
@@ -526,7 +526,7 @@ Let F := IndF.functor Σ.
 Variable (T : initAlgType F).
 
 Let eq_op_branch As (cAs : hlist arg_class As) :
-  hlist (type_of_arg (T * (T -> bool))) As ->
+  hlist (type_of_arg (T * (T -> bool))%deriving) As ->
   hlist (type_of_arg T)                 As ->
   bool :=
   arity_rec _ (fun As => hlist _ As -> hlist _ As -> bool)

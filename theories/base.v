@@ -17,7 +17,7 @@ Definition cast T (P : T -> Type) x y (e : x = y) : P x -> P y :=
 
 Arguments cast {_} _ {_ _} _.
 
-Notation "e1 * e2" := (etrans e1 e2) : deriving_scope.
+Notation "e1 ** e2" := (etrans e1 e2) (at level 30) : deriving_scope.
 Notation "e ^-1" := (esym e) : deriving_scope.
 
 Record sig T (P : T -> Prop) := exist { sval : T; svalP : P sval }.
@@ -26,6 +26,19 @@ Arguments exist {T} P sval svalP.
 
 Notation "{ x | P }" := (sig (fun x => P)) : deriving_scope.
 Notation "{ x : T | P }" := (sig (fun x : T => P)) : deriving_scope.
+
+Record prod A B := pair { fst : A; snd : B }.
+
+Arguments pair {_ _}.
+Arguments fst {_ _}.
+Arguments snd {_ _}.
+
+Notation "( x , y , .. , z )" := (pair .. (pair x y) .. z) : core_scope.
+
+Notation "x .1" := (fst x) : deriving_scope.
+Notation "x .2" := (snd x) : deriving_scope.
+
+Notation "T * S" := (prod T S) : deriving_scope.
 
 Inductive seq T := nil | cons of T & seq T.
 Arguments nil {_}.
@@ -176,7 +189,7 @@ Fixpoint size_map T S (f : T -> S) (s : seq T) : size (map f s) = size s :=
 Fixpoint size_enum_fin n : size (enum_fin n) = n :=
   match n with
   | 0 => erefl
-  | n.+1 => congr1 succn (size_map Some (enum_fin n) * size_enum_fin n)%EQ
+  | n.+1 => congr1 succn (size_map Some (enum_fin n) ** size_enum_fin n)
   end.
 
 Definition map_fin (n : nat) T (f : fin n -> T) : seq T :=
@@ -219,8 +232,8 @@ Variables (T : Type).
 Definition ilist n := iter n (prod T) unit.
 
 Fixpoint nth_ilist n : ilist n -> fin n -> T :=
-  match n with
-  | 0    => fun l i => match i with end
+  match n return ilist n -> fin n -> T with
+  | 0    => fun l (i : void) => match i with end
   | n.+1 => fun l i => if i is Some j then nth_ilist l.2 j else l.1
   end.
 
@@ -317,7 +330,7 @@ Variables (I : Type) (T_ : I -> Type).
 Implicit Types (i : I) (ix : seq I).
 
 Definition hlist ix : Type :=
-  foldr (fun i S => T_ i * S)%type unit ix.
+  foldr (fun i => prod (T_ i)) unit ix.
 
 Definition hfun ix S : Type :=
   foldr (fun i R => T_ i -> R) S ix.
@@ -530,7 +543,7 @@ by elim: ix=> [[] []|i ix IH] /= [x xs] [j|] //=.
 Qed.
 
 Fixpoint hzip I (T_ S_ : I -> Type) ix :
-  hlist T_ ix -> hlist S_ ix -> hlist (fun i => T_ i * S_ i)%type ix :=
+  hlist T_ ix -> hlist S_ ix -> hlist (fun i => T_ i * S_ i) ix :=
   match ix with
   | [::] => fun _ _ => tt
   | i :: ix => fun lx ly => ((lx.1, ly.1), hzip lx.2 ly.2)
