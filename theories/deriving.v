@@ -104,11 +104,12 @@ Proof. exact: can_inj unrollK. Qed.
 
 End InitAlgTheory.
 
+Set Universe Polymorphism.
+
 Section Signature.
 
 Import PolyType.
 
-Set Universe Polymorphism.
 Variant arg := NonRec of Type | Rec.
 
 Definition type_of_arg T (A : arg) : Type :=
@@ -206,9 +207,20 @@ elim: As cAs=> [|[Ssort|] As IH] => /= [[]|[[S e] cAs]|[[] cAs]] //.
 by apply: TRec.
 Qed.
 
-Unset Universe Polymorphism.
-
 End Signature.
+
+Definition arg_class_map
+  K1 K2 (sort1 : K1 -> Type) (sort2 : K2 -> Type)
+  (f : K1 -> K2) (p : forall cT, sort2 (f cT) = sort1 cT) (A : arg) :
+  arg_class sort1 A -> arg_class sort2 A :=
+  match A with
+  | NonRec T => fun cT =>
+    PolyType.exist _
+      (f (PolyType.sval cT)) (p (PolyType.sval cT) * PolyType.svalP cT)
+  | Rec      => fun _  => tt
+  end.
+
+Unset Universe Polymorphism.
 
 Arguments arity_rec {_} _ _ _ _ _.
 
