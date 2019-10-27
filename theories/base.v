@@ -8,21 +8,24 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 Set Universe Polymorphism.
 
-(* The SSReflect definition is opaque, which interferes with certain reductions
-   below. *)
-Notation svalP := proj2_sig.
+Declare Scope deriving_scope.
+Delimit Scope deriving_scope with deriving.
+Local Open Scope deriving_scope.
 
 Definition cast T (P : T -> Type) x y (e : x = y) : P x -> P y :=
   match e with erefl => id end.
 
 Arguments cast {_} _ {_ _} _.
 
-Declare Scope deriving_scope.
-Delimit Scope deriving_scope with deriving.
-Local Open Scope deriving_scope.
-
 Notation "e1 * e2" := (etrans e1 e2) : deriving_scope.
 Notation "e ^-1" := (esym e) : deriving_scope.
+
+Record sig T (P : T -> Prop) := exist { sval : T; svalP : P sval }.
+
+Arguments exist {T} P sval svalP.
+
+Notation "{ x | P }" := (sig (fun x => P)) : deriving_scope.
+Notation "{ x : T | P }" := (sig (fun x : T => P)) : deriving_scope.
 
 Inductive seq T := nil | cons of T & seq T.
 Arguments nil {_}.
