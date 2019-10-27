@@ -780,7 +780,7 @@ Definition enum_branch :=
   arity_rec
     _ (fun As => all (negb \o is_rec) As -> seq.seq (hlist (type_of_arg T) As))
     (fun _ => [:: tt]%SEQ)
-    (fun S As rec P => allpairs HCons (Finite.enum S) (rec P))
+    (fun S As rec P => allpairs Cell (Finite.enum S) (rec P))
     (fun   As rec P => ltac:(done)).
 
 Definition enum_ind :=

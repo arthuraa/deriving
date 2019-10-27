@@ -20,13 +20,16 @@ Arguments cast {_} _ {_ _} _.
 Notation "e1 * e2" := (etrans e1 e2) : deriving_scope.
 Notation "e ^-1" := (esym e) : deriving_scope.
 
-Record hcons T S := HCons { hd : T; tl : S }.
+(** An alternative to the standard prod type, to avoid name clashes and universe
+    issues. *)
 
-Arguments HCons {_ _}.
+Record cell T S := Cell { hd : T; tl : S }.
+
+Arguments Cell {_ _}.
 Arguments hd {_ _}.
 Arguments tl {_ _}.
 
-Notation "x ::: y" := (HCons x y) (at level 60) : deriving_scope.
+Notation "x ::: y" := (Cell x y) (at level 60) : deriving_scope.
 
 Module PolyType.
 
@@ -230,18 +233,18 @@ Section Ilist.
 
 Variables (T : Type).
 
-Definition ilist n := iter n (prod T) unit.
+Definition ilist n := iter n (cell T) unit.
 
 Fixpoint nth_ilist n : ilist n -> fin n -> T :=
   match n return ilist n -> fin n -> T with
   | 0    => fun l (i : void) => match i with end
-  | n.+1 => fun l i => if i is Some j then nth_ilist l.2 j else l.1
+  | n.+1 => fun l i => if i is Some j then nth_ilist l.(tl) j else l.(hd)
   end.
 
 Fixpoint ilist_of_fun n : forall (f : fin n -> T), ilist n :=
   match n with
   | 0    => fun _ => tt
-  | n.+1 => fun f => (f None, ilist_of_fun (fun i => f (Some i)))
+  | n.+1 => fun f => f None ::: ilist_of_fun (fun i => f (Some i))
   end.
 
 Fixpoint nth_ilist_of_fun n : forall (f : fin n -> T) (i : fin n), nth_ilist (ilist_of_fun f) i = f i :=
@@ -253,13 +256,13 @@ Fixpoint nth_ilist_of_fun n : forall (f : fin n -> T) (i : fin n), nth_ilist (il
 Fixpoint ilist_of_seq s : ilist (size s) :=
   match s with
   | [::] => tt
-  | x :: s => (x, ilist_of_seq s)
+  | x :: s => x ::: ilist_of_seq s
   end.
 
 Fixpoint seq_of_ilist n : ilist n -> seq T :=
   match n with
   | 0    => fun l => [::]
-  | n.+1 => fun l => l.1 :: seq_of_ilist l.2
+  | n.+1 => fun l => l.(hd) :: seq_of_ilist l.(tl)
   end.
 
 End Ilist.
@@ -267,7 +270,7 @@ End Ilist.
 Fixpoint imap T S (f : T -> S) n : ilist T n -> ilist S n :=
   match n with
   | 0    => fun l => tt
-  | n.+1 => fun l => (f l.1, imap f l.2)
+  | n.+1 => fun l => f l.(hd) ::: imap f l.(tl)
   end.
 
 Lemma imap_eq (T S : Type) (f g : T -> S) :
@@ -331,7 +334,7 @@ Variables (I : Type) (T_ : I -> Type).
 Implicit Types (i : I) (ix : seq I).
 
 Definition hlist ix : Type :=
-  foldr (fun i => hcons (T_ i)) unit ix.
+  foldr (fun i => cell (T_ i)) unit ix.
 
 Definition hfun ix S : Type :=
   foldr (fun i R => T_ i -> R) S ix.
@@ -554,7 +557,7 @@ Fixpoint hlist_map I J (T_ : J -> Type) (f : I -> J) (ix : seq I) :
   hlist T_ (map f ix) = hlist (T_ \o f) ix :=
   match ix with
   | [::]    => erefl
-  | i :: ix => congr1 (hcons (T_ (f i))) (hlist_map T_ f ix)
+  | i :: ix => congr1 (cell (T_ (f i))) (hlist_map T_ f ix)
   end.
 
 Fixpoint hfun_map I J (T_ : J -> Type) (f : I -> J) S (ix : seq I) :
@@ -568,7 +571,7 @@ Fixpoint hlist_eq I (T_ S_ : I -> Type) (e : forall i, T_ i = S_ i) ix :
   hlist T_ ix = hlist S_ ix :=
   match ix with
   | [::]    => erefl
-  | i :: ix => congr2 hcons (e i) (hlist_eq e ix)
+  | i :: ix => congr2 cell (e i) (hlist_eq e ix)
   end.
 
 Fixpoint hfun_eq I (T_ S_ : I -> Type) (e : forall i, T_ i = S_ i) ix R :
