@@ -80,7 +80,7 @@ Lemma list_of_seq_map T S (f : T -> S) (xs : seq T) :
   list_of_seq (map f xs) = seq.map f (list_of_seq xs).
 Proof. by elim: xs=> //= x xs ->. Qed.
 
-Fixpoint all T (P : pred T) (xs : seq T) :=
+Fixpoint all T (P : T -> bool) (xs : seq T) :=
   if xs is x :: xs then P x && all P xs else true.
 
 End PolyType.

@@ -740,7 +740,7 @@ Import PolyType.
 
 Section FinType.
 
-Fixpoint allP T (P : pred T) (xs : seq T) :
+Fixpoint allP T (P : T -> bool) (xs : seq T) :
   all P xs -> forall i : fin (size xs), P (nth_fin i) :=
   match xs with
   | [::] =>
