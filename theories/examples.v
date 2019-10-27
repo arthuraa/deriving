@@ -22,15 +22,15 @@ Canonical tree_indType T :=
   Eval hnf in IndType _ _ (tree_indMixin T).
 
 Definition tree_eqMixin (T : eqType) :=
-  Eval simpl in [indEqMixin for tree T].
+  Eval simpl in [derive eqMixin for tree T].
 Canonical tree_eqType (T : eqType) :=
   Eval hnf in EqType (tree T) (tree_eqMixin T).
 Definition tree_choiceMixin (T : choiceType) :=
-  [indChoiceMixin for tree T].
+  [derive choiceMixin for tree T].
 Canonical tree_choiceType (T : choiceType) :=
   Eval hnf in ChoiceType (tree T) (tree_choiceMixin T).
 Definition tree_countMixin (T : countType) :=
-  [indCountMixin for tree T].
+  [derive countMixin for tree T].
 Canonical tree_countType (T : countType) :=
   Eval hnf in CountType (tree T) (tree_countMixin T).
 
@@ -46,17 +46,17 @@ Canonical three_indType :=
   Eval hnf in IndType _ _ three_indMixin.
 
 Definition three_eqMixin :=
-  Eval simpl in [indEqMixin for three].
+  Eval simpl in [derive eqMixin for three].
 Canonical three_eqType :=
   Eval hnf in EqType three three_eqMixin.
-Definition three_choiceMixin := [indChoiceMixin for three].
+Definition three_choiceMixin := [derive choiceMixin for three].
 Canonical three_choiceType :=
   Eval hnf in ChoiceType three three_choiceMixin.
-Definition three_countMixin := [indCountMixin for three].
+Definition three_countMixin := [derive countMixin for three].
 Canonical three_countType :=
   Eval hnf in CountType three three_countMixin.
 Definition three_finMixin :=
-  Eval simpl in [indFinMixin for three].
+  Eval simpl in [derive finMixin for three].
 Canonical three_finType :=
   Eval hnf in FinType three three_finMixin.
 

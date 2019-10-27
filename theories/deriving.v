@@ -542,7 +542,7 @@ Canonical IndF.functor.
 Canonical IndF.initAlgType.
 Coercion IndF.initAlgType : indType >-> initAlgType.
 
-Module IndEqType.
+Module DerEqType.
 
 Local Notation arg_class := (arg_class Equality.sort).
 Local Notation arg_inst := (arg_inst Equality.sort).
@@ -600,15 +600,6 @@ Qed.
 
 End EqType.
 
-Record type (F : functor) := Pack {
-  sort           : Type;
-  eq_class       : Equality.class_of sort;
-  init_alg_class : InitAlg.mixin_of sort F;
-}.
-
-Definition eqType F (T : type F) := Equality.Pack (eq_class T).
-Definition initAlgType F (T : type F) := InitAlg.Pack (init_alg_class T).
-
 Definition pack :=
   fun (T : Type) =>
   fun Σ (sT : indType Σ) & phant_id (Ind.sort sT) T =>
@@ -623,12 +614,30 @@ Definition pack :=
       end).
 
 Module Import Exports.
-Notation "[ 'indEqMixin' 'for' T ]" :=
+Notation "[ 'derive' 'eqMixin' 'for' T ]" :=
   (let m := @pack T _ _ id _ id _ id in
    ltac:(
      let x := eval hnf in m in
      exact x))
-  (at level 0, format "[ 'indEqMixin'  'for'  T ]") : form_scope.
+  (at level 0) : form_scope.
+End Exports.
+
+End DerEqType.
+
+Export DerEqType.Exports.
+
+Module InitAlgEqType.
+
+Record type (F : functor) := Pack {
+  sort           : Type;
+  eq_class       : Equality.class_of sort;
+  init_alg_class : InitAlg.mixin_of sort F;
+}.
+
+Definition eqType F (T : type F) := Equality.Pack (eq_class T).
+Definition initAlgType F (T : type F) := InitAlg.Pack (init_alg_class T).
+
+Module Import Exports.
 Notation initAlgEqType := type.
 Notation InitAlgEqType := Pack.
 Coercion sort : type >-> Sortclass.
@@ -638,9 +647,9 @@ Coercion initAlgType : type >-> InitAlg.type.
 Canonical initAlgType.
 End Exports.
 
-End IndEqType.
+End InitAlgEqType.
 
-Export IndEqType.Exports.
+Export InitAlgEqType.Exports.
 
 Section TreeOfInd.
 
@@ -738,15 +747,15 @@ Definition pack_tree_of_indK :=
   fun Σ (sT_ind : indType Σ) & phant_id (Ind.sort sT_ind) T =>
   @tree_of_coq_indK _ sT_ind.
 
-Notation "[ 'indChoiceMixin' 'for' T ]" :=
+Notation "[ 'derive' 'choiceMixin' 'for' T ]" :=
   (PcanChoiceMixin (@pack_tree_of_indK T _ _ id))
-  (at level 0, format "[ 'indChoiceMixin'  'for'  T ]") : form_scope.
+  (at level 0, format "[ 'derive'  'choiceMixin'  'for'  T ]") : form_scope.
 
-Notation "[ 'indCountMixin' 'for' T ]" :=
+Notation "[ 'derive' 'countMixin' 'for' T ]" :=
   (PcanCountMixin (@pack_tree_of_indK T _ _ id))
-  (at level 0, format "[ 'indCountMixin'  'for'  T ]") : form_scope.
+  (at level 0, format "[ 'derive' 'countMixin'  'for'  T ]") : form_scope.
 
-Module IndFinType.
+Module DerFinType.
 
 Import PolyType.
 
@@ -845,16 +854,16 @@ Definition pack :=
       end).
 
 Module Import Exports.
-Notation "[ 'indFinMixin' 'for' T ]" :=
+Notation "[ 'derive' 'finMixin' 'for' T ]" :=
   (let m := @pack T _ _ id _ _ id _ id _ id erefl in
    ltac:(
      let x := eval hnf in m in
      exact x))
-  (at level 0, format "[ 'indFinMixin'  'for'  T ]") : form_scope.
+  (at level 0, format "[ 'derive'  'finMixin'  'for'  T ]") : form_scope.
 End Exports.
 
-End IndFinType.
-Export IndFinType.Exports.
+End DerFinType.
+Export DerFinType.Exports.
 
 Section Instances.
 
@@ -905,19 +914,19 @@ Definition comparison_indMixin :=
 Canonical comparison_indType :=
   Eval hnf in IndType _ comparison comparison_indMixin.
 Definition comparison_eqMixin :=
-  Eval simpl in [indEqMixin for comparison].
+  Eval simpl in [derive eqMixin for comparison].
 Canonical comparison_eqType :=
   Eval hnf in EqType comparison comparison_eqMixin.
 Definition comparison_choiceMixin :=
-  Eval simpl in [indChoiceMixin for comparison].
+  Eval simpl in [derive choiceMixin for comparison].
 Canonical comparison_choiceType :=
   Eval hnf in ChoiceType comparison comparison_choiceMixin.
 Definition comparison_countMixin :=
-  Eval simpl in [indCountMixin for comparison].
+  Eval simpl in [derive countMixin for comparison].
 Canonical comparison_countType :=
   Eval hnf in CountType comparison comparison_countMixin.
 Definition comparison_finMixin :=
-  Eval simpl in [indFinMixin for comparison].
+  Eval simpl in [derive finMixin for comparison].
 Canonical comparison_finType :=
   Eval hnf in FinType comparison comparison_finMixin.
 
@@ -926,15 +935,15 @@ Definition positive_indMixin :=
 Canonical positive_indType :=
   Eval hnf in IndType _ positive positive_indMixin.
 Definition positive_eqMixin :=
-  Eval simpl in [indEqMixin for positive].
+  Eval simpl in [derive eqMixin for positive].
 Canonical positive_eqType :=
   Eval hnf in EqType positive positive_eqMixin.
 Definition positive_choiceMixin :=
-  Eval simpl in [indChoiceMixin for positive].
+  Eval simpl in [derive choiceMixin for positive].
 Canonical positive_choiceType :=
   Eval hnf in ChoiceType positive positive_choiceMixin.
 Definition positive_countMixin :=
-  Eval simpl in [indCountMixin for positive].
+  Eval simpl in [derive countMixin for positive].
 Canonical positive_countType :=
   Eval hnf in CountType positive positive_countMixin.
 
@@ -943,11 +952,11 @@ Definition bin_nat_indMixin :=
 Canonical bin_nat_indType :=
   Eval hnf in IndType _ N bin_nat_indMixin.
 Definition bin_nat_choiceMixin :=
-  Eval simpl in [indChoiceMixin for N].
+  Eval simpl in [derive choiceMixin for N].
 Canonical bin_nat_choiceType :=
   Eval hnf in ChoiceType N bin_nat_choiceMixin.
 Definition bin_nat_countMixin :=
-  Eval simpl in [indCountMixin for N].
+  Eval simpl in [derive countMixin for N].
 Canonical bin_nat_countType :=
   Eval hnf in CountType N bin_nat_countMixin.
 
@@ -956,15 +965,15 @@ Definition Z_indMixin :=
 Canonical Z_indType :=
   Eval hnf in IndType _ Z Z_indMixin.
 Definition Z_eqMixin :=
-  Eval simpl in [indEqMixin for Z].
+  Eval simpl in [derive eqMixin for Z].
 Canonical Z_eqType :=
   Eval hnf in EqType Z Z_eqMixin.
 Definition Z_choiceMixin :=
-  Eval simpl in [indChoiceMixin for Z].
+  Eval simpl in [derive choiceMixin for Z].
 Canonical Z_choiceType :=
   Eval hnf in ChoiceType Z Z_choiceMixin.
 Definition Z_countMixin :=
-  Eval simpl in [indCountMixin for Z].
+  Eval simpl in [derive countMixin for Z].
 Canonical Z_countType :=
   Eval hnf in CountType Z Z_countMixin.
 
@@ -973,19 +982,19 @@ Definition ascii_indMixin :=
 Canonical ascii_indType :=
   Eval hnf in IndType _ ascii ascii_indMixin.
 Definition ascii_eqMixin :=
-  Eval simpl in [indEqMixin for ascii].
+  Eval simpl in [derive eqMixin for ascii].
 Canonical ascii_eqType :=
   Eval hnf in EqType ascii ascii_eqMixin.
 Definition ascii_choiceMixin :=
-  Eval simpl in [indChoiceMixin for ascii].
+  Eval simpl in [derive choiceMixin for ascii].
 Canonical ascii_choiceType :=
   Eval hnf in ChoiceType ascii ascii_choiceMixin.
 Definition ascii_countMixin :=
-  Eval simpl in [indCountMixin for ascii].
+  Eval simpl in [derive countMixin for ascii].
 Canonical ascii_countType :=
   Eval hnf in CountType ascii ascii_countMixin.
 Definition ascii_finMixin :=
-  Eval simpl in [indFinMixin for ascii].
+  Eval simpl in [derive finMixin for ascii].
 Canonical ascii_finType :=
   Eval hnf in FinType ascii ascii_finMixin.
 
@@ -994,15 +1003,15 @@ Definition string_indMixin :=
 Canonical string_indType :=
   Eval hnf in IndType _ string string_indMixin.
 Definition string_eqMixin :=
-  Eval simpl in [indEqMixin for string].
+  Eval simpl in [derive eqMixin for string].
 Canonical string_eqType :=
   Eval hnf in EqType string string_eqMixin.
 Definition string_choiceMixin :=
-  Eval simpl in [indChoiceMixin for string].
+  Eval simpl in [derive choiceMixin for string].
 Canonical string_choiceType :=
   Eval hnf in ChoiceType string string_choiceMixin.
 Definition string_countMixin :=
-  Eval simpl in [indCountMixin for string].
+  Eval simpl in [derive countMixin for string].
 Canonical string_countType :=
   Eval hnf in CountType string string_countMixin.
 
