@@ -160,7 +160,7 @@ Canonical Rec_arg_inst :=
   ArgInst Rec tt.
 
 Canonical nth_fin_arg_inst Asi (i : fin (size Asi)) :=
-  ArgInst (nth_fin i) (nth_hlist (arity_inst_class Asi) i).
+  ArgInst (nth_fin i) (hnth (arity_inst_class Asi) i).
 
 Canonical nil_arity_inst :=
   ArityInst nil tt.
@@ -170,7 +170,7 @@ Canonical cons_arity_inst Ai Asi :=
             (arg_inst_class Ai ::: arity_inst_class Asi).
 
 Canonical nth_fin_arity_inst Σi (i : fin (size Σi)) :=
-  ArityInst (nth_fin i) (nth_hlist (sig_inst_class Σi) i).
+  ArityInst (nth_fin i) (hnth (sig_inst_class Σi) i).
 
 Canonical nil_sig_inst :=
   SigInst nil tt.
@@ -269,8 +269,8 @@ Definition recursor_eq Σ T (Cs : constructors Σ T) (r : recursor Σ T) :=
   all_hlist (fun bs : hlist (branch T S) Σ =>
   all_fin   (fun i  : fin (size Σ) =>
   all_hlist (fun xs : hlist (type_of_arg T) (nth_fin i) =>
-    r S bs (nth_hlist Cs i xs) =
-    hfun_of_branch (nth_hlist bs i)
+    r S bs (hnth Cs i xs) =
+    hfun_of_branch (hnth bs i)
                    (hmap (type_of_arg_map (fun x => Datatypes.pair x (r S bs x))) xs)))).
 
 Definition destructor Σ T :=
@@ -281,7 +281,7 @@ Definition destructor_eq Σ T (Cs : constructors Σ T) (d : destructor Σ T) :=
   all_hlist (fun bs : hlist (fun ks => hfun (type_of_arg T) ks S) Σ =>
   all_fin   (fun i  : fin (size Σ) =>
   all_hlist (fun xs : hlist (type_of_arg T) (nth_fin i) =>
-    d S bs (nth_hlist Cs i xs) = nth_hlist bs i xs))).
+    d S bs (hnth Cs i xs) = hnth bs i xs))).
 
 Definition destructor_of_recursor Σ T (r : recursor Σ T) : destructor Σ T :=
   fun S => hcurry (
@@ -469,7 +469,7 @@ Qed.
 Variable T : indType Σ.
 
 Definition Roll (x : F T) : T :=
-  nth_hlist (@Ind.Cons _ _ T) (constr x) (args x).
+  hnth (@Ind.Cons _ _ T) (constr x) (args x).
 
 Definition branches_of_fun S (body : F (T * S) -> S) :=
   hlist_of_fun (fun i =>
@@ -495,7 +495,7 @@ move/all_hlistP/(_ (branches_of_fun f)).
 move/all_finP/(_ i).
 move/all_hlistP/(_ args).
 rewrite /rec /Roll => -> /=.
-by rewrite /= nth_hlist_of_fun Ind.branch_of_hfunK hcurryK.
+by rewrite /= hnth_of_fun Ind.branch_of_hfunK hcurryK.
 Qed.
 
 Lemma caseE S f a : case f (Roll a) = f a :> S.
@@ -506,7 +506,7 @@ move/(_ (hlist_of_fun (fun i => hcurry (fun l => f (Cons i l))))).
 move/all_finP/(_ i).
 move/all_hlistP/(_ args).
 rewrite /case /Roll => -> /=.
-by rewrite nth_hlist_of_fun hcurryK.
+by rewrite hnth_of_fun hcurryK.
 Qed.
 
 Lemma indP P :
@@ -515,16 +515,16 @@ Lemma indP P :
 Proof.
 rewrite /Roll; case: (T) P => S [/= Cs _ _ _ _ indP] P.
 have {}indP:
-    (forall i, Ind.ind_branch P (nth_hlist Cs i)) ->
+    (forall i, Ind.ind_branch P (hnth Cs i)) ->
     (forall x, P x).
   elim: (Σ) Cs {indP} (indP P) => //= As Σ' IH [C Cs] /= indP hyps.
   move/indP/IH: (hyps None); apply=> i; exact: (hyps (Some i)).
 move=> hyps; apply: indP=> j.
 have {}hyps:
   forall args : hlist (type_of_arg {x : S & P x}) (nth_fin j),
-    P (nth_hlist Cs j (hmap (type_of_arg_map tag) args)).
+    P (hnth Cs j (hmap (type_of_arg_map tag) args)).
   by move=> args; move: (hyps (Cons j args)).
-elim: (nth_fin j) (nth_hlist Cs j) hyps=> [|[R|] As IH] //=.
+elim: (nth_fin j) (hnth Cs j) hyps=> [|[R|] As IH] //=.
 - by move=> ? /(_ tt).
 - move=> C hyps x; apply: IH=> args; exact: (hyps (x ::: args)).
 - move=> constr hyps x H; apply: IH=> args.
@@ -570,7 +570,7 @@ Let eq_op : T -> T -> bool :=
           match leq_fin (IndF.constr args2) (IndF.constr args1) with
           | inl e =>
             eq_op_branch
-              (nth_hlist (sig_inst_class Σ) (IndF.constr args1))
+              (hnth (sig_inst_class Σ) (IndF.constr args1))
               (IndF.args args1)
               (cast (hlist (type_of_arg T) \o @nth_fin _ _) e (IndF.args args2))
           | inr _ => false
@@ -588,7 +588,7 @@ case: xi / e xargs {le} => /= xargs.
 apply/(@iffP (hmap (type_of_arg_map tag) xargs = yargs)); first last.
 - by move=> /Roll_inj /IndF.inj.
 - by move=> <-.
-elim/arity_ind: {yi} _ / (nth_hlist _ _) xargs yargs=> //=.
+elim/arity_ind: {yi} _ / (hnth _ _) xargs yargs=> //=.
 - by move=> _ []; constructor.
 - move=> S As cAs IH [x xs] [y ys] /=.
   apply/(iffP andP)=> [[/eqP ? /IH ?]|[/eqP ? /IH]];
@@ -794,7 +794,7 @@ Definition enum_branch :=
 
 Definition enum_ind :=
   flatten [seq [seq Roll (IndF.Cons args)
-               | args <- enum_branch (nth_hlist (sig_inst_class Σ) i) (allP not_rec i)]
+               | args <- enum_branch (hnth (sig_inst_class Σ) i) (allP not_rec i)]
           | i <- list_of_seq (enum_fin (size Σ))].
 
 Lemma enum_indP : Finite.axiom enum_ind.
@@ -813,7 +813,7 @@ have [<- {j}|ne] /= := altP (i =P j).
     move=> ys; rewrite /P /=; apply/(iffP idP); last by move=> ->.
     by move=> /eqP/Roll_inj/IndF.inj ->.
   move: P PP.
-  elim/arity_ind: {i} _ / (nth_hlist _ i) xs (allP _ _)=> //=.
+  elim/arity_ind: {i} _ / (hnth _ i) xs (allP _ _)=> //=.
     by move=> [] _ P /(_ tt); case.
   move=> S As cAs IH [x xs] As_not_rec P PP.
   elim: (Finite.enum S) (enumP x)=> //= y ys IHys.

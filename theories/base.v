@@ -235,10 +235,10 @@ Variables (T : Type).
 
 Definition ilist n := iter n (cell T) unit.
 
-Fixpoint nth_ilist n : ilist n -> fin n -> T :=
+Fixpoint inth n : ilist n -> fin n -> T :=
   match n return ilist n -> fin n -> T with
   | 0    => fun l (i : void) => match i with end
-  | n.+1 => fun l i => if i is Some j then nth_ilist l.(tl) j else l.(hd)
+  | n.+1 => fun l i => if i is Some j then inth l.(tl) j else l.(hd)
   end.
 
 Fixpoint ilist_of_fun n : forall (f : fin n -> T), ilist n :=
@@ -247,10 +247,10 @@ Fixpoint ilist_of_fun n : forall (f : fin n -> T), ilist n :=
   | n.+1 => fun f => f None ::: ilist_of_fun (fun i => f (Some i))
   end.
 
-Fixpoint nth_ilist_of_fun n : forall (f : fin n -> T) (i : fin n), nth_ilist (ilist_of_fun f) i = f i :=
+Fixpoint inth_of_fun n : forall (f : fin n -> T) (i : fin n), inth (ilist_of_fun f) i = f i :=
   match n with
   | 0    => fun f i => match i with end
-  | n.+1 => fun f i => if i is Some j then nth_ilist_of_fun (fun j => f (Some j)) j else erefl
+  | n.+1 => fun f i => if i is Some j then inth_of_fun (fun j => f (Some j)) j else erefl
   end.
 
 Fixpoint ilist_of_seq s : ilist (size s) :=
@@ -363,12 +363,12 @@ Fixpoint hcat (ix1 ix2 : seq I) :
   | i :: ix1 => fun l1 l2 => l1.(hd) ::: hcat l1.(tl) l2
   end.
 
-Fixpoint nth_hlist (ix : seq I) :
+Fixpoint hnth (ix : seq I) :
     hlist ix -> forall n : fin (size ix), T_ (nth_fin n) :=
   match ix with
   | [::]    => fun l n => match n with end
   | i :: ix => fun l n => match n with
-                          | Some n => nth_hlist l.(tl) n
+                          | Some n => hnth l.(tl) n
                           | None   => l.(hd)
                           end
   end.
@@ -377,8 +377,8 @@ Fixpoint nth_hlist (ix : seq I) :
 Fixpoint hlist_of_fun (f : forall i, T_ i) ix : hlist ix :=
   if ix is i :: ix then (f i, hlist_of_fun f ix) else tt.
 
-Lemma nth_hlist_of_fun f ix n :
-  nth_hlist (hlist_of_fun f ix) n = f (nth_fin n).
+Lemma hnth_of_fun f ix n :
+  hnth (hlist_of_fun f ix) n = f (nth_fin n).
 Proof. elim: ix n=> /= [|i ix IH] // [n|]; by rewrite ?IH. Qed.
 *)
 
@@ -456,7 +456,7 @@ Fixpoint hlist_of_fun ix : forall (f : forall n : fin (size ix), T_ (nth_fin n))
   | i :: ix => fun f => f None ::: hlist_of_fun (fun n => f (Some n))
   end.
 
-Lemma nth_hlist_of_fun ix f n : nth_hlist (@hlist_of_fun ix f) n = f n.
+Lemma hnth_of_fun ix f n : hnth (@hlist_of_fun ix f) n = f n.
 Proof.
 by elim: ix f n=> [|i ix IH] //= f [n|] //; rewrite IH.
 Qed.
@@ -514,7 +514,7 @@ Qed.
 Definition hmap_in I (T_ S_ : I -> Type) ix :
   (forall n : fin (size ix), T_ (nth_fin n) -> S_ (nth_fin n)) ->
   hlist T_ ix -> hlist S_ ix :=
-  fun f l => hlist_of_fun (fun n => f n (nth_hlist l n)).
+  fun f l => hlist_of_fun (fun n => f n (hnth l n)).
 
 Fixpoint hpmap_in I (T_ S_ : I -> Type) ix :
   (forall n : fin (size ix), T_ (nth_fin n) -> option (S_ (nth_fin n))) ->
@@ -540,8 +540,8 @@ rewrite fK (IH (fun n => f (Some n)) (fun n => g (Some n))) //.
 move=> n; exact: (fK (Some n)).
 Qed.
 
-Lemma nth_hlist_hmap I (T_ S_ : I -> Type) (f : forall i, T_ i -> S_ i) ix :
-  forall (l : hlist T_ ix) i, nth_hlist (hmap f l) i = f _ (nth_hlist l i).
+Lemma hnth_hmap I (T_ S_ : I -> Type) (f : forall i, T_ i -> S_ i) ix :
+  forall (l : hlist T_ ix) i, hnth (hmap f l) i = f _ (hnth l i).
 Proof.
 by elim: ix=> [[] []|i ix IH] /= [x xs] [j|] //=.
 Qed.
