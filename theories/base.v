@@ -112,6 +112,10 @@ Fixpoint nth_fin T (xs : seq T) : fin (size xs) -> T :=
   | x :: xs => fun n => if n is Some n then nth_fin n else x
   end.
 
+Definition fnth T S (f : T -> S) (xs : seq T) (i : fin (size xs)) : S :=
+  f (nth_fin i).
+Arguments fnth {T S} f xs i.
+
 Fixpoint leq_fin n : forall i j : fin n, (i = j) + bool :=
   match n with
   | 0    => fun i => match i with end
@@ -385,69 +389,58 @@ End Hsum.
 
 Section Hlist.
 
-Implicit Types (T S : Type).
-
-Fixpoint hlist n : ilist Type n -> Type :=
+Fixpoint hlist n : (fin n -> Type) -> Type :=
   match n with
-  | 0    => fun Ts => unit
-  | n.+1 => fun Ts => cell Ts.(hd) (hlist Ts.(tl))
+  | 0    => fun T_ => unit
+  | n.+1 => fun T_ => cell (T_ None) (hlist (fun i => T_ (Some i)))
   end.
 
-Fixpoint hfun n : ilist Type n -> Type -> Type :=
+Fixpoint hfun n : (fin n -> Type) -> Type -> Type :=
   match n with
-  | 0    => fun Ts S => S
-  | n.+1 => fun Ts S => Ts.(hd) -> hfun Ts.(tl) S
+  | 0    => fun T_ S => S
+  | n.+1 => fun T_ S => T_ None -> hfun (fun i => T_ (Some i)) S
   end.
 
-Fixpoint happ n : forall (Ts : ilist Type n) S, hfun Ts S -> hlist Ts -> S :=
+Fixpoint happ n : forall (T_ : fin n -> Type) S, hfun T_ S -> hlist T_ -> S :=
   match n with
-  | 0    => fun Ts S f xs => f
-  | n.+1 => fun Ts S f xs => happ (f xs.(hd)) xs.(tl)
+  | 0    => fun T_ S f xs => f
+  | n.+1 => fun T_ S f xs => happ (f xs.(hd)) xs.(tl)
   end.
 
-Fixpoint hcurry n : forall (Ts : ilist Type n) S, (hlist Ts -> S) -> hfun Ts S :=
+Fixpoint hcurry n : forall (T_ : fin n -> Type) S, (hlist T_ -> S) -> hfun T_ S :=
   match n with
-  | 0    => fun Ts S f => f tt
-  | n.+1 => fun Ts S f => fun x => hcurry (fun xs => f (x ::: xs))
+  | 0    => fun T_ S f => f tt
+  | n.+1 => fun T_ S f => fun x => hcurry (fun xs => f (x ::: xs))
   end.
 
-Lemma hcurryK n (Ts : ilist Type n) S (f : hlist Ts -> S) xs : happ (hcurry f) xs = f xs.
+Lemma hcurryK n (T_ : fin n -> Type) S (f : hlist T_ -> S) xs : happ (hcurry f) xs = f xs.
 Proof.
-by elim: n Ts S f xs=> [??? [] //|n IH] /= [??] /= ??[??]; rewrite IH.
+by elim: n T_ S f xs=> [??? [] //|n IH] /= ? /= ??[??]; rewrite IH.
 Qed.
 
-Fixpoint hnth n : forall (Ts : ilist Type n), hlist Ts -> forall i, inth Ts i :=
+Fixpoint hnth n : forall (T_ : fin n -> Type), hlist T_ -> forall i, T_ i :=
   match n with
-  | 0    => fun Ts xs i => match i with end
-  | n.+1 => fun Ts xs i => match i with
+  | 0    => fun T_ xs i => match i with end
+  | n.+1 => fun T_ xs i => match i with
                            | Some j => hnth xs.(tl) j
                            | None   => xs.(hd)
                            end
   end.
 
-(*
-Fixpoint hlist_of_fun (f : forall i, T_ i) ix : hlist ix :=
-  if ix is i :: ix then (f i, hlist_of_fun f ix) else tt.
-
-Lemma hnth_of_fun f ix n :
-  hnth (hlist_of_fun f ix) n = f (nth_fin n).
-Proof. elim: ix n=> /= [|i ix IH] // [n|]; by rewrite ?IH. Qed.
-*)
-
 Fixpoint seq_of_hlist n S :
-  forall (Ts : ilist Type n),
-    (forall i, inth Ts i -> S) -> hlist Ts -> seq S :=
+  forall (T_ : fin n -> Type),
+    (forall i, T_ i -> S) -> hlist T_ -> seq S :=
   match n with
-  | 0    => fun Ts f xs => [::]
-  | n.+1 => fun Ts f xs => f None xs.(hd) :: seq_of_hlist (fun i => f (Some i)) xs.(tl)
+  | 0    => fun T_ f xs => [::]
+  | n.+1 => fun T_ f xs => f None xs.(hd) :: seq_of_hlist (fun i => f (Some i)) xs.(tl)
   end.
 
 Fixpoint hlist_of_seq n S :
-  forall (Ts : ilist Type n),
-    (forall i, S -> option (inth Ts i)) -> seq S -> option (hlist Ts) :=
+  forall (T_ : fin n -> Type),
+    (forall i, S -> option (T_ i)) -> seq S -> option (hlist T_) :=
   match n with
-  | 0    => fun Ts f xs => Some tt
-  | n.+1 => fun Ts f xs =>
+  | 0    => fun T_ f xs => Some tt
+  | n.+1 => fun T_ f xs =>
     match xs with
     | [::] => None
     | x :: xs =>
@@ -458,45 +451,45 @@ Fixpoint hlist_of_seq n S :
     end
   end.
 
-Lemma seq_of_hlistK n S (Ts : ilist Type n)
-  (f : forall i, inth Ts i -> S)
-  (g : forall i, S -> option (inth Ts i)) :
+Lemma seq_of_hlistK n S (T_ : fin n -> Type)
+  (f : forall i, T_ i -> S)
+  (g : forall i, S -> option (T_ i)) :
   (forall i, pcancel (f i) (g i)) ->
   pcancel (seq_of_hlist f) (hlist_of_seq g).
 Proof.
-elim: n Ts f g=> [???? []|n IH] //= [??] /= f g fK [??] /=.
+elim: n T_ f g=> [???? []|n IH] //= ? /= f g fK [??] /=.
 by rewrite fK IH // => i ?; rewrite fK.
 Qed.
 
-Lemma hlist_of_seq_in_map
-  n S R (Ts : ilist Type n)
-  (f : forall i, R -> option (inth Ts i)) (g : S -> R) (xs : seq S) :
+Lemma hlist_of_seq_map
+  n S R (T_ : fin n -> Type)
+  (f : forall i, R -> option (T_ i)) (g : S -> R) (xs : seq S) :
   hlist_of_seq f (map g xs) = hlist_of_seq (fun i x => f i (g x)) xs.
 Proof.
-elim: n Ts f xs=> [??|n IH] //= [??] f [] //= x xs.
+elim: n T_ f xs=> [??|n IH] //= ? f [] //= x xs.
 by case: (f None (g x))=> //= ?; rewrite IH.
 Qed.
 
-Fixpoint hlist_of_fun n : forall (Ts : ilist Type n) (f : forall i, inth Ts i), hlist Ts :=
+Fixpoint hlist_of_fun n : forall (T_ : fin n -> Type) (f : forall i, T_ i), hlist T_ :=
   match n with
-  | 0    => fun Ts f => tt
-  | n.+1 => fun Ts f => f None ::: hlist_of_fun (fun i => f (Some i))
+  | 0    => fun T_ f => tt
+  | n.+1 => fun T_ f => f None ::: hlist_of_fun (fun i => f (Some i))
   end.
 
-Lemma hnth_of_fun n Ts f i : hnth (@hlist_of_fun n Ts f) i = f i.
+Lemma hnth_of_fun n T_ f i : hnth (@hlist_of_fun n T_ f) i = f i.
 Proof.
-by elim: n Ts f i=> [?? []|n IH] [T Ts] f /= [i|] //=; rewrite IH.
+by elim: n T_ f i=> [?? []|n IH] T_ f /= [i|] //=; rewrite IH.
 Qed.
 
-Fixpoint all_hlist n : forall Ts, (@hlist n Ts -> Prop) -> Prop :=
+Fixpoint all_hlist n : forall T_, (@hlist n T_ -> Prop) -> Prop :=
   match n with
-  | 0    => fun Ts P => P tt
-  | n.+1 => fun Ts P => forall x, all_hlist (fun xs => P (x ::: xs))
+  | 0    => fun T_ P => P tt
+  | n.+1 => fun T_ P => forall x, all_hlist (fun xs => P (x ::: xs))
   end.
 
-Lemma all_hlistP n Ts P : @all_hlist n Ts P <-> (forall xs, P xs).
+Lemma all_hlistP n T_ P : @all_hlist n T_ P <-> (forall xs, P xs).
 Proof.
-elim: n Ts P=> /= [??|n IH [T Ts] P /=].
+elim: n T_ P=> /= [??|n IH T_ P /=].
   split; last exact; by move=> ? [].
 split.
 - by move=> H [x xs]; move/(_ x)/IH in H.
@@ -504,39 +497,39 @@ split.
 Qed.
 
 Fixpoint hmap n :
-  forall (Ts Ss : ilist Type n) (f : forall i, inth Ts i -> inth Ss i), hlist Ts -> hlist Ss :=
+  forall (T_ S_ : fin n -> Type) (f : forall i, T_ i -> S_ i), hlist T_ -> hlist S_ :=
   match n with
   | 0    => fun _ _ _ _  => tt
   | n.+1 => fun _ _ f xs => f None xs.(hd) ::: hmap (fun j => f (Some j)) xs.(tl)
   end.
 
-Lemma hmap_eq n (Ts Ss : ilist Type n) (f g : forall i, inth Ts i -> inth Ss i) :
+Lemma hmap_eq n (T_ S_ : fin n -> Type) (f g : forall i, T_ i -> S_ i) :
   (forall i, f i =1 g i) ->
   @hmap _ _ _ f =1 @hmap _ _ _ g.
 Proof.
-elim: n Ts Ss f g=> [//|n IH] /= [T Ts] [S Ss] /= f g efg [x xs].
+elim: n T_ S_ f g=> [//|n IH] /= T_ S_ /= f g efg [x xs].
 by rewrite efg (IH _ _ _ _ (fun j => efg (Some j))).
 Qed.
 
-Lemma hmap1 n (Ts : ilist Type n) (xs : hlist Ts) : hmap (fun i => id) xs = xs.
+Lemma hmap1 n (T_ : fin n -> Type) (xs : hlist T_) : hmap (fun i => id) xs = xs.
 Proof.
-by elim: n Ts xs=> [_ [] //|n IH] /= [T Ts] [x xs] /=; rewrite IH.
+by elim: n T_ xs=> [_ [] //|n IH] /= T_ [x xs] /=; rewrite IH.
 Qed.
 
 Lemma hmap_comp
-  n (Ts Ss Rs : ilist Type n)
-  (f : forall i, inth Ts i -> inth Ss i)
-  (g : forall i, inth Ss i -> inth Rs i)
-  (xs : hlist Ts) :
+  n (T_ S_ R_ : fin n -> Type)
+  (f : forall i, T_ i -> S_ i)
+  (g : forall i, S_ i -> R_ i)
+  (xs : hlist T_) :
   hmap g (hmap f xs) = hmap (fun i => g i \o f i) xs.
 Proof.
-by elim: n Ts Ss Rs f g xs=> //= n IH [??] [??] [??] /= ?? [??] /=; rewrite IH.
+by elim: n T_ S_ R_ f g xs=> //= n IH ??? /= ?? [??] /=; rewrite IH.
 Qed.
 
 Fixpoint hpmap n :
-  forall (Ts Ss : ilist Type n),
-    (forall i, inth Ts i -> option (inth Ss i)) ->
-    hlist Ts -> option (hlist Ss) :=
+  forall (T_ S_ : fin n -> Type),
+    (forall i, T_ i -> option (S_ i)) ->
+    hlist T_ -> option (hlist S_) :=
   match n with
   | 0 => fun _ _ _ _ => Some tt
   | n.+1 => fun _ _ f xs =>
@@ -547,29 +540,29 @@ Fixpoint hpmap n :
     else None
   end.
 
-Lemma hmap_pK n (Ts Ss : ilist Type n)
-  (f : forall i, inth Ts i -> inth Ss i)
-  (g : forall i, inth Ss i -> option (inth Ts i)) :
+Lemma hmap_pK n (T_ S_ : fin n -> Type)
+  (f : forall i, T_ i -> S_ i)
+  (g : forall i, S_ i -> option (T_ i)) :
   (forall i, pcancel (f i) (g i)) -> pcancel (hmap f) (hpmap g).
 Proof.
-elim: n Ts Ss f g=> [????? [] //|n IH] /= [T Ts] [S Ss] /= f g fgK [x xs] /=.
+elim: n T_ S_ f g=> [????? [] //|n IH] /= ?? /= f g fgK [x xs] /=.
 rewrite fgK /= IH // => i; exact: (fgK (Some i)).
 Qed.
 
-Lemma hnth_hmap n (Ts Ss : ilist Type n)
-  (f : forall i, inth Ts i -> inth Ss i) :
-  forall (xs : hlist Ts) i, hnth (hmap f xs) i = f _ (hnth xs i).
+Lemma hnth_hmap n (T_ S_ : fin n -> Type)
+  (f : forall i, T_ i -> S_ i) :
+  forall (xs : hlist T_) i, hnth (hmap f xs) i = f _ (hnth xs i).
 Proof.
-elim: n Ts Ss f=> [//|/= n IH] [T Ts] [S Ss] /= f [x xs] [i|//].
+elim: n T_ S_ f=> [//|/= n IH] T_ S_ /= f [x xs] [i|//].
 by rewrite IH.
 Qed.
 
 Fixpoint hzip n :
-  forall (Ts Ss : ilist Type n),
-    hlist Ts -> hlist Ss -> hlist (imap (fun TS => TS.1 * TS.2)%type (izip Ts Ss)) :=
+  forall (T_ S_ : fin n -> Type),
+    hlist T_ -> hlist S_ -> hlist (fun i => T_ i * S_ i)%type :=
   match n with
-  | 0    => fun Ts Ss xs ys => tt
-  | n.+1 => fun Ts Ss xs ys => (xs.(hd), ys.(hd)) ::: hzip xs.(tl) ys.(tl)
+  | 0    => fun T_ S_ xs ys => tt
+  | n.+1 => fun T_ S_ xs ys => (xs.(hd), ys.(hd)) ::: hzip xs.(tl) ys.(tl)
   end.
 
 (*
@@ -604,4 +597,5 @@ Fixpoint hfun_eq I (T_ S_ : I -> Type) (e : forall i, T_ i = S_ i) ix R :
 
 End Hlist.
 
+Arguments fnth T S f xs i /.
 Coercion happ : hfun >-> Funclass.

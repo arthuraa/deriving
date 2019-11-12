@@ -140,13 +140,13 @@ Arguments ArgInst : clear implicits.
 
 Record arity_inst := ArityInst {
   arity_inst_sort  :> arity;
-  arity_inst_class :  hlist arg_class arity_inst_sort;
+  arity_inst_class :  hlist (fnth arg_class arity_inst_sort);
 }.
 Arguments ArityInst : clear implicits.
 
 Record sig_inst := SigInst {
   sig_inst_sort  :> signature;
-  sig_inst_class :  hlist (hlist arg_class) sig_inst_sort;
+  sig_inst_class :  hlist (fnth (fun As => hlist (fnth arg_class As)) sig_inst_sort);
 }.
 Arguments SigInst : clear implicits.
 
@@ -183,7 +183,7 @@ Definition arity_rec (T : arity -> Type)
   (Tnil    : T [::])
   (TNonRec : forall (S : K) (As : arity), T As -> T (NonRec (sort S) :: As))
   (TRec    : forall         (As : arity), T As -> T (Rec :: As)) :=
-  fix arity_rec As : hlist arg_class As -> T As :=
+  fix arity_rec As : hlist (fnth arg_class As) -> T As :=
     match As with
     | [::]               => fun cAs =>
       Tnil
@@ -194,7 +194,7 @@ Definition arity_rec (T : arity -> Type)
       TRec As (arity_rec As cAs.(tl))
     end.
 
-Lemma arity_ind (T : forall As, hlist arg_class As -> Type)
+Lemma arity_ind (T : forall As, hlist (fnth arg_class As) -> Type)
   (Tnil : T [::] tt)
   (TNonRec : forall S As cAs,
       T As cAs -> T (NonRec (sort S) :: As) (exist _ S erefl ::: cAs))
@@ -203,7 +203,7 @@ Lemma arity_ind (T : forall As, hlist arg_class As -> Type)
   As cAs : T As cAs.
 Proof.
 elim: As cAs=> [|[Ssort|] As IH] => /= [[]|[[S e] cAs]|[[] cAs]] //.
-  by case: Ssort / e; apply: TNonRec.
+  by case: Ssort / e cAs=> ?; apply: TNonRec.
 by apply: TRec.
 Qed.
 
@@ -233,7 +233,7 @@ Implicit Types (A : arg) (As : arity) (Σ : signature) (T S : Type).
 Import PolyType.
 
 Definition constructors Σ T :=
-  hlist (fun As => hfun (type_of_arg T) As T) Σ.
+  hlist (fnth (fun As => hfun (fnth (type_of_arg T) As) T) Σ).
 
 Fixpoint branch T S As : Type :=
   match As with
@@ -242,10 +242,10 @@ Fixpoint branch T S As : Type :=
   | [::]           => S
   end.
 
-Definition recursor Σ T := forall S, hfun (branch T S) Σ (T -> S).
+Definition recursor Σ T := forall S, hfun (fnth (branch T S) Σ) (T -> S).
 
 Fixpoint branch_of_hfun T S As :
-  hfun (type_of_arg (Datatypes.prod T S)) As S -> branch T S As :=
+  hfun (fnth (type_of_arg (Datatypes.prod T S)) As) S -> branch T S As :=
   match As with
   | NonRec R :: As => fun f x   => branch_of_hfun (f x)
   | Rec      :: As => fun f x y => branch_of_hfun (f (Datatypes.pair x y))
@@ -253,7 +253,7 @@ Fixpoint branch_of_hfun T S As :
   end.
 
 Fixpoint hfun_of_branch T S As :
-  branch T S As -> hfun (type_of_arg (Datatypes.prod T S)) As S :=
+  branch T S As -> hfun (fnth (type_of_arg (Datatypes.prod T S)) As) S :=
   match As with
   | NonRec R :: As => fun f x => hfun_of_branch (f x)
   | Rec      :: As => fun f p => hfun_of_branch (f (Datatypes.fst p) (Datatypes.snd p))
@@ -266,32 +266,32 @@ Proof. by elim: As f xs=> [|[R|] As IH] f //= [[x y] xs]. Qed.
 
 Definition recursor_eq Σ T (Cs : constructors Σ T) (r : recursor Σ T) :=
   forall S,
-  all_hlist (fun bs : hlist (branch T S) Σ =>
+  all_hlist (fun bs : hlist (fnth (branch T S) Σ) =>
   all_fin   (fun i  : fin (size Σ) =>
-  all_hlist (fun xs : hlist (type_of_arg T) (nth_fin i) =>
+  all_hlist (fun xs : hlist (fnth (type_of_arg T) (nth_fin i)) =>
     r S bs (hnth Cs i xs) =
     hfun_of_branch (hnth bs i)
-                   (hmap (type_of_arg_map (fun x => Datatypes.pair x (r S bs x))) xs)))).
+                   (hmap (fun i x => type_of_arg_map (fun x => Datatypes.pair x (r S bs x)) x) xs)))).
 
 Definition destructor Σ T :=
-  forall S, hfun (fun As => hfun (type_of_arg T) As S) Σ (T -> S).
+  forall S, hfun (fnth (fun As => hfun (fnth (type_of_arg T) As) S) Σ) (T -> S).
 
 Definition destructor_eq Σ T (Cs : constructors Σ T) (d : destructor Σ T) :=
   forall S,
-  all_hlist (fun bs : hlist (fun ks => hfun (type_of_arg T) ks S) Σ =>
+  all_hlist (fun bs : hlist (fnth (fun ks => hfun (fnth (type_of_arg T) ks) S) Σ) =>
   all_fin   (fun i  : fin (size Σ) =>
-  all_hlist (fun xs : hlist (type_of_arg T) (nth_fin i) =>
+  all_hlist (fun xs : hlist (fnth (type_of_arg T) (nth_fin i)) =>
     d S bs (hnth Cs i xs) = hnth bs i xs))).
 
 Definition destructor_of_recursor Σ T (r : recursor Σ T) : destructor Σ T :=
   fun S => hcurry (
-  fun bs : hlist (fun As => hfun (type_of_arg T) As S) Σ =>
-    r S (hmap (fun As (b : hfun (type_of_arg T) As S) =>
+  fun bs : hlist (fnth (fun As => hfun (fnth (type_of_arg T) As) S) Σ) =>
+    r S (hmap (fun _ (b : hfun (fnth (type_of_arg T) _) S) =>
            branch_of_hfun
-             (hcurry (fun xs => b (hmap (type_of_arg_map Datatypes.fst) xs)))) bs)
+             (hcurry (fun xs => b (hmap (fun _ x => type_of_arg_map Datatypes.fst x) xs)))) bs)
 ).
 
-Fixpoint ind_branch T (P : T -> Type) As : hfun (type_of_arg T) As T -> Type :=
+Fixpoint ind_branch T (P : T -> Type) As : hfun (fnth (type_of_arg T) As) T -> Type :=
   match As with
   | NonRec R :: As => fun C => forall x : R,        ind_branch P (C x)
   | Rec      :: As => fun C => forall x : T, P x -> ind_branch P (C x)
@@ -349,7 +349,7 @@ Import PolyType.
 
 Class infer_arity
   T (P : T -> Type)
-  (branchT : Type) (As : arity) (C : hfun (type_of_arg T) As T) : Type.
+  (branchT : Type) (As : arity) (C : hfun (fnth (type_of_arg T) As) T) : Type.
 Arguments infer_arity : clear implicits.
 
 Global Instance infer_arity_end
@@ -359,14 +359,14 @@ Defined.
 
 Global Instance infer_arity_rec
   T (P : T -> Type)
-  (branchT : T -> Type) (As : arity) (C : T -> hfun (type_of_arg T) As T)
+  (branchT : T -> Type) (As : arity) (C : T -> hfun (fnth (type_of_arg T) As) T)
   (_ : forall x, infer_arity T P (branchT x) As (C x)) :
   infer_arity T P (forall x, P x -> branchT x) (Rec :: As) C.
 Defined.
 
 Global Instance infer_arity_nonrec
   T (P : T -> Type)
-  S (branchT : S -> Type) As (C : S -> hfun (type_of_arg T) As T)
+  S (branchT : S -> Type) As (C : S -> hfun (fnth (type_of_arg T) As) T)
   (_ : forall x, infer_arity T P (branchT x) As (C x)) :
   infer_arity T P (forall x, branchT x) (NonRec S :: As) C.
 Defined.
@@ -426,7 +426,7 @@ Notation size := PolyType.size.
 
 Record fobj T := Cons {
   constr : fin (size Σ);
-  args : hlist (type_of_arg T) (nth_fin constr)
+  args : hlist (fnth (type_of_arg T) (nth_fin constr))
 }.
 
 Arguments Cons {_} _ _.
@@ -434,34 +434,35 @@ Arguments Cons {_} _ _.
 Local Notation F := fobj.
 
 Definition fmap T S (f : T -> S) (x : F T) : F S :=
-  Cons (constr x) (hmap (type_of_arg_map f) (args x)).
+  Cons (constr x) (hmap (fun _ x => type_of_arg_map f x) (args x)).
 
 Lemma fmap_eq T S (f g : T -> S) : f =1 g -> fmap f =1 fmap g.
 Proof.
-by move=> e [i args]; congr Cons; apply: hmap_eq; case.
+move=> e [i xs]; congr Cons; apply: hmap_eq=> /= j x.
+by case: (nth_fin j) x.
 Qed.
 
 Lemma fmap1 T : @fmap T T id =1 id.
 Proof.
 move=> [i args] /=; congr Cons; rewrite -[RHS]hmap1.
-by apply: hmap_eq; case.
+apply: hmap_eq=> /= j x; by case: (nth_fin j) x.
 Qed.
 
 Lemma fmap_comp T S R (f : T -> S) (g : S -> R) :
   fmap (g \o f) =1 fmap g \o fmap f.
 Proof.
 move=> [i args] /=; congr Cons; rewrite /= hmap_comp.
-by apply: hmap_eq; case.
+apply: hmap_eq=> /= j x; by case: (nth_fin j) x.
 Qed.
 
 Canonical functor := Functor fmap_eq fmap1 fmap_comp.
 
-Lemma inj T (i : fin (size Σ)) (a b : hlist (type_of_arg T) (nth_fin i)) :
+Lemma inj T (i : fin (size Σ)) (a b : hlist (fnth (type_of_arg T) (nth_fin i))) :
   Cons i a = Cons i b -> a = b.
 Proof.
 pose get x :=
   if leq_fin (constr x) i is inl e then
-    cast (fun j : fin (size Σ) => hlist (type_of_arg T) (nth_fin j)) e (args x)
+    cast (fun j : fin (size Σ) => hlist (fnth (type_of_arg T) (nth_fin j))) e (args x)
   else a.
 by move=> /(congr1 get); rewrite /get /= leq_finii /=.
 Qed.
@@ -521,10 +522,10 @@ have {}indP:
   move/indP/IH: (hyps None); apply=> i; exact: (hyps (Some i)).
 move=> hyps; apply: indP=> j.
 have {}hyps:
-  forall args : hlist (type_of_arg {x : S & P x}) (nth_fin j),
-    P (hnth Cs j (hmap (type_of_arg_map tag) args)).
+  forall args : hlist (fnth (type_of_arg {x : S & P x}) (nth_fin j)),
+    P (hnth Cs j (hmap (fun _ x => type_of_arg_map tag x) args)).
   by move=> args; move: (hyps (Cons j args)).
-elim: (nth_fin j) (hnth Cs j) hyps=> [|[R|] As IH] //=.
+move: (hnth Cs j) hyps=> /=; elim: (nth_fin j)=> [|[R|] As IH] //=.
 - by move=> ? /(_ tt).
 - move=> C hyps x; apply: IH=> args; exact: (hyps (x ::: args)).
 - move=> constr hyps x H; apply: IH=> args.
@@ -555,11 +556,11 @@ Variable (Σ : sig_inst).
 Let F := IndF.functor Σ.
 Variable (T : initAlgType F).
 
-Let eq_op_branch As (cAs : hlist arg_class As) :
-  hlist (type_of_arg (T * (T -> bool))) As ->
-  hlist (type_of_arg T)                 As ->
+Let eq_op_branch As (cAs : hlist (fnth arg_class As)) :
+  hlist (fnth (type_of_arg (T * (T -> bool))) As) ->
+  hlist (fnth (type_of_arg T)                 As) ->
   bool :=
-  arity_rec _ (fun As => hlist _ As -> hlist _ As -> bool)
+  arity_rec _ (fun As => hlist (fnth _ As) -> hlist (fnth _ As) -> bool)
     (fun _ _ => true)
     (fun R As rec x y => (x.(hd) == y.(hd)) && rec x.(tl) y.(tl))
     (fun   As rec x y => x.(hd).2 y.(hd) && rec x.(tl) y.(tl)) As cAs.
@@ -572,7 +573,7 @@ Let eq_op : T -> T -> bool :=
             eq_op_branch
               (hnth (sig_inst_class Σ) (IndF.constr args1))
               (IndF.args args1)
-              (cast (hlist (type_of_arg T) \o @nth_fin _ _) e (IndF.args args2))
+              (cast ((fun x => hlist (fnth (type_of_arg T) x)) \o @nth_fin _ _) e (IndF.args args2))
           | inr _ => false
           end)).
 
@@ -585,12 +586,12 @@ case le: (leq_fin yi xi)=> [e|b]; last first.
   constructor=> /Roll_inj /= [] e _.
   by move: le; rewrite e leq_finii.
 case: xi / e xargs {le} => /= xargs.
-apply/(@iffP (hmap (type_of_arg_map tag) xargs = yargs)); first last.
+apply/(@iffP (hmap (fun _ x => type_of_arg_map tag x) xargs = yargs)); first last.
 - by move=> /Roll_inj /IndF.inj.
 - by move=> <-.
 elim/arity_ind: {yi} _ / (hnth _ _) xargs yargs=> //=.
 - by move=> _ []; constructor.
-- move=> S As cAs IH [x xs] [y ys] /=.
+- move=> S As cAs IH [/= x xs] [/= y ys].
   apply/(iffP andP)=> [[/eqP ? /IH ?]|[/eqP ? /IH]];
   intuition (eauto; congruence).
 - move=> As cAs IH [[x xP] xs] [y ys] /=.
@@ -697,15 +698,15 @@ Let wrap (i : fin (size Σ)) (j : fin (size (nth_fin i))) :
          type_of_arg (tree ind_arg) k -> tree ind_arg
   with
   | NonRec R => fun c x => Leaf (c x)
-  | Rec     => fun c x => x
+  | Rec      => fun c x => x
   end (@mk_ind_arg i j).
 
 Definition tree_of_coq_ind (x : T) : tree ind_arg :=
   rec (fun x =>
          let i := IndF.constr x in
          Node (nat_of_fin i)
-           (list_of_seq (seq_of_hlist_in (@wrap i)
-              (hmap (type_of_arg_map snd) (IndF.args x))))) x.
+           (list_of_seq (seq_of_hlist (@wrap i)
+              (hmap (fun _ x => type_of_arg_map snd x) (IndF.args x))))) x.
 
 Fixpoint coq_ind_of_tree (x : tree ind_arg) : option T :=
   match x with
@@ -713,13 +714,13 @@ Fixpoint coq_ind_of_tree (x : tree ind_arg) : option T :=
   | Node c xs =>
     if fin_of_nat (size Σ) c is Some i then
       let xs := seq_of_list [seq (t, coq_ind_of_tree t) | t <- xs] in
-      if hlist_of_seq_in (fun j ts =>
-                            match nth_fin j as k
-                                  return (ind_arg -> option (type_of_arg void k)) ->
-                                         option (type_of_arg T k) with
-                            | NonRec R => fun f => if ts.1 is Leaf x then f x else None
-                            | Rec => fun _ => ts.2
-                            end (@proj_ind_arg i j)) xs is Some args then
+      if hlist_of_seq (fun j ts =>
+                         match nth_fin j as k
+                               return (ind_arg -> option (type_of_arg void k)) ->
+                                      option (type_of_arg T k) with
+                         | NonRec R => fun f => if ts.1 is Leaf x then f x else None
+                         | Rec => fun _ => ts.2
+                         end (@proj_ind_arg i j)) xs is Some args then
         Some (Roll (IndF.Cons args))
       else None
     else None
@@ -730,9 +731,9 @@ Proof.
 elim/indP=> [[i xs]].
 rewrite /tree_of_coq_ind recE /= -[rec _]/(tree_of_coq_ind).
 rewrite nat_of_finK !hmap_comp /=.
-set xs' := hlist_of_seq_in _ _.
-suffices -> : xs' = Some (hmap (type_of_arg_map tag) xs) by [].
-rewrite {}/xs' seq_of_list_map list_of_seqK hlist_of_seq_in_map /= /wrap.
+set xs' := hlist_of_seq _ _.
+suffices -> : xs' = Some (hmap (fun _ x => type_of_arg_map tag x) xs) by [].
+rewrite {}/xs' seq_of_list_map list_of_seqK hlist_of_seq_map /= /wrap.
 move: (@mk_ind_arg i) (@proj_ind_arg i) (@mk_ind_argK i).
 elim: {i} (nth_fin i) xs=> //= - [S|] As IH /= xs C p CK.
   by rewrite CK IH //= => j x; rewrite CK.
@@ -787,7 +788,7 @@ Hypothesis not_rec : all (all (negb \o is_rec)) Σ.
 
 Definition enum_branch :=
   arity_rec
-    _ (fun As => all (negb \o is_rec) As -> seq.seq (hlist (type_of_arg T) As))
+    _ (fun As => all (negb \o is_rec) As -> seq.seq (hlist (fnth (type_of_arg T) As)))
     (fun _ => [:: tt]%SEQ)
     (fun S As rec P => allpairs Cell (Finite.enum S) (rec P))
     (fun   As rec P => ltac:(done)).
@@ -819,7 +820,7 @@ have [<- {j}|ne] /= := altP (i =P j).
   elim: (Finite.enum S) (enumP x)=> //= y ys IHys.
   have [-> {y} [e]|ne] := altP (y =P x).
     rewrite count_cat count_map (IH xs); last first.
-      move=> zs; apply/(iffP (PP (x ::: zs))); congruence.
+      by move=> zs; apply/(iffP (PP (x ::: zs)))=> [[->]|->].
     congr succn.
     elim: ys e {IHys} => //= y ys; case: (altP eqP) => //= ne H /H.
     rewrite count_cat => ->; rewrite addn0.
