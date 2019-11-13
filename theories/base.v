@@ -31,6 +31,19 @@ Arguments tl {_ _}.
 
 Notation "x ::: y" := (Cell x y) (at level 60) : deriving_scope.
 
+Definition cell_eq (T S : eqType) (x y : cell T S) :=
+  (x.(hd) == y.(hd)) && (x.(tl) == y.(tl)).
+
+Lemma cell_eqP T S : Equality.axiom (@cell_eq T S).
+Proof.
+case=> x1 x2; case=> y1 y2; rewrite /cell_eq /=.
+case: eqP=> [->|?]; last by constructor; congruence.
+case: eqP=> [->|?]; by constructor; congruence.
+Qed.
+
+Definition cell_eqMixin T S := EqMixin (@cell_eqP T S).
+Canonical cell_eqType T S := EqType _ (@cell_eqMixin T S).
+
 Module PolyType.
 
 Record sig T (P : T -> Prop) := exist { sval : T; svalP : P sval }.
