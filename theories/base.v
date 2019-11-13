@@ -612,3 +612,77 @@ End Hlist.
 
 Arguments fnth T S f xs i /.
 Coercion happ : hfun >-> Funclass.
+
+Section ClassLift.
+
+Variables (K : Type) (sort : K -> Type).
+Implicit Types (sT : K) (T : Type).
+Local Coercion sort : K >-> Sortclass.
+
+Record tagged_type := TagType { untag_type : Type }.
+Canonical cl1_refl_tag T := TagType T.
+
+Record class_lift1 := ClassLift1 {
+  cl1_sort  : tagged_type;
+  cl1_class : K;
+  _         : sort cl1_class = untag_type cl1_sort;
+}.
+
+Lemma cl1_sortP (sT : class_lift1) :
+  sort (cl1_class sT) = untag_type (cl1_sort sT).
+Proof. by case: sT. Defined.
+
+Canonical cl1_refl sT :=
+  @ClassLift1 (cl1_refl_tag (sort sT)) sT erefl.
+
+Record tagged_fun n := TagFun { untag_fun :> fin n -> Type }.
+
+Definition zero_tag n f := @TagFun n f.
+Canonical one_tag n f := @zero_tag n f.
+
+Record class_liftN n := ClassLiftN {
+  cln_sort  : tagged_fun n;
+  cln_class : fin n -> K;
+  _         : forall i, sort (cln_class i) = cln_sort i;
+}.
+
+Definition cln_sortP n (Ts : class_liftN n) : forall i, sort (@cln_class n Ts i) = untag_fun (@cln_sort n Ts) i :=
+  let: ClassLiftN _ _ e := Ts in e.
+
+Record fun_split n T (Ts : fin n -> Type) := FunSplit {
+  fs_fun : fin n.+1 -> Type;
+  _      : T  = fs_fun None;
+  _      : Ts = fun i => fs_fun (Some i);
+}.
+
+Definition fun_splitE1 n T Ts (sp : @fun_split n T Ts) : T = fs_fun sp None :=
+  let: FunSplit _ e _ := sp in e.
+
+Definition fun_splitE2 n T Ts (sp : @fun_split n T Ts) : Ts = fun i => fs_fun sp (Some i) :=
+  let: FunSplit _ _ e := sp in e.
+
+Canonical fun_split1 n (Ts : fin n.+1 -> Type) :=
+  @FunSplit n _ _ Ts erefl erefl.
+
+Canonical class_liftN0 (Ts : fin 0 -> Type) :=
+  @ClassLiftN 0 (zero_tag Ts)
+              (fun i => match i with end) (fun i => match i with end).
+
+Canonical class_liftN1 n (sT : class_lift1) (sTs : class_liftN n)
+  (sp : fun_split (untag_type (cl1_sort sT)) (untag_fun (cln_sort sTs))) :=
+  @ClassLiftN _ (@one_tag _ (fs_fun sp))
+              (fun i => match i with
+                        | None => cl1_class sT
+                        | Some j => @cln_class n sTs j
+                        end)
+              (fun i => match i with
+                        | None => cl1_sortP sT * fun_splitE1 sp
+                        | Some j => @cln_sortP n sTs j * congr1 (fun f => f j) (fun_splitE2 sp)
+                        end).
+
+End ClassLift.
+
+Check ((fun (sT : class_lift1 Equality.sort) (T : Type) & phant_id (untag_type (cl1_sort sT)) T => sT) _ nat id).
+
+Check ((fun (sTs : class_liftN Choice.sort _) (Ts : fin _ -> Type) & phant_id (untag_fun (cln_sort sTs)) Ts => sTs)
+         _ (@nth_fin _ (nat :: bool :: nat :: nil)) id).
