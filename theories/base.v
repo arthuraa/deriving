@@ -31,18 +31,6 @@ Arguments tl {_ _}.
 
 Notation "x ::: y" := (Cell x y) (at level 60) : deriving_scope.
 
-Definition cell_eq (T S : eqType) (x y : cell T S) :=
-  (x.(hd) == y.(hd)) && (x.(tl) == y.(tl)).
-
-Lemma cell_eqP T S : Equality.axiom (@cell_eq T S).
-Proof.
-case=> x1 x2; case=> y1 y2; rewrite /cell_eq /=.
-case: eqP=> [->|?]; last by constructor; congruence.
-case: eqP=> [->|?]; by constructor; congruence.
-Qed.
-
-Definition cell_eqMixin T S := EqMixin (@cell_eqP T S).
-Canonical cell_eqType T S := EqType _ (@cell_eqMixin T S).
 
 Module PolyType.
 
@@ -614,76 +602,138 @@ End Hlist.
 Arguments fnth T S f xs i /.
 Coercion happ : hfun >-> Funclass.
 
+Unset Universe Polymorphism.
+
+Section ProdCell.
+
+Variables T S : Type.
+
+Definition prod_of_cell (x : cell T S) := (x.(hd), x.(tl)).
+Definition cell_of_prod (x : T * S) := Cell x.1 x.2.
+
+Lemma prod_of_cellK : cancel prod_of_cell cell_of_prod.
+Proof. by case. Qed.
+
+Lemma cell_of_prodK : cancel cell_of_prod prod_of_cell.
+Proof. by case. Qed.
+
+End ProdCell.
+
+Definition cell_eqMixin (T S : eqType) := CanEqMixin (@prod_of_cellK T S).
+Canonical cell_eqType T S := EqType _ (@cell_eqMixin T S).
+Definition cell_choiceMixin (T S : choiceType) :=
+  CanChoiceMixin (@prod_of_cellK T S).
+Canonical cell_choiceType T S :=
+  Eval hnf in ChoiceType _ (@cell_choiceMixin T S).
+Definition cell_countMixin (T S : countType) :=
+  CanCountMixin (@prod_of_cellK T S).
+Canonical cell_countType T S :=
+  Eval hnf in CountType _ (@cell_countMixin T S).
+Definition cell_finMixin (T S : finType) :=
+  CanFinMixin (@prod_of_cellK T S).
+Canonical cell_finType T S :=
+  Eval hnf in FinType _ (@cell_finMixin T S).
+
 Section ClassLift.
 
 Variables (K : Type) (sort : K -> Type).
-Implicit Types (sT : K) (T : Type).
 Local Coercion sort : K >-> Sortclass.
 
-Record tagged_type := TagType { untag_type : Type }.
-Canonical cl1_refl_tag T := TagType T.
+Variables (sum_K : K -> K -> K).
+Variables (sum_KP : forall sT sS, sort (sum_K sT sS) = (sort sT + sort sS)%type).
 
-Record class_lift1 := ClassLift1 {
-  cl1_sort  : tagged_type;
-  cl1_class : K;
-  _         : sort cl1_class = untag_type cl1_sort;
-}.
+Variables (void_K : K).
+Variables (void_KP : sort void_K = void).
 
-Lemma cl1_sortP (sT : class_lift1) :
-  sort (cl1_class sT) = untag_type (cl1_sort sT).
-Proof. by case: sT. Defined.
+Fixpoint hsum_lift_loop n :
+  forall (T_ : fin n -> K), {sT | sort sT = hsum T_} :=
+  match n with
+  | 0    => fun T_ => exist _ void_K void_KP
+  | n.+1 => fun T_ =>
+    let sT := hsum_lift_loop (fun j => T_ (Some j)) in
+    exist _ (sum_K (T_ None) (sval sT))
+            (sum_KP (T_ None) (sval sT) * congr1 (sum (T_ None)) (svalP sT))
+  end.
 
-Canonical cl1_refl sT :=
-  @ClassLift1 (cl1_refl_tag (sort sT)) sT erefl.
+Variables (cell_K : K -> K -> K).
+Variables (cell_KP : forall sT sS, sort (cell_K sT sS) = cell (sort sT) (sort sS)).
 
-Record tagged_fun n := TagFun { untag_fun :> fin n -> Type }.
+Variables (unit_K : K).
+Variables (unit_KP : sort unit_K = unit).
 
-Definition zero_tag n f := @TagFun n f.
-Canonical one_tag n f := @zero_tag n f.
+Fixpoint hlist_lift_loop n :
+  forall (T_ : fin n -> K), {sT | sort sT = hlist T_} :=
+  match n with
+  | 0    => fun T_ => exist _ unit_K unit_KP
+  | n.+1 => fun T_ =>
+    let sT := hlist_lift_loop (fun j => T_ (Some j)) in
+    exist _ (cell_K (T_ None) (sval sT))
+            (cell_KP (T_ None) (sval sT) * congr1 (cell (T_ None)) (svalP sT))
+  end.
 
-Record class_liftN n := ClassLiftN {
-  cln_sort  : tagged_fun n;
-  cln_class : fin n -> K;
-  _         : forall i, sort (cln_class i) = cln_sort i;
-}.
+Variables (arr_K : K -> K -> K).
+Variables (arr_KP : forall sT sS, sort (arr_K sT sS) = (sort sT -> sort sS)).
 
-Definition cln_sortP n (Ts : class_liftN n) : forall i, sort (@cln_class n Ts i) = untag_fun (@cln_sort n Ts) i :=
-  let: ClassLiftN _ _ e := Ts in e.
-
-Record fun_split n T (Ts : fin n -> Type) := FunSplit {
-  fs_fun : fin n.+1 -> Type;
-  _      : T  = fs_fun None;
-  _      : Ts = fun i => fs_fun (Some i);
-}.
-
-Definition fun_splitE1 n T Ts (sp : @fun_split n T Ts) : T = fs_fun sp None :=
-  let: FunSplit _ e _ := sp in e.
-
-Definition fun_splitE2 n T Ts (sp : @fun_split n T Ts) : Ts = fun i => fs_fun sp (Some i) :=
-  let: FunSplit _ _ e := sp in e.
-
-Canonical fun_split1 n (Ts : fin n.+1 -> Type) :=
-  @FunSplit n _ _ Ts erefl erefl.
-
-Canonical class_liftN0 (Ts : fin 0 -> Type) :=
-  @ClassLiftN 0 (zero_tag Ts)
-              (fun i => match i with end) (fun i => match i with end).
-
-Canonical class_liftN1 n (sT : class_lift1) (sTs : class_liftN n)
-  (sp : fun_split (untag_type (cl1_sort sT)) (untag_fun (cln_sort sTs))) :=
-  @ClassLiftN _ (@one_tag _ (fs_fun sp))
-              (fun i => match i with
-                        | None => cl1_class sT
-                        | Some j => @cln_class n sTs j
-                        end)
-              (fun i => match i with
-                        | None => cl1_sortP sT * fun_splitE1 sp
-                        | Some j => @cln_sortP n sTs j * congr1 (fun f => f j) (fun_splitE2 sp)
-                        end).
+Fixpoint hfun_lift_loop n :
+  forall (T_ : fin n -> K) (sS : K) , {sT | sort sT = hfun T_ sS} :=
+  match n return forall (T_ : fin n -> K) (sS : K) , {sT | sort sT = hfun T_ sS} with
+  | 0    => fun T_ sS => exist _ sS erefl
+  | n.+1 => fun T_ sS =>
+    let sT := hfun_lift_loop (fun j => T_ (Some j)) sS in
+    exist _ (arr_K (T_ None) (sval sT))
+            (arr_KP (T_ None) (sval sT) * congr1 (fun S => T_ None -> S) (svalP sT))
+  end.
 
 End ClassLift.
 
-Check ((fun (sT : class_lift1 Equality.sort) (T : Type) & phant_id (untag_type (cl1_sort sT)) T => sT) _ nat id).
+Definition hsum_lift K sort n T_ sum_K sum_KP void_K void_KP :=
+  @hsum_lift_loop K sort sum_K sum_KP void_K void_KP n T_.
+Arguments hsum_lift {K} sort {n} _ _ _ _ _.
 
-Check ((fun (sTs : class_liftN Choice.sort _) (Ts : fin _ -> Type) & phant_id (untag_fun (cln_sort sTs)) Ts => sTs)
-         _ (@nth_fin _ (nat :: bool :: nat :: nil)) id).
+Definition hlist_lift K sort n T_ cell_K cell_KP unit_K unit_KP :=
+  @hlist_lift_loop K sort cell_K cell_KP unit_K unit_KP n T_.
+Arguments hlist_lift {K} sort {n} _ _ _ _ _.
+
+Definition hfun_lift K sort n T_ arr_K arr_KP S :=
+  @hlist_lift_loop K sort arr_K arr_KP n T_ S.
+Arguments hfun_lift {K} sort {n} _ _ _ S.
+
+Section HeterogeneousInstances.
+
+Definition hsum_eqMixin n (T_ : fin n -> eqType) :=
+  let lift := hsum_lift Equality.sort T_ sum_eqType (fun _ _ => erefl) void_eqType erefl in
+  cast Equality.mixin_of (svalP lift) (Equality.class (sval lift)).
+Canonical hsum_eqType n T_ :=
+  EqType (hsum _) (@hsum_eqMixin n T_).
+
+Definition hsum_choiceMixin n (T_ : fin n -> choiceType) :=
+  let lift := hsum_lift Choice.sort T_ sum_choiceType (fun _ _ => erefl) void_choiceType erefl in
+  cast Choice.mixin_of (svalP lift) (Choice.mixin (Choice.class (sval lift))).
+Canonical hsum_choiceType n T_ :=
+  Eval hnf in ChoiceType (hsum _) (@hsum_choiceMixin n T_).
+
+Definition hsum_countMixin n (T_ : fin n -> countType) :=
+  let lift := hsum_lift Countable.sort T_ sum_countType (fun _ _ => erefl) void_countType erefl in
+  cast Countable.mixin_of (svalP lift) (Countable.mixin (Countable.class (sval lift))).
+Canonical hsum_countType n T_ :=
+  Eval hnf in CountType (hsum _) (@hsum_countMixin n T_).
+
+Definition hlist_eqMixin n (T_ : fin n -> eqType) :=
+  let lift := hlist_lift Equality.sort T_ cell_eqType (fun _ _ => erefl) unit_eqType erefl in
+  cast Equality.mixin_of (svalP lift) (Equality.class (sval lift)).
+Canonical hlist_eqType n T_ :=
+  EqType (hlist _) (@hlist_eqMixin n T_).
+
+Definition hlist_choiceMixin n (T_ : fin n -> choiceType) :=
+  let lift := hlist_lift Choice.sort T_ cell_choiceType (fun _ _ => erefl) unit_choiceType erefl in
+  cast Choice.mixin_of (svalP lift) (Choice.mixin (Choice.class (sval lift))).
+Canonical hlist_choiceType n T_ :=
+  Eval hnf in ChoiceType (hlist _) (@hlist_choiceMixin n T_).
+
+Definition hlist_countMixin n (T_ : fin n -> countType) :=
+  let lift := hlist_lift Countable.sort T_ cell_countType (fun _ _ => erefl) unit_countType erefl in
+  cast Countable.mixin_of (svalP lift) (Countable.mixin (Countable.class (sval lift))).
+Canonical hlist_countType n T_ :=
+  Eval hnf in CountType (hlist _) (@hlist_countMixin n T_).
+
+End HeterogeneousInstances.
