@@ -367,35 +367,36 @@ Fixpoint izip T S n : ilist T n -> ilist S n -> ilist (T * S) n :=
 
 Section Hsum.
 
-Variables (I : Type) (T_ : I -> Type).
+Fixpoint hsum n : (fin n -> Type) -> Type :=
+  match n with
+  | 0    => fun T_ => void
+  | n.+1 => fun T_ => (T_ None + hsum (fun i => T_ (Some i)))%type
+  end.
 
-Implicit Types (i : I) (ix : seq I).
+Fixpoint hin n : forall (T_ : fin n -> Type) i, T_ i -> hsum T_ :=
+  match n with
+  | 0    => fun T_ i => match i with end
+  | n.+1 => fun T_ i =>
+    match i with
+    | Some j => fun x => inr (@hin _ (fun i => T_ (Some i)) j x)
+    | None   => fun x => inl x
+    end
+  end.
 
-Definition hsum ix : Type :=
-  foldr (fun i S => T_ i + S)%type void ix.
+Fixpoint hcase S n : forall (T_ : fin n -> Type), (forall i, T_ i -> S) -> hsum T_ -> S :=
+  match n with
+  | 0    => fun T_ f x => match x with end
+  | n.+1 => fun T_ f x =>
+    match x with
+    | inl x => f None x
+    | inr x => hcase (fun i x => f (Some i) x) x
+    end
+  end.
 
-Fixpoint hin ix : forall n : fin (size ix), T_ (nth_fin n) -> hsum ix :=
-  if ix is i :: ix then
-    fun n : fin (size ix).+1 =>
-      if n is Some n' then fun x : T_ (nth_fin n') => inr (hin x)
-      else fun x => inl x
-  else fun n => match n with end.
-
-Fixpoint hcase S ix : (forall n : fin (size ix), T_ (nth_fin n) -> S) -> hsum ix -> S :=
-  if ix is i :: ix then
-    fun f x =>
-      match x with
-      | inl x => f None x
-      | inr x => hcase (fun n x => f (Some n) x) x
-      end
-  else fun _ x => match x with end.
-
-Lemma hcaseE S ix
-  (f : forall n : fin (size ix), T_ (nth_fin n) -> S)
-  (n : fin (size ix))
-  (x : T_ (nth_fin n)) : hcase f (hin x) = f n x.
+Lemma hcaseE S n (T_ : fin n -> Type) (f : forall i, T_ i -> S)
+  (i : fin n) (x : T_ i) : hcase f (hin x) = f i x.
 Proof.
-by elim: ix f n x=> [_ []|i ix IH] /= f [n|] // x; rewrite IH.
+by elim: n T_ f i x=> [_ _ []|n IH] T_ f /= [i|//] x /=; rewrite IH.
 Qed.
 
 End Hsum.

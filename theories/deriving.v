@@ -661,7 +661,8 @@ Variables (T : initAlgType F).
 Import GenTree.
 Import PolyType.
 
-Definition ind_arg := hsum (hsum (type_of_arg void)) Σ.
+Definition ind_arg :=
+  hsum (fnth (fun As => hsum (fnth (type_of_arg void) As)) Σ).
 
 Definition mk_ind_arg (i : fin (size Σ)) (j : fin (size (nth_fin i))) :
   type_of_arg void (nth_fin j) -> ind_arg :=
@@ -673,7 +674,7 @@ Definition proj_ind_arg
   hcase (fun i' =>
     if leq_fin i' i is inl e then
       match e^-1 in _ = i'
-      return (hsum (fun k => type_of_arg void k) (nth_fin i') -> option _) with
+      return hsum (fnth (type_of_arg void) (nth_fin i')) -> option _ with
       | erefl =>
         hcase (fun j' =>
           if leq_fin j' j is inl e then
