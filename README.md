@@ -9,8 +9,8 @@ To define an `eqType` instance for a type `foo`, just write:
 
     Inductive foo := Foo of nat.
 
-    Definition foo_coqIndMixin := Eval simpl in [indMixin for foo_rect].
-    Canonical foo_coqIndType := CoqIndType _ foo foo_coqIndMixin.
+    Definition foo_indMixin := Eval simpl in [indMixin for foo_rect].
+    Canonical foo_indType := IndType _ foo foo_indMixin.
 
     Definition foo_eqMixin := Eval simpl in [derive eqMixin for foo].
     Canonical foo_eqType := EqType foo foo_eqMixin.
