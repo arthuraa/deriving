@@ -581,21 +581,23 @@ Fixpoint hfun_map I J (T_ : J -> Type) (f : I -> J) S (ix : seq I) :
   | [::]    => erefl
   | i :: ix => congr1 (fun R => T_ (f i) -> R) (hfun_map T_ f S ix)
   end.
-
-Fixpoint hlist_eq I (T_ S_ : I -> Type) (e : forall i, T_ i = S_ i) ix :
-  hlist T_ ix = hlist S_ ix :=
-  match ix with
-  | [::]    => erefl
-  | i :: ix => congr2 cell (e i) (hlist_eq e ix)
-  end.
-
-Fixpoint hfun_eq I (T_ S_ : I -> Type) (e : forall i, T_ i = S_ i) ix R :
-  hfun T_ ix R = hfun S_ ix R :=
-  match ix with
-  | [::]    => erefl
-  | i :: ix => congr2 (fun X Y => X -> Y) (e i) (hfun_eq e ix R)
-  end.
 *)
+
+Fixpoint hlist_eq n :
+  forall (T_ S_ : fin n -> Type) (e : forall i, T_ i = S_ i),
+  hlist T_ = hlist S_ :=
+  match n with
+  | 0    => fun T_ S_ e => erefl
+  | n.+1 => fun T_ S_ e => congr2 cell (e None) (hlist_eq (fun i => e (Some i)))
+  end.
+
+Fixpoint hfun_eq n :
+  forall (T_ S_ : fin n -> Type) (e : forall i, T_ i = S_ i) R,
+  hfun T_ R = hfun S_ R :=
+  match n with
+  | 0    => fun T_ S_ e R => erefl
+  | n.+1 => fun T_ S_ e R => congr2 (fun X Y => X -> Y) (e None) (hfun_eq (fun i => e (Some i)) R)
+  end.
 
 End Hlist.
 
