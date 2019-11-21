@@ -20,6 +20,47 @@ Arguments cast {_} _ {_ _} _.
 Notation "e1 * e2" := (etrans e1 e2) : deriving_scope.
 Notation "e ^-1" := (esym e) : deriving_scope.
 
+(* We redefine some constants of the standard library here to avoid problems
+   with universe inconsistency and opacity. *)
+
+Definition congr1 T S (f : T -> S) x y (e : x = y) : f x = f y :=
+  match e with erefl => erefl end.
+
+Definition congr1V T S (f : T -> S) x y (e : x = y) : (congr1 f e)^-1 = congr1 f e^-1 :=
+  match e with erefl => erefl end.
+
+Definition etransV T (x y z : T) (p : x = y) (q : y = z) : (p * q)^-1 = q^-1 * p^-1 :=
+  match p in _ = y return forall q : y = z, (p * q)^-1 = q^-1 * p^-1 with
+  | erefl => fun q => match q with erefl => erefl end
+  end q.
+
+Definition etrans1p T (x y : T) (p : x = y) : erefl * p = p :=
+  match p with erefl => erefl end.
+
+Definition etransVp T (x y : T) (p : x = y) : p^-1 * p = erefl :=
+  match p with erefl => erefl end.
+
+Definition etranspV T (x y : T) (p : x = y) : p * p^-1 = erefl :=
+  match p with erefl => erefl end.
+
+Definition congr2 T1 T2 S (f : T1 -> T2 -> S) x1 y1 x2 y2 (e1 : x1 = y1) (e2 : x2 = y2) : f x1 x2 = f y1 y2 :=
+  congr1 (f x1) e2 * congr1 (fun a => f a y2) e1.
+
+Definition castCE T S (x y : T) (p : x = y) a : cast (fun=> S) p a = a :=
+  match p with erefl => erefl end.
+
+Definition castFE T (P Q : T -> Type) x y (p : x = y) :
+  forall f a,
+  cast (fun x => P x -> Q x) p f a = cast Q p (f (cast P p^-1 a)) :=
+  match p with erefl => fun f a => erefl end.
+
+Definition cast_idE T (P : T -> Type) x y (p : x = y) : cast id (congr1 P p) = cast P p :=
+  match p with erefl => erefl end.
+
+Definition castD T (P : T -> Type) x y z (p : x = y) (q : y = z) :
+  forall a, cast P (p * q) a = cast P q (cast P p a) :=
+  match q with erefl => fun a => erefl end.
+
 (** An alternative to the standard prod type, to avoid name clashes and universe
     issues. *)
 
@@ -591,6 +632,22 @@ Fixpoint hlist_eq n :
   | n.+1 => fun T_ S_ e => congr2 cell (e None) (hlist_eq (fun i => e (Some i)))
   end.
 
+Lemma hlist_eq_hmap n T_ S_ e xs :
+  cast id (@hlist_eq n T_ S_ e) xs = hmap (fun i => cast id (e i)) xs.
+Proof.
+elim: n T_ S_ e xs=> [??? []|n IH] //= T_ S_ e [x xs] /=.
+rewrite /congr2.
+case: _ / (e None) x=> /= x; rewrite -IH.
+by case: _ / (hlist_eq _) xs.
+Qed.
+
+Lemma hlist_eqV n (T_ S_ : fin n -> Type) e :
+  (@hlist_eq n T_ S_ e)^-1 = hlist_eq (fun i => (e i)^-1).
+Proof.
+elim: n T_ S_ e=> //= n IH T_ S_ e.
+by rewrite /congr2; case: _ / (e None)=> /=; rewrite -IH congr1V.
+Qed.
+
 Fixpoint hfun_eq n :
   forall (T_ S_ : fin n -> Type) (e : forall i, T_ i = S_ i) R,
   hfun T_ R = hfun S_ R :=
@@ -598,6 +655,23 @@ Fixpoint hfun_eq n :
   | 0    => fun T_ S_ e R => erefl
   | n.+1 => fun T_ S_ e R => congr2 (fun X Y => X -> Y) (e None) (hfun_eq (fun i => e (Some i)) R)
   end.
+
+Lemma hfun_eqV n  T_ S_ e R :
+  (@hfun_eq n T_ S_ e R)^-1 = hfun_eq (fun i => (e i)^-1) R.
+Proof.
+elim: n T_ S_ e=> //= n IH T_ S_ e; rewrite /congr2 /=.
+by case: _ / (e None)=> /=; rewrite -IH congr1V.
+Qed.
+
+Lemma happ_eq n T_ S_ e R f xs :
+  happ (cast id (@hfun_eq n T_ S_ e R) f) xs = happ f (cast id (hlist_eq e)^-1 xs).
+Proof.
+elim: n T_ S_ e f xs=> [|n IH] //= T_ S_ e f [x xs] /=.
+rewrite /congr2; case: _ / (e None) x=> x /=.
+transitivity (happ (cast id (hfun_eq (fun i => e (Some i)) R) (f x)) xs).
+  by congr (happ _ xs); case: _ / (hfun_eq _ R) f=> f.
+rewrite {}IH; congr (happ (f _) _); by case: _ / (hlist_eq _) xs.
+Qed.
 
 End Hlist.
 
@@ -636,7 +710,7 @@ Definition cell_finMixin (T S : finType) :=
 Canonical cell_finType T S :=
   Eval hnf in FinType _ (@cell_finMixin T S).
 
-Section ClassLift.
+Section HeterogeneousInstances.
 
 Variables (K : Type) (sort : K -> Type).
 Local Coercion sort : K >-> Sortclass.
@@ -686,7 +760,7 @@ Fixpoint hfun_lift_loop n :
             (arr_KP (T_ None) (sval sT) * congr1 (fun S => T_ None -> S) (svalP sT))
   end.
 
-End ClassLift.
+End HeterogeneousInstances.
 
 Definition hsum_lift K sort n T_ sum_K sum_KP void_K void_KP :=
   @hsum_lift_loop K sort sum_K sum_KP void_K void_KP n T_.
@@ -699,8 +773,6 @@ Arguments hlist_lift {K} sort {n} _ _ _ _ _.
 Definition hfun_lift K sort n T_ arr_K arr_KP S :=
   @hlist_lift_loop K sort arr_K arr_KP n T_ S.
 Arguments hfun_lift {K} sort {n} _ _ _ S.
-
-Section HeterogeneousInstances.
 
 Definition hsum_eqMixin n (T_ : fin n -> eqType) :=
   let lift := hsum_lift Equality.sort T_ sum_eqType (fun _ _ => erefl) void_eqType erefl in
@@ -737,5 +809,3 @@ Definition hlist_countMixin n (T_ : fin n -> countType) :=
   cast Countable.mixin_of (svalP lift) (Countable.mixin (Countable.class (sval lift))).
 Canonical hlist_countType n T_ :=
   Eval hnf in CountType (hlist _) (@hlist_countMixin n T_).
-
-End HeterogeneousInstances.
