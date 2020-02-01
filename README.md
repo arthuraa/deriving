@@ -4,7 +4,7 @@ The Deriving library builds instances of basic MathComp classes for inductive
 data types with little boilerplate, akin to Haskell's `deriving` functionality.
 To define an `eqType` instance for a type `foo`, just write:
 
-    From mathcomp Require Import ssreflect eqtype.
+    From mathcomp Require Import ssreflect ssrnat eqtype.
     From deriving Require Import deriving.
 
     Inductive foo := Foo of nat.
