@@ -408,8 +408,8 @@ Ltac ind_mixin rec :=
     let Cs   := eval simpl in ΣCs.2 in
     let case := constr:(ltac:(intros P; simpl; unwind_recursor (Rec P)) : forall P, elimT P) in
     let case := eval compute in (@Ind.destructor_of_recursor Σ T (fun S => case (fun _ => S))) in
-    refine (@IndMixin Σ T Cs (fun S => Rec (fun _ => S)) case _ _ _);
-    try by [abstract (compute; intuition)|exact rec]
+    refine (@IndMixin Σ T Cs (fun S => Rec (fun _ => S)) case _ _ rec);
+    abstract (compute; intuition)
   end.
 
 Notation "[ 'indMixin' 'for' rect ]" :=
