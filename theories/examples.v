@@ -61,3 +61,120 @@ Canonical three_finType :=
   Eval hnf in FinType three three_finMixin.
 
 End FiniteExample.
+
+Module SyntaxExample.
+
+(* An example of syntax trees for a lambda calculus.  Adapted from Iris's heap
+lang
+(https://gitlab.mpi-sws.org/iris/iris/blob/master/theories/heap_lang/lang.v). *)
+
+Inductive base_lit : Set :=
+  | LitInt (n : nat) | LitBool (b : bool) | LitUnit | LitPoison
+  | LitLoc (l : nat) | LitProphecy (p: nat).
+Definition base_lit_indMixin :=
+  Eval simpl in [indMixin for base_lit_rect].
+Canonical base_lit_indType :=
+  IndType _ base_lit base_lit_indMixin.
+Definition base_lit_eqMixin :=
+  Eval simpl in [derive eqMixin for base_lit].
+Canonical base_lit_eqType :=
+  EqType base_lit base_lit_eqMixin.
+Definition base_lit_choiceMixin :=
+  Eval simpl in [derive choiceMixin for base_lit].
+Canonical base_lit_choiceType :=
+  Eval hnf in ChoiceType base_lit base_lit_choiceMixin.
+Definition base_lit_countMixin :=
+  Eval simpl in [derive countMixin for base_lit].
+Canonical base_lit_countType :=
+  Eval hnf in CountType base_lit base_lit_countMixin.
+
+Inductive un_op : Set :=
+  | NegOp | MinusUnOp.
+Definition un_op_indMixin :=
+  Eval simpl in [indMixin for un_op_rect].
+Canonical un_op_indType :=
+  IndType _ un_op un_op_indMixin.
+Definition un_op_eqMixin :=
+  Eval simpl in [derive eqMixin for un_op].
+Canonical un_op_eqType :=
+  EqType un_op un_op_eqMixin.
+Definition un_op_choiceMixin :=
+  Eval simpl in [derive choiceMixin for un_op].
+Canonical un_op_choiceType :=
+  Eval hnf in ChoiceType un_op un_op_choiceMixin.
+Definition un_op_countMixin :=
+  Eval simpl in [derive countMixin for un_op].
+Canonical un_op_countType :=
+  Eval hnf in CountType un_op un_op_countMixin.
+Definition un_op_finMixin :=
+  Eval simpl in [derive finMixin for un_op].
+Canonical un_op_finType :=
+  Eval hnf in FinType un_op un_op_finMixin.
+
+Inductive bin_op : Set :=
+  | PlusOp | MinusOp | MultOp | QuotOp | RemOp
+  | AndOp | OrOp | XorOp
+  | ShiftLOp | ShiftROp
+  | LeOp | LtOp | EqOp
+  | OffsetOp.
+Definition bin_op_indMixin :=
+  Eval simpl in [indMixin for bin_op_rect].
+Canonical bin_op_indType :=
+  IndType _ bin_op bin_op_indMixin.
+Definition bin_op_eqMixin :=
+  Eval simpl in [derive eqMixin for bin_op].
+Canonical bin_op_eqType :=
+  EqType bin_op bin_op_eqMixin.
+Definition bin_op_choiceMixin :=
+  Eval simpl in [derive choiceMixin for bin_op].
+Canonical bin_op_choiceType :=
+  Eval hnf in ChoiceType bin_op bin_op_choiceMixin.
+Definition bin_op_countMixin :=
+  Eval simpl in [derive countMixin for bin_op].
+Canonical bin_op_countType :=
+  Eval hnf in CountType bin_op bin_op_countMixin.
+Definition bin_op_finMixin :=
+  Eval simpl in [derive finMixin for bin_op].
+Canonical bin_op_finType :=
+  Eval hnf in FinType bin_op bin_op_finMixin.
+
+Inductive expr :=
+  | Var (x : nat)
+  | Rec (f x : nat) (e : expr)
+  | App (e1 e2 : expr)
+  | UnOp (op : un_op) (e : expr)
+  | BinOp (op : bin_op) (e1 e2 : expr)
+  | If (e0 e1 e2 : expr)
+  | Pair (e1 e2 : expr)
+  | Fst (e : expr)
+  | Snd (e : expr)
+  | InjL (e : expr)
+  | InjR (e : expr)
+  | Case (e0 : expr) (e1 : expr) (e2 : expr)
+  | Fork (e : expr)
+  | AllocN (e1 e2 : expr)
+  | Load (e : expr)
+  | Store (e1 : expr) (e2 : expr)
+  | CmpXchg (e0 : expr) (e1 : expr) (e2 : expr)
+  | FAA (e1 : expr) (e2 : expr)
+  | NewProph
+  | Resolve (e0 : expr) (e1 : expr) (e2 : expr)
+  | Lit (l : base_lit).
+Definition expr_indMixin :=
+  Eval simpl in [indMixin for expr_rect].
+Canonical expr_indType :=
+  IndType _ expr expr_indMixin.
+Definition expr_eqMixin :=
+  Eval simpl in [derive eqMixin for expr].
+Canonical expr_eqType :=
+  EqType expr expr_eqMixin.
+Definition expr_choiceMixin :=
+  Eval simpl in [derive choiceMixin for expr].
+Canonical expr_choiceType :=
+  Eval hnf in ChoiceType expr expr_choiceMixin.
+Definition expr_countMixin :=
+  Eval simpl in [derive countMixin for expr].
+Canonical expr_countType :=
+  Eval hnf in CountType expr expr_countMixin.
+
+End SyntaxExample.
