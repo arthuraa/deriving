@@ -396,7 +396,8 @@ Ltac unwind_recursor rec :=
   | |- ?F -> ?G =>
     let X := fresh "X" in
     intros X; unwind_recursor (rec X)
-  | |- _ => case; intros; apply rec
+  | |- forall x, _ =>
+    intros x; destruct x; apply rec
   end.
 
 Ltac ind_mixin rec :=
