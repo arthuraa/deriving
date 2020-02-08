@@ -343,6 +343,26 @@ End Exports.
 End Ind.
 Export Ind.Exports.
 
+Ltac sig_inst_simpl t :=
+  let x := eval cbv beta iota zeta delta [
+    arg_class
+    arg_inst_sort
+    arg_inst_class
+    arity_inst_sort
+    arity_inst_class
+    sig_inst_sort
+    sig_inst_class
+    NonRec_arg_inst
+    Rec_arg_inst
+    nth_fin_arg_inst
+    nil_arity_inst
+    cons_arity_inst
+    nth_fin_arity_inst
+    nil_sig_inst
+    cons_sig_inst
+    arity_rec
+    Ind.class] in t in x.
+
 Section InferInstances.
 
 Import PolyType.
@@ -614,18 +634,26 @@ Definition pack :=
         exact: @EqMixin T e' ax
       end).
 
-Module Import Exports.
-Notation "[ 'derive' 'eqMixin' 'for' T ]" :=
-  (let m := @pack T _ _ id _ id _ id in
-   ltac:(
-     let x := eval hnf in m in
-     exact x))
-  (at level 0) : form_scope.
-End Exports.
-
 End DerEqType.
 
-Export DerEqType.Exports.
+Notation "[ 'derive' 'eqMixin' 'for' T ]" :=
+  (ltac:(
+     let m := constr:(@DerEqType.pack T _ _ id _ id _ id) in
+     match m with
+     | @DerEqType.pack _ _ _ _ _ _ ?cT _ =>
+       let m := eval hnf in m in
+       match m with
+       | @Equality.Mixin _ ?op ?ax =>
+         let op := eval pattern cT in op in
+         match op with
+         | ?op _ =>
+           let cT := eval hnf in cT in
+           let op := sig_inst_simpl constr:(op cT) in
+           exact (@Equality.Mixin _ op ax)
+         end
+       end
+     end))
+  (at level 0) : form_scope.
 
 Module InitAlgEqType.
 
@@ -911,11 +939,11 @@ Canonical seq_indType :=
   Eval hnf in IndType _ _ seq_indMixin.
 
 Definition comparison_indMixin :=
-  Eval simpl in [indMixin for comparison_rect].
+  [indMixin for comparison_rect].
 Canonical comparison_indType :=
   Eval hnf in IndType _ comparison comparison_indMixin.
 Definition comparison_eqMixin :=
-  Eval simpl in [derive eqMixin for comparison].
+  [derive eqMixin for comparison].
 Canonical comparison_eqType :=
   Eval hnf in EqType comparison comparison_eqMixin.
 Definition comparison_choiceMixin :=
