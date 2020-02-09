@@ -579,11 +579,13 @@ Variable (T : initAlgType F).
 Definition eq_op_branch As (cAs : hlist arg_class As) :
   hlist (type_of_arg (T * (T -> bool))) As ->
   hlist (type_of_arg T)                 As ->
+  bool                                     ->
   bool :=
-  arity_rec _ (fun As => hlist _ As -> hlist _ As -> bool)
-    (fun _ _ => true)
-    (fun R As rec x y => (x.(hd) == y.(hd)) && rec x.(tl) y.(tl))
-    (fun   As rec x y => x.(hd).2 y.(hd) && rec x.(tl) y.(tl)) As cAs.
+  arity_rec _ (fun As => hlist _ As -> hlist _ As -> bool -> bool)
+    (fun _ _ b => b)
+    (fun R As rec x y b => rec x.(tl) y.(tl) (b && (x.(hd) == y.(hd))))
+    (fun   As rec x y b => rec x.(tl) y.(tl) (b &&  x.(hd).2 y.(hd)))
+    As cAs.
 
 Definition eq_op : T -> T -> bool :=
   rec  (fun args1 =>
@@ -594,6 +596,7 @@ Definition eq_op : T -> T -> bool :=
               (hnth (sig_inst_class Σ) (IndF.constr args1))
               (IndF.args args1)
               (cast (hlist (type_of_arg T) \o @nth_fin _ _) e (IndF.args args2))
+              true
           | inr _ => false
           end)).
 
@@ -609,14 +612,17 @@ case: xi / e xargs {le} => /= xargs.
 apply/(@iffP (hmap (type_of_arg_map tag) xargs = yargs)); first last.
 - by move=> /Roll_inj /IndF.inj.
 - by move=> <-.
-elim/arity_ind: {yi} _ / (hnth _ _) xargs yargs=> //=.
-- by move=> _ []; constructor.
-- move=> S As cAs IH [x xs] [y ys] /=.
-  apply/(iffP andP)=> [[/eqP ? /IH ?]|[/eqP ? /IH]];
-  intuition (eauto; congruence).
-- move=> As cAs IH [[x xP] xs] [y ys] /=.
-  apply/(iffP andP)=> [[/xP ? /IH ?]|[/xP ? /IH ?]];
-  intuition (eauto; congruence).
+apply/(iffP idP)=> [H|<-]; last first.
+  elim/arity_ind: {yi} _ / (hnth _ _) xargs {yargs}=> //= S As cAs.
+    by move=> IH [x xargs]; rewrite eqxx.
+  by move=> [[x xP] xargs] /=; rewrite (introT (xP _)).
+suffices [//]: true /\ hmap (type_of_arg_map tag) xargs = yargs.
+elim/arity_ind: {yi} _ / (hnth _ _) xargs yargs true H.
+- by move=> [] [].
+- move=> S As cAs IH /= [x xargs] [y yargs] /= b /IH.
+  by case=> /andP [-> /eqP <-] ->.
+- move=> As cAs /= IH [[x xP] xargs] [y yargs] /= b /IH.
+  by case=> /andP [-> /xP <-] ->.
 Qed.
 
 End EqType.
@@ -633,7 +639,11 @@ Ltac derive_eqMixin T :=
   let cΣ  := eval hnf in (sig_inst_class sΣ) in
   let cΣ  := sig_inst_simpl cΣ in
   let op  := eval cbv iota zeta beta in (op cΣ) in
+  let op  := eval pattern (andb true) in op in
+  match op with ?op _ =>
+  let op := eval cbv beta in (op id) in
   exact (@EqMixin _ op (@DerEqType.eq_opP sΣ (IndF.initAlgType sT)))
+  end
   end.
 
 Notation "[ 'derive' 'eqMixin' 'for' T ]" :=
