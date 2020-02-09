@@ -41,22 +41,24 @@ Module FiniteExample.
 Inductive three := A of unit & bool | B | C.
 
 Definition three_indMixin :=
-  Eval simpl in [indMixin for three_rect].
+  [indMixin for three_rect].
 Canonical three_indType :=
   Eval hnf in IndType _ _ three_indMixin.
 
 Definition three_eqMixin :=
-  Eval simpl in [derive eqMixin for three].
+  [derive eqMixin for three].
 Canonical three_eqType :=
   Eval hnf in EqType three three_eqMixin.
-Definition three_choiceMixin := [derive choiceMixin for three].
+Definition three_choiceMixin :=
+  [derive choiceMixin for three].
 Canonical three_choiceType :=
   Eval hnf in ChoiceType three three_choiceMixin.
-Definition three_countMixin := [derive countMixin for three].
+Definition three_countMixin :=
+  [derive countMixin for three].
 Canonical three_countType :=
   Eval hnf in CountType three three_countMixin.
 Definition three_finMixin :=
-  Eval simpl in [derive finMixin for three].
+  [derive finMixin for three].
 Canonical three_finType :=
   Eval hnf in FinType three three_finMixin.
 
@@ -75,7 +77,7 @@ Definition base_lit_indMixin :=
   [indMixin for base_lit_rect].
 Canonical base_lit_indType :=
   IndType _ base_lit base_lit_indMixin.
-Time Definition base_lit_eqMixin :=
+Definition base_lit_eqMixin :=
   [derive eqMixin for base_lit].
 Canonical base_lit_eqType :=
   EqType base_lit base_lit_eqMixin.
