@@ -576,7 +576,7 @@ Variable (Σ : sig_inst).
 Let F := IndF.functor Σ.
 Variable (T : initAlgType F).
 
-Let eq_op_branch As (cAs : hlist arg_class As) :
+Definition eq_op_branch As (cAs : hlist arg_class As) :
   hlist (type_of_arg (T * (T -> bool))) As ->
   hlist (type_of_arg T)                 As ->
   bool :=
@@ -585,7 +585,7 @@ Let eq_op_branch As (cAs : hlist arg_class As) :
     (fun R As rec x y => (x.(hd) == y.(hd)) && rec x.(tl) y.(tl))
     (fun   As rec x y => x.(hd).2 y.(hd) && rec x.(tl) y.(tl)) As cAs.
 
-Let eq_op : T -> T -> bool :=
+Definition eq_op : T -> T -> bool :=
   rec  (fun args1 =>
   case (fun args2 =>
           match leq_fin (IndF.constr args2) (IndF.constr args1) with
@@ -621,38 +621,23 @@ Qed.
 
 End EqType.
 
-Definition pack :=
-  fun (T : Type) =>
-  fun Σ (sT : indType Σ) & phant_id (Ind.sort sT) T =>
-  fun (sΣ : sig_inst) & phant_id Σ (sig_inst_sort sΣ) =>
-  fun (cT : Ind.mixin_of sΣ T) & phant_id (Ind.class sT) cT =>
-    ltac:(
-      let ax := constr:(@eq_opP sΣ (Ind.Pack cT)) in
-      match type of ax with
-      | Equality.axiom ?e =>
-        let e' := eval compute -[eq_op Equality.sort andb] in e in
-        exact: @EqMixin T e' ax
-      end).
-
 End DerEqType.
 
+Ltac derive_eqMixin T :=
+  let sT := eval hnf in [the indType _ of T by @Ind.sort _] in
+  match sT with @Ind.Pack ?Σ _ ?cT =>
+  let sT' := constr:(IndF.initAlgType sT) in
+  let op  := constr:(fun cΣ => @DerEqType.eq_op (@SigInst _ _ Σ cΣ) sT') in
+  let op  := eval compute -[Equality.sort eq_op andb] in op in
+  let sΣ  := eval hnf in [the sig_inst Equality.sort of Σ by @sig_inst_sort _ _] in
+  let cΣ  := eval hnf in (sig_inst_class sΣ) in
+  let cΣ  := sig_inst_simpl cΣ in
+  let op  := eval cbv iota zeta beta in (op cΣ) in
+  exact (@EqMixin _ op (@DerEqType.eq_opP sΣ (IndF.initAlgType sT)))
+  end.
+
 Notation "[ 'derive' 'eqMixin' 'for' T ]" :=
-  (ltac:(
-     let m := constr:(@DerEqType.pack T _ _ id _ id _ id) in
-     match m with
-     | @DerEqType.pack _ _ _ _ _ _ ?cT _ =>
-       let m := eval hnf in m in
-       match m with
-       | @Equality.Mixin _ ?op ?ax =>
-         let op := eval pattern cT in op in
-         match op with
-         | ?op _ =>
-           let cT := eval hnf in cT in
-           let op := sig_inst_simpl constr:(op cT) in
-           exact (@Equality.Mixin _ op ax)
-         end
-       end
-     end))
+  (ltac:(derive_eqMixin T))
   (at level 0) : form_scope.
 
 Module InitAlgEqType.
