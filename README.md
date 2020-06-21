@@ -45,11 +45,3 @@ To install, do
 ```shell
 make install
 ```
-
-## TODO
-
-- Documentation
-
-- Clean up code
-
-- Support mutually inductive types
