@@ -1,0 +1,7 @@
+theories/tactics.v: theories/make_tactics.v make_tactics.ml theories/ind.vo theories/base.vo
+	$(COQC) $(COQLIBS) theories/make_tactics.v \
+	| ocaml str.cma make_tactics.ml > theories/tactics.v
+
+# Local Variables:
+# mode: Makefile
+# End:

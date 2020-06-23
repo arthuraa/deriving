@@ -1,6 +1,3 @@
 * Support mutually inductive types
 * Documentation
 * Clean up code
-** Improve simplification
-We need a more principled way of simplifying the implementations of indMixin and
-derived mixins such as eqMixin.

@@ -1,5 +1,5 @@
 From mathcomp Require Import
-  ssreflect ssrfun ssrbool ssrnat eqtype seq choice fintype.
+  ssreflect ssrfun ssrbool ssrnat eqtype seq choice fintype finset.
 
 From void Require Import void.
 
@@ -12,7 +12,7 @@ Unset Printing Implicit Defensive.
 Module RecursiveExample.
 
 Inductive tree (T : Type) :=
-| Leaf of nat
+| Leaf of {set 'I_10}
 | Node of T & tree T & tree T.
 Arguments Leaf {_} _.
 

@@ -4,6 +4,9 @@
 -arg -w -arg -non-reversible-notation
 
 theories/base.v
+theories/ind.v
+theories/tactics.v
+theories/instances.v
 theories/deriving.v
 theories/examples.v
 

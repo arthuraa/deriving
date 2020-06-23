@@ -11,14 +11,21 @@ Set Universe Polymorphism.
 Declare Scope deriving_scope.
 Delimit Scope deriving_scope with deriving.
 Open Scope deriving_scope.
+Create HintDb deriving.
 
 Definition cast T (P : T -> Type) x y (e : x = y) : P x -> P y :=
   match e with erefl => id end.
 
 Arguments cast {_} _ {_ _} _.
+Hint Unfold cast : deriving.
 
 Notation "e1 * e2" := (etrans e1 e2) : deriving_scope.
 Notation "e ^-1" := (esym e) : deriving_scope.
+
+Hint Unfold etrans : deriving.
+Hint Unfold esym : deriving.
+Hint Unfold congr1 f_equal : deriving.
+Hint Unfold fst snd : deriving.
 
 (** An alternative to the standard prod type, to avoid name clashes and universe
     issues. *)
@@ -28,6 +35,9 @@ Record cell T S := Cell { hd : T; tl : S }.
 Arguments Cell {_ _}.
 Arguments hd {_ _}.
 Arguments tl {_ _}.
+
+Hint Unfold hd : deriving.
+Hint Unfold tl : deriving.
 
 Notation "x ::: y" := (Cell x y) (at level 60) : deriving_scope.
 
@@ -90,14 +100,25 @@ End PolyType.
 
 Import PolyType.
 
+Hint Unfold sval : deriving.
+Hint Unfold svalP : deriving.
+Hint Unfold list_of_seq : deriving.
+Hint Unfold seq_of_list : deriving.
+Hint Unfold size : deriving.
+Hint Unfold map : deriving.
+Hint Unfold foldr : deriving.
+Hint Unfold cat : deriving.
+
 Fixpoint fin n :=
   if n is n.+1 then option (fin n) else void.
+Hint Unfold fin : deriving.
 
 Fixpoint all_fin n : (fin n -> Prop) -> Prop :=
   match n with
   | 0    => fun P => True
   | n.+1 => fun P => P None /\ @all_fin n (fun i => P (Some i))
   end.
+Hint Unfold all_fin : deriving.
 
 Lemma all_finP n (P : fin n -> Prop) : all_fin P <-> (forall i, P i).
 Proof.
@@ -111,6 +132,7 @@ Fixpoint nth_fin T (xs : seq T) : fin (size xs) -> T :=
   | [::]    => fun n => match n with end
   | x :: xs => fun n => if n is Some n then nth_fin n else x
   end.
+Hint Unfold nth_fin : deriving.
 
 Fixpoint leq_fin n : forall i j : fin n, (i = j) + bool :=
   match n with
@@ -127,6 +149,7 @@ Fixpoint leq_fin n : forall i j : fin n, (i = j) + bool :=
                             else inr false
       end
   end.
+Hint Unfold leq_fin : deriving.
 
 Lemma leq_finii n i : @leq_fin n i i = inl erefl.
 Proof.
@@ -138,6 +161,7 @@ Fixpoint nat_of_fin n : fin n -> nat :=
   | 0    => fun i => match i with end
   | n.+1 => fun i => if i is Some i then (nat_of_fin i).+1 else 0
   end.
+Hint Unfold nat_of_fin : deriving.
 
 Lemma leq_nat_of_fin n (i j : fin n) :
   (nat_of_fin i <= nat_of_fin j) = if leq_fin i j is inr b then b else true.
@@ -155,6 +179,7 @@ Fixpoint fin_of_nat n m : option (fin n) :=
   | n.+1 => if m is m.+1 then if fin_of_nat n m is Some i then Some (Some i) else None
             else Some None
   end.
+Hint Unfold fin_of_nat : deriving.
 
 Lemma nat_of_finK n : pcancel (@nat_of_fin n) (@fin_of_nat n).
 Proof.
@@ -183,6 +208,7 @@ Fixpoint enum_fin n : seq (fin n) :=
   | 0 => [::]
   | n.+1 => None :: map Some (enum_fin n)
   end.
+Hint Unfold enum_fin : deriving.
 
 Fixpoint size_map T S (f : T -> S) (s : seq T) : size (map f s) = size s :=
   match s with
@@ -267,11 +293,19 @@ Fixpoint seq_of_ilist n : ilist n -> seq T :=
 
 End Ilist.
 
+Hint Unfold ilist : deriving.
+Hint Unfold inth : deriving.
+Hint Unfold ilist_of_fun : deriving.
+Hint Unfold inth_of_fun : deriving.
+Hint Unfold ilist_of_seq : deriving.
+Hint Unfold seq_of_ilist : deriving.
+
 Fixpoint imap T S (f : T -> S) n : ilist T n -> ilist S n :=
   match n with
   | 0    => fun l => tt
   | n.+1 => fun l => f l.(hd) ::: imap f l.(tl)
   end.
+Hint Unfold imap : deriving.
 
 Lemma imap_eq (T S : Type) (f g : T -> S) :
   f =1 g ->
@@ -327,6 +361,10 @@ Qed.
 
 End Hsum.
 
+Hint Unfold hsum : deriving.
+Hint Unfold hin : deriving.
+Hint Unfold hcase : deriving.
+
 Section Hlist.
 
 Variables (I : Type) (T_ : I -> Type).
@@ -372,15 +410,6 @@ Fixpoint hnth (ix : seq I) :
                           | None   => l.(hd)
                           end
   end.
-
-(*
-Fixpoint hlist_of_fun (f : forall i, T_ i) ix : hlist ix :=
-  if ix is i :: ix then (f i, hlist_of_fun f ix) else tt.
-
-Lemma hnth_of_fun f ix n :
-  hnth (hlist_of_fun f ix) n = f (nth_fin n).
-Proof. elim: ix n=> /= [|i ix IH] // [n|]; by rewrite ?IH. Qed.
-*)
 
 Fixpoint seq_of_hlist S ix (f : forall i, T_ i -> S) : hlist ix -> seq S :=
   match ix with
@@ -482,6 +511,20 @@ Fixpoint hfold S (f : forall i, T_ i -> S -> S) a ix : hlist ix -> S :=
 
 End Hlist.
 
+Hint Unfold hlist : deriving.
+Hint Unfold hfun : deriving.
+Hint Unfold happ : deriving.
+Hint Unfold hcurry : deriving.
+Hint Unfold hcat : deriving.
+Hint Unfold hnth : deriving.
+Hint Unfold seq_of_hlist : deriving.
+Hint Unfold hlist_of_seq : deriving.
+Hint Unfold seq_of_hlist_in : deriving.
+Hint Unfold hlist_of_seq_in : deriving.
+Hint Unfold hlist_of_fun : deriving.
+Hint Unfold all_hlist : deriving.
+Hint Unfold hfold : deriving.
+
 Coercion happ : hfun >-> Funclass.
 
 Fixpoint hmap I (T_ S_ : I -> Type) (f : forall i, T_ i -> S_ i) ix :
@@ -490,6 +533,7 @@ Fixpoint hmap I (T_ S_ : I -> Type) (f : forall i, T_ i -> S_ i) ix :
   | [::]    => fun _ => tt
   | i :: ix => fun l => f i l.(hd) ::: hmap f l.(tl)
   end.
+Hint Unfold hmap : deriving.
 
 Lemma hmap_eq I (T_ S_ : I -> Type) (f g : forall i, T_ i -> S_ i) :
   (forall i, f i =1 g i) ->
@@ -515,6 +559,7 @@ Definition hmap_in I (T_ S_ : I -> Type) ix :
   (forall n : fin (size ix), T_ (nth_fin n) -> S_ (nth_fin n)) ->
   hlist T_ ix -> hlist S_ ix :=
   fun f l => hlist_of_fun (fun n => f n (hnth l n)).
+Hint Unfold hmap_in : deriving.
 
 Fixpoint hpmap_in I (T_ S_ : I -> Type) ix :
   (forall n : fin (size ix), T_ (nth_fin n) -> option (S_ (nth_fin n))) ->
@@ -529,6 +574,7 @@ Fixpoint hpmap_in I (T_ S_ : I -> Type) ix :
                  else None
                else None
   end.
+Hint Unfold hpmap_in : deriving.
 
 Lemma hmap_pinK I (T_ S_ : I -> Type) ix
   (f : forall n : fin (size ix), T_ (nth_fin n) -> S_ (nth_fin n))
@@ -552,6 +598,7 @@ Fixpoint hzip I (T_ S_ : I -> Type) ix :
   | [::]    => fun _  _  => tt
   | i :: ix => fun lx ly => (lx.(hd), ly.(hd)) ::: hzip lx.(tl) ly.(tl)
   end.
+Hint Unfold hzip : deriving.
 
 Fixpoint hlist_map I J (T_ : J -> Type) (f : I -> J) (ix : seq I) :
   hlist T_ (map f ix) = hlist (T_ \o f) ix :=
@@ -559,6 +606,7 @@ Fixpoint hlist_map I J (T_ : J -> Type) (f : I -> J) (ix : seq I) :
   | [::]    => erefl
   | i :: ix => congr1 (cell (T_ (f i))) (hlist_map T_ f ix)
   end.
+Hint Unfold hlist_map : deriving.
 
 Fixpoint hfun_map I J (T_ : J -> Type) (f : I -> J) S (ix : seq I) :
   hfun T_ (map f ix) S = hfun (T_ \o f) ix S :=
@@ -566,6 +614,7 @@ Fixpoint hfun_map I J (T_ : J -> Type) (f : I -> J) S (ix : seq I) :
   | [::]    => erefl
   | i :: ix => congr1 (fun R => T_ (f i) -> R) (hfun_map T_ f S ix)
   end.
+Hint Unfold hfun_map : deriving.
 
 Fixpoint hlist_eq I (T_ S_ : I -> Type) (e : forall i, T_ i = S_ i) ix :
   hlist T_ ix = hlist S_ ix :=
@@ -573,6 +622,7 @@ Fixpoint hlist_eq I (T_ S_ : I -> Type) (e : forall i, T_ i = S_ i) ix :
   | [::]    => erefl
   | i :: ix => congr2 cell (e i) (hlist_eq e ix)
   end.
+Hint Unfold hlist_eq : deriving.
 
 Fixpoint hfun_eq I (T_ S_ : I -> Type) (e : forall i, T_ i = S_ i) ix R :
   hfun T_ ix R = hfun S_ ix R :=
@@ -580,3 +630,4 @@ Fixpoint hfun_eq I (T_ S_ : I -> Type) (e : forall i, T_ i = S_ i) ix R :
   | [::]    => erefl
   | i :: ix => congr2 (fun X Y => X -> Y) (e i) (hfun_eq e ix R)
   end.
+Hint Unfold hfun_eq : deriving.
