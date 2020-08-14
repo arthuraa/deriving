@@ -1,8 +1,6 @@
 From mathcomp Require Import
   ssreflect ssrfun ssrbool ssrnat eqtype seq choice fintype.
 
-From void Require Import void.
-
 From deriving Require Import base.
 
 From Coq Require Import ZArith NArith String Ascii.

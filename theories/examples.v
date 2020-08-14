@@ -1,8 +1,6 @@
 From mathcomp Require Import
   ssreflect ssrfun ssrbool ssrnat eqtype seq choice fintype finset.
 
-From void Require Import void.
-
 From deriving Require Import deriving.
 
 Set Implicit Arguments.

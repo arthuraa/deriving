@@ -1,8 +1,6 @@
 From mathcomp Require Import
   ssreflect ssrfun ssrbool ssrnat eqtype seq choice fintype.
 
-From void Require Import void.
-
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -195,11 +193,11 @@ Lemma leq_fin_swap n (i j : fin n) :
 Proof.
 move: (leq_nat_of_fin i j) (leq_nat_of_fin j i).
 case: ltngtP=> [||/nat_of_fin_inj ->]; last by rewrite leq_finii.
-- case: (leq_fin i j)=> // _ ji <-.
-  case: (leq_fin j i) ji => [e|b _ <- //].
-  by rewrite {1}e ltnn.
 - case: (leq_fin j i)=> // [] [] //=.
   case: (leq_fin i j)=> [e|b _ <- //].
+  by rewrite {1}e ltnn.
+- case: (leq_fin i j)=> // _ ji <-.
+  case: (leq_fin j i) ji => [e|b _ <- //].
   by rewrite {1}e ltnn.
 Qed.
 
