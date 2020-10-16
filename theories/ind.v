@@ -637,8 +637,8 @@ Definition choiceType F (T : type F) := Choice.Pack (choice_class T).
 Definition initAlgType F (T : type F) := InitAlg.Pack (init_alg_class T).
 
 Module Import Exports.
-Notation initAlgEqType := type.
-Notation InitAlgEqType := Pack.
+Notation initAlgChoiceType := type.
+Notation InitAlgChoiceType := Pack.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Canonical eqType.
