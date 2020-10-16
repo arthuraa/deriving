@@ -623,3 +623,40 @@ Hint Unfold
   InitAlgEqType.eqType
   InitAlgEqType.initAlgType
   : deriving.
+
+Module InitAlgChoiceType.
+
+Record type (F : functor) := Pack {
+  sort           : Type;
+  choice_class   : Choice.class_of sort;
+  init_alg_class : InitAlg.mixin_of sort F;
+}.
+
+Definition eqType F (T : type F) := Equality.Pack (choice_class T).
+Definition choiceType F (T : type F) := Choice.Pack (choice_class T).
+Definition initAlgType F (T : type F) := InitAlg.Pack (init_alg_class T).
+
+Module Import Exports.
+Notation initAlgEqType := type.
+Notation InitAlgEqType := Pack.
+Coercion sort : type >-> Sortclass.
+Coercion eqType : type >-> Equality.type.
+Canonical eqType.
+Coercion choiceType : type >-> Choice.type.
+Canonical choiceType.
+Coercion initAlgType : type >-> InitAlg.type.
+Canonical initAlgType.
+End Exports.
+
+End InitAlgChoiceType.
+
+Export InitAlgChoiceType.Exports.
+
+Hint Unfold
+  InitAlgChoiceType.sort
+  InitAlgChoiceType.choice_class
+  InitAlgChoiceType.init_alg_class
+  InitAlgChoiceType.eqType
+  InitAlgChoiceType.choiceType
+  InitAlgChoiceType.initAlgType
+  : deriving.
