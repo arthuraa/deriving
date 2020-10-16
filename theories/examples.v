@@ -1,5 +1,5 @@
 From mathcomp Require Import
-  ssreflect ssrfun ssrbool ssrnat eqtype seq choice fintype finset.
+  ssreflect ssrfun ssrbool ssrnat eqtype seq choice fintype finset order.
 
 From deriving Require Import deriving.
 
@@ -36,7 +36,7 @@ End RecursiveExample.
 
 Module FiniteExample.
 
-Inductive three := A of unit & bool | B | C.
+Inductive three := A of bool & bool | B | C.
 
 Definition three_indMixin :=
   [indMixin for three_rect].
@@ -59,6 +59,16 @@ Definition three_finMixin :=
   [derive finMixin for three].
 Canonical three_finType :=
   Eval hnf in FinType three three_finMixin.
+Definition three_orderMixin :=
+  [derive orderMixin for three].
+Canonical three_porderType :=
+  Eval hnf in POrderType tt three three_orderMixin.
+Canonical three_latticeType :=
+  Eval hnf in LatticeType three three_orderMixin.
+Canonical three_distrLatticeType :=
+  Eval hnf in DistrLatticeType three three_orderMixin.
+Canonical three_orderType :=
+  Eval hnf in OrderType three three_orderMixin.
 
 End FiniteExample.
 
@@ -87,6 +97,16 @@ Definition base_lit_countMixin :=
   [derive countMixin for base_lit].
 Canonical base_lit_countType :=
   Eval hnf in CountType base_lit base_lit_countMixin.
+Definition base_lit_orderMixin :=
+  [derive orderMixin for base_lit].
+Canonical base_lit_porderType :=
+  Eval hnf in POrderType tt base_lit base_lit_orderMixin.
+Canonical base_lit_latticeType :=
+  Eval hnf in LatticeType base_lit base_lit_orderMixin.
+Canonical base_lit_distrLatticeType :=
+  Eval hnf in DistrLatticeType base_lit base_lit_orderMixin.
+Canonical base_lit_orderType :=
+  Eval hnf in OrderType base_lit base_lit_orderMixin.
 
 Inductive un_op : Set :=
   | NegOp | MinusUnOp.
@@ -110,6 +130,16 @@ Definition un_op_finMixin :=
   [derive finMixin for un_op].
 Canonical un_op_finType :=
   Eval hnf in FinType un_op un_op_finMixin.
+Definition un_op_orderMixin :=
+  [derive orderMixin for un_op].
+Canonical un_op_porderType :=
+  Eval hnf in POrderType tt un_op un_op_orderMixin.
+Canonical un_op_latticeType :=
+  Eval hnf in LatticeType un_op un_op_orderMixin.
+Canonical un_op_distrLatticeType :=
+  Eval hnf in DistrLatticeType un_op un_op_orderMixin.
+Canonical un_op_orderType :=
+  Eval hnf in OrderType un_op un_op_orderMixin.
 
 Inductive bin_op : Set :=
   | PlusOp | MinusOp | MultOp | QuotOp | RemOp
@@ -137,6 +167,16 @@ Definition bin_op_finMixin :=
   [derive finMixin for bin_op].
 Canonical bin_op_finType :=
   Eval hnf in FinType bin_op bin_op_finMixin.
+Definition bin_op_orderMixin :=
+  [derive orderMixin for bin_op].
+Canonical bin_op_porderType :=
+  Eval hnf in POrderType tt bin_op bin_op_orderMixin.
+Canonical bin_op_latticeType :=
+  Eval hnf in LatticeType bin_op bin_op_orderMixin.
+Canonical bin_op_distrLatticeType :=
+  Eval hnf in DistrLatticeType bin_op bin_op_orderMixin.
+Canonical bin_op_orderType :=
+  Eval hnf in OrderType bin_op bin_op_orderMixin.
 
 Inductive expr :=
   | Var (x : nat)
@@ -176,5 +216,15 @@ Definition expr_countMixin :=
   [derive countMixin for expr].
 Canonical expr_countType :=
   Eval hnf in CountType expr expr_countMixin.
+Definition expr_orderMixin :=
+  [derive orderMixin for expr].
+Canonical expr_porderType :=
+  Eval hnf in POrderType tt expr expr_orderMixin.
+Canonical expr_latticeType :=
+  Eval hnf in LatticeType expr expr_orderMixin.
+Canonical expr_distrLatticeType :=
+  Eval hnf in DistrLatticeType expr expr_orderMixin.
+Canonical expr_orderType :=
+  Eval hnf in OrderType expr expr_orderMixin.
 
 End SyntaxExample.

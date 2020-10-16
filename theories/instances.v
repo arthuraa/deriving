@@ -1,5 +1,5 @@
 From mathcomp Require Import
-  ssreflect ssrfun ssrbool ssrnat eqtype seq choice fintype.
+  ssreflect ssrfun ssrbool ssrnat eqtype seq choice fintype order.
 
 From deriving Require Import base ind tactics.
 
@@ -337,6 +337,181 @@ End Exports.
 
 End DerFinType.
 Export DerFinType.Exports.
+
+Module DerOrderType.
+Section DerOrderType.
+
+Import Order.Total Order.Theory.
+
+Record packedOrderType := Pack {
+  disp : unit;
+  sort : orderType disp;
+}.
+
+Notation arg_class  := (arg_class  sort).
+Notation arg_inst   := (arg_inst   sort).
+Notation arity_inst := (arity_inst sort).
+Notation sig_inst   := (sig_inst   sort).
+
+Section Def.
+
+Variable (Σ : sig_inst).
+Let F := IndF.functor Σ.
+Variable (T : initAlgChoiceType F).
+
+Definition le_branch As (cAs : hlist arg_class As) :
+  hlist (type_of_arg (T * (T -> bool))) As ->
+  hlist (type_of_arg T)                 As ->
+  bool :=
+  @arity_rec
+    _ _ (fun a => hlist (type_of_arg (T * (T -> bool))) a ->
+                  hlist (type_of_arg T) a ->
+                  bool)
+    (fun _ _ => true)
+    (fun R As rec x y =>
+       if x.(hd) == y.(hd) then rec x.(tl) y.(tl) else (x.(hd) <= y.(hd))%O)
+    (fun   As rec x y =>
+       if x.(hd).1 == y.(hd) then rec x.(tl) y.(tl) else x.(hd).2 y.(hd)) As cAs.
+
+Definition le : T -> T -> bool :=
+  rec (fun args1 =>
+         case
+           (fun args2 =>
+              match leq_fin (IndF.constr args2) (IndF.constr args1) with
+              | inl e =>
+                le_branch
+                  (hnth (sig_inst_class Σ) (IndF.constr args1))
+                  (IndF.args args1)
+                  (cast (hlist (type_of_arg T) \o @nth_fin _ _) e (IndF.args args2))
+              | inr b => ~~ b
+              end)).
+
+Lemma refl : reflexive le.
+Proof.
+elim/indP=> [[i args]].
+rewrite /le recE /= -[rec _]/(le) caseE leq_finii /=.
+elim/arity_ind: {i} _ / (hnth _ _) args=> [[]|R As cAs IH|As cAs IH] //=.
+  by case=> [x args]; rewrite /= eqxx.
+by case=> [[x xP] args] /=; rewrite eqxx.
+Qed.
+
+Lemma anti : antisymmetric le.
+Proof.
+elim/indP=> [[xi xargs]] y.
+rewrite -(unrollK y); case: {y} (unroll y)=> [yi yargs].
+rewrite /le !recE -[rec _]/(le) /= !caseE /=.
+case ie: (leq_fin yi xi) (leq_nat_of_fin yi xi)=> [e|b].
+  case: xi / e {ie} xargs=> xargs _ /=; rewrite leq_finii /= => h.
+  congr (Roll (IndF.Cons _))=> /=.
+  elim/arity_ind: {yi} (nth_fin yi) / (hnth _ _) xargs yargs h
+      => [[] []|R As cAs IH|As cAs IH] //=.
+    case=> [x xargs] [y yargs] /=.
+    rewrite eq_sym; case: (altP (_ =P _))=> [-> /IH ->|yx] //.
+    by move=> /le_anti e; rewrite e eqxx in yx.
+  case=> [[x xP] xargs] [y yargs] /=.
+  rewrite eq_sym; case: (altP (_ =P _))=> [-> /IH ->|yx /xP e] //.
+  by rewrite e eqxx in yx.
+case: (leq_fin xi yi) (leq_nat_of_fin xi yi)=> [e|b'].
+  by rewrite e leq_finii in ie.
+move=> <- <-.
+have ne: nat_of_fin yi != nat_of_fin xi.
+  by apply/eqP=> /nat_of_fin_inj e; rewrite e leq_finii in ie.
+  by case: ltngtP ne.
+Qed.
+
+Lemma trans : transitive le.
+Proof.
+move=> y x z; elim/indP: x y z=> [[xi xargs]] y z.
+rewrite -(unrollK y) -(unrollK z).
+move: (unroll y) (unroll z)=> {y z} [yi yargs] [zi zargs].
+rewrite /le !recE /= -[rec _]/(le) !caseE /=.
+case: (leq_fin yi xi) (leq_nat_of_fin yi xi)=> [e _|b] //.
+  case: xi / e xargs=> /= xargs.
+  case: (leq_fin zi yi) (leq_nat_of_fin zi yi)=> [e _|b] //.
+    case: yi / e xargs yargs => xargs yargs /=.
+    elim/arity_ind: {zi} _ / (hnth _ _) xargs yargs zargs => [//|R|] As cAs IH /=.
+      case=> [x xargs] [y yargs] [z zargs] /=.
+      case: (altP (_ =P _)) => [<-|xy].
+        case: ifP=> // /eqP _; exact: IH.
+      case: (altP (_ =P _)) => [<-|yz]; first by rewrite (negbTE xy).
+      case: (altP (_ =P _)) => [<-|xz]; last exact: le_trans.
+      move=> c1 c2; suffices e: x = y by rewrite e eqxx in xy.
+      by have /andP/le_anti := conj c1 c2.
+    case=> [[x xP] xargs] [y yargs] [z zargs] /=.
+    case: (altP (x =P y))=> [<-|xy].
+      case: (altP (x =P z))=> [_|//]; exact: IH.
+    case: (altP (x =P z))=> [<-|yz].
+      rewrite eq_sym (negbTE xy)=> le1 le2.
+      suffices e : x = y by rewrite e eqxx in xy.
+      by apply: anti; rewrite le1.
+    case: (altP (_ =P _))=> [<-|_] //; exact: xP.
+move=> <- {b} ei.
+case: (leq_fin zi yi) (leq_nat_of_fin zi yi)=> [e _|_ <-].
+  case: yi / e yargs ei=> /= yargs.
+  by rewrite leq_nat_of_fin; case: (leq_fin zi xi).
+case: (leq_fin zi xi) (leq_nat_of_fin zi xi)=> [e|_ <-].
+  by case: xi / e ei xargs; rewrite -ltnNge => /ltnW ->.
+move: ei; rewrite -!ltnNge; exact: ltn_trans.
+Qed.
+
+Lemma total : total le.
+Proof.
+elim/indP=> [[xi xargs]] y.
+rewrite -(unrollK y); case: {y} (unroll y)=> [yi yargs].
+rewrite /le !recE /= -[rec _]/(le) !caseE /= (leq_fin_swap xi yi).
+case: (leq_fin yi xi)=> [e|[] //].
+case: xi / e xargs=> /= xargs.
+elim/arity_ind: {yi} _ / (hnth _ _) xargs yargs=> [[] []|R|] //= As cAs IH.
+  case=> [x xargs] [y yargs] /=.
+  rewrite eq_sym; case: (altP eqP)=> [{y} _|]; first exact: IH.
+  by rewrite le_total.
+case=> /= [[x xP] xargs] [y yargs] /=.
+by rewrite eq_sym; case: (altP eqP).
+Qed.
+
+Definition ind_porderMixin :=
+  @LeOrderMixin T le _ _ _
+                (fun _ _ => erefl) (fun _ _ => erefl) (fun _ _ => erefl)
+                anti trans total.
+
+End Def.
+
+End DerOrderType.
+End DerOrderType.
+
+Canonical packOrderType disp (T : orderType disp) :=
+  DerOrderType.Pack T.
+
+Ltac derive_orderMixin T :=
+  let sT_ind := eval hnf in [the indType _ of T by @Ind.sort _] in
+  match sT_ind with @Ind.Pack ?Σ _ ?cT_ind =>
+  let cT_ind := eval red in cT_ind in
+  let sT_ind := constr:(@Ind.Pack Σ T cT_ind) in
+  let sT_ind := constr:(IndF.initAlgType sT_ind) in
+  let sT_ch  := eval hnf in [choiceType of T] in
+  let bT_ch  := constr:(Choice.class sT_ch) in
+  let sΣ     := eval hnf in [the sig_inst DerOrderType.sort of Σ
+                             by @sig_inst_sort _ _] in
+  let cΣ     := eval hnf in (sig_inst_class sΣ) in
+  let cΣ     := eval deriving_compute in cΣ in
+  let sΣ     := constr:(@SigInst _ DerOrderType.sort Σ cΣ) in
+  let sT_ind_ch := constr:(InitAlgChoiceType bT_ch (InitAlg.class sT_ind)) in
+  let op     := constr:(@DerOrderType.le sΣ sT_ind_ch) in
+  let op     := eval cbv delta [DerOrderType.le DerOrderType.le_branch] in op in
+  let op     := eval deriving_compute in op in
+  let op     := eval simpl in op in
+  exact (@LeOrderMixin _ op _ _ _
+                       (fun _ _ => erefl)
+                       (fun _ _ => erefl)
+                       (fun _ _ => erefl)
+                       (@DerOrderType.anti sΣ sT_ind_ch)
+                       (@DerOrderType.trans sΣ sT_ind_ch)
+                       (@DerOrderType.total sΣ sT_ind_ch))
+  end.
+
+Notation "[ 'derive' 'orderMixin' 'for' T ]" :=
+  (ltac:(derive_orderMixin T))
+  (at level 0) : form_scope.
 
 Section Instances.
 
