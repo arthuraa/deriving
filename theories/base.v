@@ -83,6 +83,9 @@ Fixpoint cat T (xs ys : seq T) :=
 
 Infix "++" := cat : deriving_scope.
 
+Definition flatten T (xxs : seq (seq T)) : seq T :=
+  foldr (@cat T) [::] xxs.
+
 Lemma seq_of_list_map T S (f : T -> S) (xs : seq.seq T) :
   seq_of_list (seq.map f xs) = map f (seq_of_list xs).
 Proof. by elim: xs=> //= x xs ->. Qed.

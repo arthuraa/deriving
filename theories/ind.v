@@ -11,49 +11,64 @@ Unset Printing Implicit Defensive.
 
 Open Scope deriving_scope.
 
-Record functor := Functor {
-  fobj      :> Type -> Type;
-  fmap      :  forall T S, (T -> S) -> (fobj T -> fobj S);
-  fmap_eq   :  forall T S (f g : T -> S), f =1 g -> fmap f =1 fmap g;
-  fmap1     :  forall T, fmap (@id T) =1 id;
-  fmap_comp :  forall T S R (f : T -> S) (g : S -> R),
-                 fmap (g \o f) =1 fmap g \o fmap f
+Notation "T -F> S" :=
+  (forall i, T i -> S i)
+  (at level 30, no associativity)
+  : deriving_scope.
+
+Notation "T *F S"  :=
+  (fun i => T i * S i)%type
+  (at level 20, no associativity)
+  : deriving_scope.
+
+Record functor I := Functor {
+  fobj      :> (I -> Type) -> I -> Type;
+  fmap      :  forall T S, (T -F> S) -> fobj T -F> fobj S;
+  fmap_eq   :  forall T S (f g : T -F> S),
+                 (forall i, f i =1 g i) ->
+                 (forall i (x : fobj T i), fmap f x = fmap g x);
+  fmap1     :  forall T i (x : fobj T i),
+                 fmap (fun i => @id (T i)) x = x;
+  fmap_comp :  forall T S R (f : T -F> S) (g : S -F> R) i (x : fobj T i),
+                 fmap (fun i => g i \o f i) x = fmap g (fmap f x);
 }.
 
 Module InitAlg.
 
 Section ClassDef.
 
-Record mixin_of T (F : functor) := Mixin {
-  Roll     :  F T -> T;
-  case     :  forall S, (F T -> S) -> T -> S;
-  rec      :  forall S, (F (T * S)%type -> S) -> T -> S;
-  _        :  forall S f a, rec f (Roll a) =
-                            f (fmap (fun x => (x, rec f x)) a) :> S;
-  _        :  forall S f a, case f (Roll a) = f a :> S;
-  _        :  forall P,
-                (forall (a : F {x & P x}), P (Roll (fmap tag a))) ->
-                forall x, P x
+Record mixin_of I T (F : functor I) := Mixin {
+  Roll     :  F T -F> T;
+  case     :  forall S, (F T -F> S) -> T -F> S;
+  rec      :  forall S, (F (T *F S) -F> S) -> T -F> S;
+  _        :  forall S f i a,
+                rec f (Roll a) =
+                f i (fmap (fun i x => (x, rec f x)) a) :> S i;
+  _        :  forall S f i a, case f (Roll a) = f i a :> S i;
+  _        :  forall (P : forall i, T i -> Type),
+                (forall i (a : F (fun i => {x & P i x}) i),
+                   P i (Roll (fmap (fun i x => tag x) a))) ->
+                forall i (x : T i), P i x
 }.
 Notation class_of := mixin_of (only parsing).
 
-Record type F := Pack {sort : Type; _ : class_of sort F}.
-Local Coercion sort : type >-> Sortclass.
-Variables (F : functor) (T : Type) (cT : type F).
+Record type I F := Pack {sort : I -> Type; _ : class_of sort F}.
+Local Coercion sort : type >-> Funclass.
+Variables (I : Type) (F : functor I) (T : I -> Type) (cT : type F).
 Definition class := let: Pack _ c as cT' := cT return class_of cT' F in c.
-Definition clone c of phant_id class c := @Pack F T c.
+Definition clone c of phant_id class c := @Pack I F T c.
 Let xT := let: Pack T _ := cT in T.
 Notation xclass := (class : class_of xT).
 
-Definition pack c := @Pack F T c.
+Definition pack c := @Pack I F T c.
 
 End ClassDef.
 
 Module Exports.
-Coercion sort : type >-> Sortclass.
+Coercion sort : type >-> Funclass.
 Notation initAlgType := type.
 Notation InitAlgMixin := Mixin.
-Notation InitAlgType F T m := (@pack F T m).
+Notation InitAlgType F T m := (@pack _ F T m).
 Notation "[ 'initAlgMixin' 'of' T ]" := (class _ : mixin_of T)
   (at level 0, format "[ 'initAlgMixin'  'of'  T ]") : form_scope.
 Notation "[ 'initAlgType' 'of' T 'for' C ]" := (@clone T C _ idfun id)
@@ -67,38 +82,40 @@ Export InitAlg.Exports.
 
 Section InitAlgTheory.
 
-Variable F : functor.
+Variable I : Type.
+Variable F : functor I.
 Variable T : initAlgType F.
 
 Definition Roll := (InitAlg.Roll (InitAlg.class T)).
 Definition case := (InitAlg.case (InitAlg.class T)).
 Definition rec  := (InitAlg.rec  (InitAlg.class T)).
 
-Lemma recE S f a : rec f (Roll a) =
-                   f (fmap (fun x => (x, rec f x)) a) :> S.
+Lemma recE S f i a : rec f (Roll a) =
+                     f i (fmap (fun i x => (x, rec f x)) a) :> S i.
 Proof. by rewrite /Roll /rec; case: (T) f a=> [? []]. Qed.
 
-Lemma caseE S f a : case f (Roll a) = f a :> S.
+Lemma caseE S f i a : case f (Roll a) = f i a :> S i.
 Proof. by rewrite /Roll /case; case: (T) f a=> [? []]. Qed.
 
 Lemma indP P :
-  (forall (a : F {x & P x}), P (Roll (fmap tag a))) ->
-  forall x, P x.
+  (forall i (a : F (fun i => {x & P i x}) i),
+      P i (Roll (fmap (fun i x => tag x) a))) ->
+  forall i (x : T i), P i x.
 Proof. by rewrite /Roll /rec; case: (T) P => [? []]. Qed.
 
-Definition unroll := case id.
+Definition unroll := case (fun _ => id).
 
-Lemma RollK : cancel Roll unroll.
+Lemma RollK i : cancel (@Roll i) (@unroll i).
 Proof. by move=> x; rewrite /unroll caseE. Qed.
 
-Lemma Roll_inj : injective Roll.
-Proof. exact: can_inj RollK. Qed.
+Lemma Roll_inj i : injective (@Roll i).
+Proof. exact: can_inj (@RollK i). Qed.
 
-Lemma unrollK : cancel unroll Roll.
-Proof. by elim/indP=> a; rewrite RollK. Qed.
+Lemma unrollK i : cancel (@unroll i) (@Roll i).
+Proof. by elim/indP: i / => i a; rewrite RollK. Qed.
 
-Lemma unroll_inj : injective unroll.
-Proof. exact: can_inj unrollK. Qed.
+Lemma unroll_inj i : injective (@unroll i).
+Proof. exact: can_inj (@unrollK i). Qed.
 
 End InitAlgTheory.
 
@@ -120,22 +137,32 @@ Section Signature.
 
 Import PolyType.
 
-Variant arg := NonRec of Type | Rec.
+Variable n : nat.
+Implicit Types (T S : fin n -> Type).
+
+Variant arg := NonRec of Type | Rec of fin n.
 
 Definition type_of_arg T (A : arg) : Type :=
-  if A is NonRec T' then T' else T.
+  match A with
+  | NonRec X => X
+  | Rec i => T i
+  end.
 
-Definition type_of_arg_map T S (f : T -> S) A :
+Definition type_of_arg_map T S (f : T -F> S) A :
   type_of_arg T A -> type_of_arg S A :=
-  if A is Rec then f else id.
+  match A with
+  | NonRec X => id
+  | Rec i => f i
+  end.
 
-Definition is_rec A := if A is Rec then true else false.
+Definition is_rec A := if A is Rec _ then true else false.
 
-Definition arity := seq arg.
-Definition signature := seq arity.
+Definition arity       := seq arg.
+Definition signature   := seq arity.
+Definition declaration := ilist signature n.
 
 Identity Coercion seq_of_arity : arity >-> seq.
-Identity Coercion seq_of_sig : signature >-> seq.
+Identity Coercion seq_of_sig   : signature >-> seq.
 
 Variables (K : Type) (sort : K -> Type).
 
@@ -160,14 +187,21 @@ Record sig_inst := SigInst {
 }.
 Arguments SigInst : clear implicits.
 
+Record decl_inst := DeclInst {
+  decl_inst_len   :  nat;
+  decl_inst_sort  :> ilist signature decl_inst_len;
+  decl_inst_class :  hlist (hlist (hlist arg_class)) (seq_of_ilist decl_inst_sort);
+}.
+Arguments DeclInst : clear implicits.
+
 Implicit Types (A : arg) (As : arity) (Σ : signature).
 Implicit Types (Ai : arg_inst) (Asi : arity_inst) (Σi : sig_inst).
 
-Canonical NonRec_arg_inst T :=
-  ArgInst (NonRec (sort T)) (exist _ T erefl).
+Canonical NonRec_arg_inst sX :=
+  ArgInst (NonRec (sort sX)) (exist _ sX erefl).
 
-Canonical Rec_arg_inst :=
-  ArgInst Rec tt.
+Canonical Rec_arg_inst i :=
+  ArgInst (Rec i) tt.
 
 Canonical nth_fin_arg_inst Asi (i : fin (size Asi)) :=
   ArgInst (nth_fin i) (hnth (arity_inst_class Asi) i).
@@ -189,32 +223,40 @@ Canonical cons_sig_inst Asi Σi :=
   SigInst (arity_inst_sort Asi :: sig_inst_sort Σi)
           (arity_inst_class Asi ::: sig_inst_class Σi).
 
-Definition arity_rec (T : arity -> Type)
-  (Tnil    : T [::])
-  (TNonRec : forall (S : K) (As : arity), T As -> T (NonRec (sort S) :: As))
-  (TRec    : forall         (As : arity), T As -> T (Rec :: As)) :=
-  fix arity_rec As : hlist arg_class As -> T As :=
+Canonical nil_decl_inst :=
+  DeclInst 0 tt tt.
+
+Canonical cons_decl_inst Σi Di :=
+  DeclInst (decl_inst_len Di).+1
+           (sig_inst_sort Σi  ::: decl_inst_sort Di)
+           (sig_inst_class Σi ::: decl_inst_class Di).
+
+Definition arity_rec (P : arity -> Type)
+  (Pnil    : P [::])
+  (PNonRec : forall (sX : K) (As : arity), P As -> P (NonRec (sort sX) :: As))
+  (PRec    : forall i        (As : arity), P As -> P (Rec i            :: As)) :=
+  fix arity_rec As : hlist arg_class As -> P As :=
     match As with
     | [::]               => fun cAs =>
-      Tnil
-    | NonRec Ssort :: As => fun cAs =>
-      cast (fun Ssort => T (NonRec Ssort :: As)) (svalP cAs.(hd))
-           (TNonRec (sval cAs.(hd)) As (arity_rec As cAs.(tl)))
-    | Rec :: As          => fun cAs =>
-      TRec As (arity_rec As cAs.(tl))
+      Pnil
+    | NonRec X :: As => fun cAs =>
+      cast (fun X => P (NonRec X :: As)) (svalP cAs.(hd))
+           (PNonRec (sval cAs.(hd)) As (arity_rec As cAs.(tl)))
+    | Rec i :: As    => fun cAs =>
+      PRec i As (arity_rec As cAs.(tl))
     end.
 
-Lemma arity_ind (T : forall As, hlist arg_class As -> Type)
-  (Tnil : T [::] tt)
-  (TNonRec : forall S As cAs,
-      T As cAs -> T (NonRec (sort S) :: As) (exist _ S erefl ::: cAs))
-  (TRec : forall As cAs,
-      T As cAs -> T (Rec :: As) (tt ::: cAs))
-  As cAs : T As cAs.
+Lemma arity_ind (P : forall As, hlist arg_class As -> Type)
+  (Pnil : P [::] tt)
+  (PNonRec : forall sX As cAs,
+      P As cAs -> P (NonRec (sort sX) :: As) (exist _ sX erefl ::: cAs))
+  (PRec : forall i As cAs,
+      P As cAs -> P (Rec i :: As) (tt ::: cAs))
+  As cAs : P As cAs.
 Proof.
-elim: As cAs=> [|[Ssort|] As IH] => /= [[]|[[S e] cAs]|[[] cAs]] //.
-  by case: Ssort / e; apply: TNonRec.
-by apply: TRec.
+elim: As cAs=> [|[X|i] As IH] => /= [[]|[[sX e] cAs]|[[] cAs]] //.
+  by case: X / e; apply: PNonRec.
+by apply: PRec.
 Qed.
 
 End Signature.
@@ -243,41 +285,109 @@ Hint Unfold
   : deriving.
 
 Definition arg_class_map
-  K1 K2 (sort1 : K1 -> Type) (sort2 : K2 -> Type)
-  (f : K1 -> K2) (p : forall cT, sort2 (f cT) = sort1 cT) (A : arg) :
+  n K1 K2 (sort1 : K1 -> Type) (sort2 : K2 -> Type)
+  (f : K1 -> K2) (p : forall cT, sort2 (f cT) = sort1 cT) (A : arg n) :
   arg_class sort1 A -> arg_class sort2 A :=
   match A with
   | NonRec T => fun cT =>
     PolyType.exist _
       (f (PolyType.sval cT)) (p (PolyType.sval cT) * PolyType.svalP cT)
-  | Rec      => fun _  => tt
+  | Rec i    => fun _  => tt
   end.
 
 Hint Unfold arg_class_map : deriving.
 
 Unset Universe Polymorphism.
 
-Arguments arity_rec {_} _ _ _ _ _.
+Arguments arity_rec {n K} _ _ _ _ _.
+
+Unset Elimination Schemes.
+Inductive foo := Foo of bar
+with bar := Bar of foo.
+Set Elimination Schemes.
+
+Scheme foo_rect := Induction for foo Sort Type
+with   bar_rect := Induction for bar Sort Type.
+
+Combined Scheme foo_bar_rect from foo_rect, bar_rect.
 
 Module Ind.
 
 Section Basic.
 
-Implicit Types (A : arg) (As : arity) (Σ : signature) (T S : Type).
+Variable n : nat.
+Implicit Types (A : arg n.+1) (As : arity n.+1) (Σ : signature n.+1).
+Implicit Types (D : declaration n.+1).
+Implicit Types (T S : fin n.+1 -> Type).
 
 Import PolyType.
 
-Definition constructors Σ T :=
-  hlist (fun As => hfun (type_of_arg T) As T) Σ.
+Definition constructors D T :=
+  hlist (fun Σ => hlist (fun As => hfun (type_of_arg T) As (T i)) Σ).
 
-Fixpoint branch T S As : Type :=
+Fixpoint branch T S i As : Type :=
   match As with
-  | NonRec R :: As => R      -> branch T S As
-  | Rec      :: As => T -> S -> branch T S As
-  | [::]           => S
+  | NonRec X :: As => X          -> branch T S i As
+  | Rec    j :: As => T j -> S j -> branch T S i As
+  | [::]           => S i
   end.
 
-Definition recursor Σ T := forall S, hfun (branch T S) Σ (T -> S).
+Fixpoint recursor_res_aux m acc :
+  forall (T : fin m -> Type) (P : forall i : fin m, T i -> Type), Type :=
+  match m with
+  | 0 =>
+    fun _ _ => acc
+  | m.+1 =>
+    fun (T : fin m.+1 -> Type) (P : forall i : fin m.+1, T i -> Type) =>
+      recursor_res_aux (prod acc (forall x : T None, P None x))
+                       (fun i x => P (Some i) x)
+  end.
+
+Fixpoint acc_of_recursor_res_aux m acc :
+  forall (T : fin m -> Type) (P : forall i, T i -> Type),
+    recursor_res_aux acc P -> acc :=
+  match m with
+  | 0    =>
+    fun (T : fin 0 -> Type) _ => id
+  | m.+1 =>
+    fun (T : fin m.+1 -> Type) P fs =>
+      Datatypes.fst (@acc_of_recursor_res_aux m _ _ _ fs)
+  end.
+
+Fixpoint fun_of_recursor_res_aux m acc :
+  forall (T : fin m -> Type) (P : forall i, T i -> Type),
+    recursor_res_aux acc P ->
+    forall (i : fin m) (x : T i), P i x :=
+  match m with
+  | 0    => fun (T : fin 0 -> Type) P fs i => match i with end
+  | m.+1 => fun (T : fin m.+1 -> Type) P fs i =>
+    match i with
+    | None   => Datatypes.snd (@acc_of_recursor_res_aux m _ _ _ fs)
+    | Some i => fun x => @fun_of_recursor_res_aux m _ _ _ fs i x
+    end
+  end.
+
+Definition recursor_res T (P : forall i, T i -> Type) : Type :=
+  recursor_res_aux (forall x : T None, P None x)
+                   (fun i x => P (Some i) x).
+
+Definition fun_of_recursor_res
+  T (P : forall i, T i -> Type) (f : recursor_res P) (i : fin n.+1) :
+  forall (x : T i), P i x :=
+  match i with
+  | None   => acc_of_recursor_res_aux f
+  | Some i => fun x => fun_of_recursor_res_aux f x
+  end.
+
+Fixpoint recursor_for m : forall (D : ilist (signature n.+1) m) T S, Type :=
+  match m with
+  | 0    => fun _ T S => @recursor_res T (fun i _ => S i)
+  | m.+1 => fun (D : ilist (signature n.+1) m) T S =>
+              hfun
+
+
+Definition recursor Σ T :=
+  forall S, hfun (branch T S) Σ (@recursor_res T (fun i _ => S i)).
 
 Fixpoint branch_of_hfun T S As :
   hfun (type_of_arg (Datatypes.prod T S)) As S -> branch T S As :=
