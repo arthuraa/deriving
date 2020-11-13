@@ -1,0 +1,3 @@
+* Support mutually inductive types
+* Documentation
+* Clean up code

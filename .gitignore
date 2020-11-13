@@ -1,6 +1,9 @@
 *.vo
+*.vok
+*.vos
 *.glob
 *.d
 *.aux
 CoqMakefile
 CoqMakefile.conf
+theories/tactics.v
