@@ -175,22 +175,28 @@ Record arg_inst := ArgInst {
 }.
 Arguments ArgInst : clear implicits.
 
+Definition arity_class (As : arity) :=
+  hlist' arg_class As.
+
 Record arity_inst := ArityInst {
   arity_inst_sort  :> arity;
-  arity_inst_class :  hlist arg_class arity_inst_sort;
+  arity_inst_class :  arity_class arity_inst_sort;
 }.
 Arguments ArityInst : clear implicits.
 
+Definition sig_class (Σ : signature) :=
+  hlist' arity_class Σ.
+
 Record sig_inst := SigInst {
   sig_inst_sort  :> signature;
-  sig_inst_class :  hlist (hlist arg_class) sig_inst_sort;
+  sig_inst_class :  sig_class sig_inst_sort;
 }.
 Arguments SigInst : clear implicits.
 
 Record decl_inst := DeclInst {
   decl_inst_len   :  nat;
   decl_inst_sort  :> ilist signature decl_inst_len;
-  decl_inst_class :  hlist (hlist (hlist arg_class)) (seq_of_ilist decl_inst_sort);
+  decl_inst_class :  hlist' sig_class (seq_of_ilist decl_inst_sort);
 }.
 Arguments DeclInst : clear implicits.
 
@@ -204,7 +210,7 @@ Canonical Rec_arg_inst i :=
   ArgInst (Rec i) tt.
 
 Canonical nth_fin_arg_inst Asi (i : fin (size Asi)) :=
-  ArgInst (nth_fin i) (hnth (arity_inst_class Asi) i).
+  ArgInst (nth_fin i) (arity_inst_class Asi i).
 
 Canonical nil_arity_inst :=
   ArityInst nil tt.
@@ -214,7 +220,7 @@ Canonical cons_arity_inst Ai Asi :=
             (arg_inst_class Ai ::: arity_inst_class Asi).
 
 Canonical nth_fin_arity_inst Σi (i : fin (size Σi)) :=
-  ArityInst (nth_fin i) (hnth (sig_inst_class Σi) i).
+  ArityInst (nth_fin i) (sig_inst_class Σi i).
 
 Canonical nil_sig_inst :=
   SigInst nil tt.
@@ -235,7 +241,7 @@ Definition arity_rec (P : arity -> Type)
   (Pnil    : P [::])
   (PNonRec : forall (sX : K) (As : arity), P As -> P (NonRec (sort sX) :: As))
   (PRec    : forall i        (As : arity), P As -> P (Rec i            :: As)) :=
-  fix arity_rec As : hlist arg_class As -> P As :=
+  fix arity_rec As : arity_class As -> P As :=
     match As with
     | [::]               => fun cAs =>
       Pnil
@@ -246,7 +252,7 @@ Definition arity_rec (P : arity -> Type)
       PRec i As (arity_rec As cAs.(tl))
     end.
 
-Lemma arity_ind (P : forall As, hlist arg_class As -> Type)
+Lemma arity_ind (P : forall As, hlist' arg_class As -> Type)
   (Pnil : P [::] tt)
   (PNonRec : forall sX As cAs,
       P As cAs -> P (NonRec (sort sX) :: As) (exist _ sX erefl ::: cAs))
@@ -254,8 +260,8 @@ Lemma arity_ind (P : forall As, hlist arg_class As -> Type)
       P As cAs -> P (Rec i :: As) (tt ::: cAs))
   As cAs : P As cAs.
 Proof.
-elim: As cAs=> [|[X|i] As IH] => /= [[]|[[sX e] cAs]|[[] cAs]] //.
-  by case: X / e; apply: PNonRec.
+elim: As cAs=> [|[X|i] As IH] => /= [[]|[[xS e] cAs]|[[] cAs]] //.
+  by case: X / e cAs => ?; apply: PNonRec.
 by apply: PRec.
 Qed.
 
@@ -270,8 +276,10 @@ Hint Unfold
   arg_class
   arg_inst_sort
   arg_inst_class
+  arity_class
   arity_inst_sort
   arity_inst_class
+  sig_class
   sig_inst_sort
   sig_inst_class
   NonRec_arg_inst
@@ -322,166 +330,176 @@ Implicit Types (T S : fin n.+1 -> Type).
 
 Import PolyType.
 
-Definition constructors D T :=
-  hlist (fun Σ => hlist (fun As => hfun (type_of_arg T) As (T i)) Σ).
+Definition idx D := fin (sumn_fin (fun i => size (inth D i))).
 
-Fixpoint branch T S i As : Type :=
+Definition Tidx D (i : idx D) := tag (tag_of_fin _ i).
+Arguments Tidx : clear implicits.
+
+Definition Cidx D (i : idx D) := tagged (tag_of_fin _ i).
+Arguments Cidx : clear implicits.
+
+Definition sig_of D (i : idx D) : signature n.+1 :=
+  inth D (Tidx D i).
+
+Definition arity_of D (i : idx D) : arity n.+1 :=
+  nth_fin (Cidx D i).
+
+Definition args D T (i : idx D) : Type :=
+  hlist' (type_of_arg T) (arity_of i).
+
+Definition args_map D T S (f : T -F> S) (i : idx D) (xs : args T i) : args S i :=
+  hmap' (type_of_arg_map f) xs.
+
+Definition constructors D T :=
+  hlist (fun i =>
+    hfun' (type_of_arg T) (arity_of i) (T (Tidx D i))).
+
+Fixpoint rec_branch' T S i As : Type :=
   match As with
-  | NonRec X :: As => X          -> branch T S i As
-  | Rec    j :: As => T j -> S j -> branch T S i As
+  | NonRec X :: As => X          -> rec_branch' T S i As
+  | Rec    j :: As => T j -> S j -> rec_branch' T S i As
   | [::]           => S i
   end.
 
-Fixpoint recursor_res_aux m acc :
-  forall (T : fin m -> Type) (P : forall i : fin m, T i -> Type), Type :=
+Definition rec_branch D T S i : Type :=
+  rec_branch' T S (Tidx D i) (arity_of i).
+
+Fixpoint hlist1V' m acc : (fin m -> Type) -> Type :=
   match m with
-  | 0 =>
-    fun _ _ => acc
-  | m.+1 =>
-    fun (T : fin m.+1 -> Type) (P : forall i : fin m.+1, T i -> Type) =>
-      recursor_res_aux (prod acc (forall x : T None, P None x))
-                       (fun i x => P (Some i) x)
+  | 0    => fun _ => acc
+  | m.+1 => fun X => hlist1V' (acc * (X None)) (fun i => X (Some i))
+  end%type.
+
+Fixpoint hd_hlist1V' m acc :
+  forall (X : fin m -> Type), hlist1V' acc X -> acc :=
+  match m with
+  | 0    => fun X l => l
+  | m.+1 => fun X l => (@hd_hlist1V' m _ (fun i => X (Some i)) l).1
   end.
 
-Fixpoint acc_of_recursor_res_aux m acc :
-  forall (T : fin m -> Type) (P : forall i, T i -> Type),
-    recursor_res_aux acc P -> acc :=
+Fixpoint tl_hlist1V' m acc :
+  forall (X : fin m -> Type), hlist1V' acc X -> forall i, X i :=
   match m with
-  | 0    =>
-    fun (T : fin 0 -> Type) _ => id
-  | m.+1 =>
-    fun (T : fin m.+1 -> Type) P fs =>
-      Datatypes.fst (@acc_of_recursor_res_aux m _ _ _ fs)
-  end.
-
-Fixpoint fun_of_recursor_res_aux m acc :
-  forall (T : fin m -> Type) (P : forall i, T i -> Type),
-    recursor_res_aux acc P ->
-    forall (i : fin m) (x : T i), P i x :=
-  match m with
-  | 0    => fun (T : fin 0 -> Type) P fs i => match i with end
-  | m.+1 => fun (T : fin m.+1 -> Type) P fs i =>
+  | 0    => fun X l i => match i with end
+  | m.+1 => fun X l i =>
     match i with
-    | None   => Datatypes.snd (@acc_of_recursor_res_aux m _ _ _ fs)
-    | Some i => fun x => @fun_of_recursor_res_aux m _ _ _ fs i x
+    | None => (@hd_hlist1V' m _ _ l).2
+    | Some i => @tl_hlist1V' m _ _ l i
     end
   end.
 
-Definition recursor_res T (P : forall i, T i -> Type) : Type :=
-  recursor_res_aux (forall x : T None, P None x)
-                   (fun i x => P (Some i) x).
+Definition hlist1V T := hlist1V' (T None) (fun i => T (Some i)).
 
-Definition fun_of_recursor_res
-  T (P : forall i, T i -> Type) (f : recursor_res P) (i : fin n.+1) :
-  forall (x : T i), P i x :=
+Definition hnth1V T (l : hlist1V T) i : T i :=
   match i with
-  | None   => acc_of_recursor_res_aux f
-  | Some i => fun x => fun_of_recursor_res_aux f x
+  | None => hd_hlist1V' l
+  | Some i => tl_hlist1V' l i
   end.
 
-Fixpoint recursor_for m : forall (D : ilist (signature n.+1) m) T S, Type :=
-  match m with
-  | 0    => fun _ T S => @recursor_res T (fun i _ => S i)
-  | m.+1 => fun (D : ilist (signature n.+1) m) T S =>
-              hfun
+Coercion hnth1V : hlist1V >-> Funclass.
 
+Definition recursor D T :=
+  forall S, hfun (@rec_branch D T S) (hlist1V (fun i => T i -> S i)).
 
-Definition recursor Σ T :=
-  forall S, hfun (branch T S) Σ (@recursor_res T (fun i _ => S i)).
-
-Fixpoint branch_of_hfun T S As :
-  hfun (type_of_arg (Datatypes.prod T S)) As S -> branch T S As :=
+Fixpoint rec_branch'_of_hfun' T S i As :
+  hfun' (type_of_arg (T *F S)) As (S i) -> rec_branch' T S i As :=
   match As with
-  | NonRec R :: As => fun f x   => branch_of_hfun (f x)
-  | Rec      :: As => fun f x y => branch_of_hfun (f (Datatypes.pair x y))
+  | NonRec R :: As => fun f x   => rec_branch'_of_hfun' (f x)
+  | Rec    j :: As => fun f x y => rec_branch'_of_hfun' (f (x, y))
   | [::]           => fun f     => f
   end.
 
-Fixpoint hfun_of_branch T S As :
-  branch T S As -> hfun (type_of_arg (Datatypes.prod T S)) As S :=
+Fixpoint hfun'_of_rec_branch' T S i As :
+  rec_branch' T S i As -> hfun' (type_of_arg (T *F S)) As (S i) :=
   match As with
-  | NonRec R :: As => fun f x => hfun_of_branch (f x)
-  | Rec      :: As => fun f p => hfun_of_branch (f (Datatypes.fst p) (Datatypes.snd p))
+  | NonRec R :: As => fun f x => hfun'_of_rec_branch' (f x)
+  | Rec    j :: As => fun f p => hfun'_of_rec_branch' (f p.1 p.2)
   | [::]           => fun f   => f
   end.
 
-Lemma branch_of_hfunK T S As f xs :
-  hfun_of_branch (@branch_of_hfun T S As f) xs = f xs.
-Proof. by elim: As f xs=> [|[R|] As IH] f //= [[x y] xs]. Qed.
+Coercion hfun'_of_rec_branch' : rec_branch' >-> hfun'.
 
-Definition recursor_eq Σ T (Cs : constructors Σ T) (r : recursor Σ T) :=
+Lemma rec_branch_of_hfunK T S i As f xs :
+  @rec_branch'_of_hfun' T S i As f xs = f xs.
+Proof. by elim: As f xs => [|[R|j] As IH] f //= [[x y] xs]. Qed.
+
+Definition recursor_eq D T (Cs : constructors D T) (r : recursor D T) :=
   forall S,
-  all_hlist (fun bs : hlist (branch T S) Σ =>
-  all_fin   (fun i  : fin (size Σ) =>
-  all_hlist (fun xs : hlist (type_of_arg T) (nth_fin i) =>
-    r S bs (hnth Cs i xs) =
-    hfun_of_branch (hnth bs i)
-                   (hmap (type_of_arg_map (fun x => Datatypes.pair x (r S bs x))) xs)))).
+  all_hlist (fun bs : hlist (rec_branch T S) =>
+  all_fin   (fun i  : idx D                  =>
+  all_hlist (fun xs : args T i               =>
+    r S bs _ (Cs i xs) =
+    bs i (args_map (fun j x => (x, r S bs j x)) xs)))).
 
-Definition destructor Σ T :=
-  forall S, hfun (fun As => hfun (type_of_arg T) As S) Σ (T -> S).
+Definition des_branch D T S i :=
+  hfun' (type_of_arg T) (arity_of i) (S (Tidx D i)).
 
-Definition destructor_eq Σ T (Cs : constructors Σ T) (d : destructor Σ T) :=
+Definition destructor D T :=
+  forall S, hfun (@des_branch D T S) (hlist1V (fun i => T i -> S i)).
+
+Definition destructor_eq D T (Cs : constructors D T) (d : destructor D T) :=
   forall S,
-  all_hlist (fun bs : hlist (fun ks => hfun (type_of_arg T) ks S) Σ =>
-  all_fin   (fun i  : fin (size Σ) =>
-  all_hlist (fun xs : hlist (type_of_arg T) (nth_fin i) =>
-    d S bs (hnth Cs i xs) = hnth bs i xs))).
+  all_hlist (fun bs : hlist (des_branch T S) =>
+  all_fin   (fun i  : idx D                  =>
+  all_hlist (fun xs : args T i               =>
+    d S bs _ (Cs i xs) = bs i xs))).
 
-Definition destructor_of_recursor Σ T (r : recursor Σ T) : destructor Σ T :=
-  fun S => hcurry (
-  fun bs : hlist (fun As => hfun (type_of_arg T) As S) Σ =>
-    r S (hmap (fun As (b : hfun (type_of_arg T) As S) =>
-           branch_of_hfun
-             (hcurry (fun xs => b (hmap (type_of_arg_map Datatypes.fst) xs)))) bs)
-).
+Definition rec_of_des_branch D T S (i : idx D) (b : des_branch T S i) :
+  rec_branch T S i :=
+  rec_branch'_of_hfun' (hcurry (fun xs => b (args_map (fun _ => fst) xs))).
 
-Fixpoint ind_branch T (P : T -> Type) As : hfun (type_of_arg T) As T -> Type :=
+Definition destructor_of_recursor D T (r : recursor D T) : destructor D T :=
+  fun S => hcurry (fun bs : hlist (@des_branch D T S) =>
+    r S (hmap (@rec_of_des_branch D T S) bs)).
+
+Fixpoint ind_branch' T (P : hlist (fun i => T i -> Type)) i As :
+  hfun' (type_of_arg T) As (T i) -> Type :=
   match As with
-  | NonRec R :: As => fun C => forall x : R,        ind_branch P (C x)
-  | Rec      :: As => fun C => forall x : T, P x -> ind_branch P (C x)
-  | [::]           => fun C => P C
+  | NonRec R :: As => fun C => forall x : R,            ind_branch' P (C x)
+  | Rec    j :: As => fun C => forall x : T j, P j x -> ind_branch' P (C x)
+  | [::]           => fun C => P i C
   end.
 
-Fixpoint induction T (P : T -> Type) Σ : constructors Σ T -> Type :=
-  match Σ with
-  | As :: Σ => fun Cs => ind_branch P Cs.(hd) -> induction P Cs.(tl)
-  | [::]    => fun Cs => forall x, P x
-  end.
+Definition ind_branch D T P (Cs : constructors D T) i :=
+  @ind_branch' T P (Tidx D i) (arity_of i) (Cs i).
+
+Definition induction D T (Cs : constructors D T) :=
+  @hdfun n.+1 (fun i => T i -> Type) (fun P =>
+  hfun (@ind_branch D T P Cs)
+       (hlist1V (fun i => forall x, P i x))).
 
 End Basic.
 
 Section ClassDef.
 
-Variables (Σ : signature).
+Variables (n : nat) (D : declaration n.+1).
 
 Record mixin_of T := Mixin {
-  Cons      : constructors Σ T;
-  rec       : recursor Σ T;
-  case      : destructor Σ T;
+  Cons      : constructors D T;
+  rec       : recursor D T;
+  case      : destructor D T;
   _         : recursor_eq Cons rec;
   _         : destructor_eq Cons case;
-  _         : forall P, induction P Cons;
+  _         : induction Cons;
 }.
 
-Record type := Pack {sort : Type; class : mixin_of sort}.
-Variables (T : Type).
+Record type := Pack {sort : fin n.+1 -> Type; class : mixin_of sort}.
+Variables (T : fin n.+1 -> Type).
 Definition recE (m : mixin_of T) : recursor_eq (Cons m) (rec m) :=
   let: Mixin _ _ _ recE _ _ := m in recE.
 Definition caseE (m : mixin_of T) : destructor_eq (Cons m) (case m) :=
   let: Mixin _ _ _ _ caseE _ := m in caseE.
 Definition indP (m : mixin_of T) :=
   let: Mixin _ _ _ _ _ indP := m
-  return forall P : T -> Type, induction P (Cons m)
-  in indP.
+  return induction (Cons m) in indP.
 
 End ClassDef.
 
 Module Exports.
-Coercion sort : type >-> Sortclass.
+Coercion sort : type >-> Funclass.
 Coercion class : type >-> mixin_of.
 Notation indType := type.
-Notation IndType Σ T m := (@Pack Σ T m).
+Notation IndType m := (@Pack _ _ _ m).
 Notation IndMixin := Mixin.
 End Exports.
 
@@ -490,14 +508,18 @@ Export Ind.Exports.
 
 Hint Unfold
   Ind.constructors
-  Ind.branch
+  Ind.rec_branch'
+  Ind.rec_branch
   Ind.recursor
-  Ind.branch_of_hfun
-  Ind.hfun_of_branch
+  Ind.rec_branch'_of_hfun'
+  Ind.hfun'_of_rec_branch'
   Ind.recursor_eq
+  Ind.des_branch
   Ind.destructor
   Ind.destructor_eq
+  Ind.rec_of_des_branch
   Ind.destructor_of_recursor
+  Ind.ind_branch'
   Ind.ind_branch
   Ind.induction
   Ind.Cons
@@ -511,56 +533,62 @@ Module IndF.
 
 Section TypeDef.
 
-Variables (Σ : signature).
+Variables (n : nat) (D : declaration n.+1).
+
+Implicit Types (T S : fin n.+1 -> Type).
 
 Notation size := PolyType.size.
 
-Record fobj T := Cons {
-  constr : fin (size Σ);
-  args : hlist (type_of_arg T) (nth_fin constr)
+Record fobj T (i : fin n.+1) := Cons {
+  constr : fin (size (inth D i));
+  args : hlist' (type_of_arg T) (nth_fin constr)
 }.
 
-Arguments Cons {_} _ _.
+Arguments Cons {_ i} _ _.
 
 Local Notation F := fobj.
 
-Definition fmap T S (f : T -> S) (x : F T) : F S :=
-  Cons (constr x) (hmap (type_of_arg_map f) (args x)).
+Definition fmap T S (f : T -F> S) i (x : F T i) : F S i :=
+  Cons (constr x) (hmap' (type_of_arg_map f) (args x)).
 
-Lemma fmap_eq T S (f g : T -> S) : f =1 g -> fmap f =1 fmap g.
+Lemma fmap_eq T S (f g : T -F> S) :
+  (forall i x, f i x = g i x) ->
+  (forall i (x : F T i), fmap f x = fmap g x).
 Proof.
-by move=> e [i args]; congr Cons; apply: hmap_eq; case.
+move=> e i [j args]; congr Cons; apply: hmap_eq => /= k.
+by case: (nth_fin k).
 Qed.
 
-Lemma fmap1 T : @fmap T T id =1 id.
+Lemma fmap1 T i : @fmap T T (fun _ => id) i =1 id.
 Proof.
-move=> [i args] /=; congr Cons; rewrite -[RHS]hmap1.
-by apply: hmap_eq; case.
+move=> [j args] /=; congr Cons; rewrite -[RHS]hmap1.
+by apply: hmap_eq=> /= k; case: (nth_fin k).
 Qed.
 
-Lemma fmap_comp T S R (f : T -> S) (g : S -> R) :
-  fmap (g \o f) =1 fmap g \o fmap f.
+Lemma fmap_comp T S R (f : T -F> S) (g : S -F> R) i :
+  @fmap _ _ (fun j x => g j (f j x)) i =1
+  @fmap _ _ g i \o @fmap _ _ f i.
 Proof.
-move=> [i args] /=; congr Cons; rewrite /= hmap_comp.
-by apply: hmap_eq; case.
+move=> [j args] /=; congr Cons; rewrite /= /hmap' hmap_comp.
+by apply: hmap_eq=> /= k; case: (nth_fin k).
 Qed.
 
 Canonical functor := Functor fmap_eq fmap1 fmap_comp.
 
-Lemma inj T (i : fin (size Σ)) (a b : hlist (type_of_arg T) (nth_fin i)) :
-  Cons i a = Cons i b -> a = b.
+Lemma inj T (i : fin n.+1) (j : fin (size (inth D i))) (a b : hlist' (type_of_arg T) (nth_fin j)) :
+  Cons j a = Cons j b -> a = b.
 Proof.
 pose get x :=
-  if leq_fin (constr x) i is inl e then
-    cast (fun j : fin (size Σ) => hlist (type_of_arg T) (nth_fin j)) e (args x)
+  if leq_fin (constr x) j is inl e then
+    cast (fun j : fin (size (inth D i)) => hlist' (type_of_arg T) (nth_fin j)) e (args x)
   else a.
 by move=> /(congr1 get); rewrite /get /= leq_finii /=.
 Qed.
 
-Variable T : indType Σ.
+Variable T : indType D.
 
-Definition Roll (x : F T) : T :=
-  hnth (@Ind.Cons _ _ T) (constr x) (args x).
+Definition Roll i (x : F T i) : T i :=
+  @Ind.Cons _ _ _ T (@fin_of_tag' _ _ i (constr x)) (args x).
 
 Definition branches_of_fun S (body : F (T * S) -> S) :=
   hlist_of_fun (fun i =>
@@ -612,10 +640,11 @@ have {}indP:
   move/indP/IH: (hyps None); apply=> i; exact: (hyps (Some i)).
 move=> hyps; apply: indP=> j.
 have {}hyps:
-  forall args : hlist (type_of_arg {x : S & P x}) (nth_fin j),
-    P (hnth Cs j (hmap (type_of_arg_map tag) args)).
+  forall args : hlist' (type_of_arg {x : S & P x}) (nth_fin j),
+    P (hnth Cs j (hmap' (type_of_arg_map tag) args)).
   by move=> args; move: (hyps (Cons j args)).
-elim: (nth_fin j) (hnth Cs j) hyps=> [|[R|] As IH] //=.
+move: (hnth Cs j) hyps; rewrite /fnth.
+elim: (nth_fin j)=> [|[R|] As IH] //=.
 - by move=> ? /(_ tt).
 - move=> C hyps x; apply: IH=> args; exact: (hyps (x ::: args)).
 - move=> constr hyps x H; apply: IH=> args.
@@ -651,7 +680,7 @@ Import PolyType.
 
 Class infer_arity
   T (P : T -> Type)
-  (branchT : Type) (As : arity) (C : hfun (type_of_arg T) As T) : Type.
+  (branchT : Type) (As : arity) (C : hfun' (type_of_arg T) As T) : Type.
 Arguments infer_arity : clear implicits.
 
 Global Instance infer_arity_end
@@ -661,14 +690,14 @@ Defined.
 
 Global Instance infer_arity_rec
   T (P : T -> Type)
-  (branchT : T -> Type) (As : arity) (C : T -> hfun (type_of_arg T) As T)
+  (branchT : T -> Type) (As : arity) (C : T -> hfun' (type_of_arg T) As T)
   (_ : forall x, infer_arity T P (branchT x) As (C x)) :
   infer_arity T P (forall x, P x -> branchT x) (Rec :: As) C.
 Defined.
 
 Global Instance infer_arity_nonrec
   T (P : T -> Type)
-  S (branchT : S -> Type) As (C : S -> hfun (type_of_arg T) As T)
+  S (branchT : S -> Type) As (C : S -> hfun' (type_of_arg T) As T)
   (_ : forall x, infer_arity T P (branchT x) As (C x)) :
   infer_arity T P (forall x, branchT x) (NonRec S :: As) C.
 Defined.

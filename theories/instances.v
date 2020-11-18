@@ -51,12 +51,12 @@ Variable (Σ : sig_inst).
 Let F := IndF.functor Σ.
 Variable (T : initAlgType F).
 
-Definition eq_op_branch As (cAs : hlist arg_class As) :
-  hlist (type_of_arg (T * (T -> bool))) As ->
-  hlist (type_of_arg T)                 As ->
+Definition eq_op_branch As (cAs : hlist' arg_class As) :
+  hlist' (type_of_arg (T * (T -> bool))) As ->
+  hlist' (type_of_arg T)                 As ->
   bool                                     ->
   bool :=
-  arity_rec _ (fun As => hlist _ As -> hlist _ As -> bool -> bool)
+  arity_rec _ (fun As => hlist' _ As -> hlist' _ As -> bool -> bool)
     (fun _ _ b => b)
     (fun R As rec x y b => rec x.(tl) y.(tl) (b && (x.(hd) == y.(hd))))
     (fun   As rec x y b => rec x.(tl) y.(tl) (b &&  x.(hd).2 y.(hd)))
@@ -70,7 +70,7 @@ Definition eq_op : T -> T -> bool :=
             eq_op_branch
               (hnth (sig_inst_class Σ) (IndF.constr args1))
               (IndF.args args1)
-              (cast (hlist (type_of_arg T) \o @nth_fin _ _) e (IndF.args args2))
+              (cast (hlist' (type_of_arg T) \o @nth_fin _ _) e (IndF.args args2))
               true
           | inr _ => false
           end)).
@@ -84,20 +84,20 @@ case le: (leq_fin yi xi)=> [e|b]; last first.
   constructor=> /Roll_inj /= [] e _.
   by move: le; rewrite e leq_finii.
 case: xi / e xargs {le} => /= xargs.
-apply/(@iffP (hmap (type_of_arg_map tag) xargs = yargs)); first last.
+apply/(@iffP (hmap' (type_of_arg_map tag) xargs = yargs)); first last.
 - by move=> /Roll_inj /IndF.inj.
 - by move=> <-.
 apply/(iffP idP)=> [H|<-]; last first.
   elim/arity_ind: {yi} _ / (hnth _ _) xargs {yargs}=> //= S As cAs.
-    by move=> IH [x xargs]; rewrite eqxx.
-  by move=> [[x xP] xargs] /=; rewrite (introT (xP _)).
-suffices [//]: true /\ hmap (type_of_arg_map tag) xargs = yargs.
+    move=> /= IH [x xargs]; rewrite /= eqxx; exact: IH.
+  move=> [[x xP] xargs] /=; rewrite (introT (xP _)) //; exact: cAs.
+suffices [//]: true /\ hmap' (type_of_arg_map tag) xargs = yargs.
 elim/arity_ind: {yi} _ / (hnth _ _) xargs yargs true H.
 - by move=> [] [].
 - move=> S As cAs IH /= [x xargs] [y yargs] /= b /IH.
-  by case=> /andP [-> /eqP <-] ->.
+  by case=> /andP [-> /eqP <-] <-.
 - move=> As cAs /= IH [[x xP] xargs] [y yargs] /= b /IH.
-  by case=> /andP [-> /xP <-] ->.
+  by case=> /andP [-> /xP <-] <-.
 Qed.
 
 End EqType.
@@ -133,7 +133,7 @@ Variables (T : initAlgType F).
 Import GenTree.
 Import PolyType.
 
-Definition ind_arg := hsum (hsum (type_of_arg void)) Σ.
+Definition ind_arg := hsum' (hsum' (type_of_arg void)) Σ.
 
 Definition mk_ind_arg (i : fin (size Σ)) (j : fin (size (nth_fin i))) :
   type_of_arg void (nth_fin j) -> ind_arg :=
@@ -145,7 +145,7 @@ Definition proj_ind_arg
   hcase (fun i' =>
     if leq_fin i' i is inl e then
       match e^-1 in _ = i'
-      return (hsum (fun k => type_of_arg void k) (nth_fin i') -> option _) with
+      return (hsum' (fun k => type_of_arg void k) (nth_fin i') -> option _) with
       | erefl =>
         hcase (fun j' =>
           if leq_fin j' j is inl e then
@@ -177,8 +177,8 @@ Definition tree_of_coq_ind (x : T) : tree ind_arg :=
   rec (fun x =>
          let i := IndF.constr x in
          Node (nat_of_fin i)
-           (list_of_seq (seq_of_hlist_in (@wrap i)
-              (hmap (type_of_arg_map snd) (IndF.args x))))) x.
+           (list_of_seq (seq_of_hlist (@wrap i)
+              (hmap' (type_of_arg_map snd) (IndF.args x))))) x.
 
 Fixpoint coq_ind_of_tree (x : tree ind_arg) : option T :=
   match x with
@@ -186,13 +186,13 @@ Fixpoint coq_ind_of_tree (x : tree ind_arg) : option T :=
   | Node c xs =>
     if fin_of_nat (size Σ) c is Some i then
       let xs := seq_of_list [seq (t, coq_ind_of_tree t) | t <- xs] in
-      if hlist_of_seq_in (fun j ts =>
-                            match nth_fin j as k
-                                  return (ind_arg -> option (type_of_arg void k)) ->
-                                         option (type_of_arg T k) with
-                            | NonRec R => fun f => if ts.1 is Leaf x then f x else None
-                            | Rec => fun _ => ts.2
-                            end (@proj_ind_arg i j)) xs is Some args then
+      if hlist_of_seq (fun j ts =>
+                          match nth_fin j as k
+                                return (ind_arg -> option (type_of_arg void k)) ->
+                                       option (type_of_arg T k) with
+                          | NonRec R => fun f => if ts.1 is Leaf x then f x else None
+                          | Rec => fun _ => ts.2
+                          end (@proj_ind_arg i j)) xs is Some args then
         Some (Roll (IndF.Cons args))
       else None
     else None
@@ -202,10 +202,10 @@ Lemma tree_of_coq_indK : pcancel tree_of_coq_ind coq_ind_of_tree.
 Proof.
 elim/indP=> [[i xs]].
 rewrite /tree_of_coq_ind recE /= -[rec _]/(tree_of_coq_ind).
-rewrite nat_of_finK !hmap_comp /=.
-set xs' := hlist_of_seq_in _ _.
-suffices -> : xs' = Some (hmap (type_of_arg_map tag) xs) by [].
-rewrite {}/xs' seq_of_list_map list_of_seqK hlist_of_seq_in_map /= /wrap.
+rewrite nat_of_finK /hmap' !hmap_comp /=.
+set xs' := hlist_of_seq _ _.
+suffices -> : xs' = Some (hmap' (type_of_arg_map tag) xs) by [].
+rewrite {}/xs' seq_of_list_map list_of_seqK hlist_of_seq_map /= /wrap.
 move: (@mk_ind_arg i) (@proj_ind_arg i) (@mk_ind_argK i).
 elim: {i} (nth_fin i) xs=> //= - [S|] As IH /= xs C p CK.
   by rewrite CK IH //= => j x; rewrite CK.
@@ -260,7 +260,7 @@ Hypothesis not_rec : all (all (negb \o is_rec)) Σ.
 
 Definition enum_branch :=
   arity_rec
-    _ (fun As => all (negb \o is_rec) As -> seq.seq (hlist (type_of_arg T) As))
+    _ (fun As => all (negb \o is_rec) As -> seq.seq (hlist' (type_of_arg T) As))
     (fun _ => [:: tt]%SEQ)
     (fun S As rec P => allpairs Cell (Finite.enum S) (rec P))
     (fun   As rec P => ltac:(done)).
@@ -292,7 +292,7 @@ have [<- {j}|ne] /= := altP (i =P j).
   elim: (Finite.enum S) (enumP x)=> //= y ys IHys.
   have [-> {y} [e]|ne] := altP (y =P x).
     rewrite count_cat count_map (IH xs); last first.
-      move=> zs; apply/(iffP (PP (x ::: zs))); congruence.
+      by move=> zs; apply/(iffP (PP (x ::: zs))) => [[<-]|->].
     congr succn.
     elim: ys e {IHys} => //= y ys; case: (altP eqP) => //= ne H /H.
     rewrite count_cat => ->; rewrite addn0.
@@ -359,13 +359,13 @@ Variable (Σ : sig_inst).
 Let F := IndF.functor Σ.
 Variable (T : initAlgChoiceType F).
 
-Definition le_branch As (cAs : hlist arg_class As) :
-  hlist (type_of_arg (T * (T -> bool))) As ->
-  hlist (type_of_arg T)                 As ->
+Definition le_branch As (cAs : hlist' arg_class As) :
+  hlist' (type_of_arg (T * (T -> bool))) As ->
+  hlist' (type_of_arg T)                 As ->
   bool :=
   @arity_rec
-    _ _ (fun a => hlist (type_of_arg (T * (T -> bool))) a ->
-                  hlist (type_of_arg T) a ->
+    _ _ (fun a => hlist' (type_of_arg (T * (T -> bool))) a ->
+                  hlist' (type_of_arg T) a ->
                   bool)
     (fun _ _ => true)
     (fun R As rec x y =>
@@ -382,7 +382,7 @@ Definition le : T -> T -> bool :=
                 le_branch
                   (hnth (sig_inst_class Σ) (IndF.constr args1))
                   (IndF.args args1)
-                  (cast (hlist (type_of_arg T) \o @nth_fin _ _) e (IndF.args args2))
+                  (cast (hlist' (type_of_arg T) \o @nth_fin _ _) e (IndF.args args2))
               | inr b => ~~ b
               end)).
 
@@ -391,8 +391,8 @@ Proof.
 elim/indP=> [[i args]].
 rewrite /le recE /= -[rec _]/(le) caseE leq_finii /=.
 elim/arity_ind: {i} _ / (hnth _ _) args=> [[]|R As cAs IH|As cAs IH] //=.
-  by case=> [x args]; rewrite /= eqxx.
-by case=> [[x xP] args] /=; rewrite eqxx.
+  case=> [x args]; rewrite /= eqxx; exact: IH.
+by case=> [[x xP] args] /=; rewrite eqxx; exact: IH.
 Qed.
 
 Lemma anti : antisymmetric le.
@@ -406,10 +406,10 @@ case ie: (leq_fin yi xi) (leq_nat_of_fin yi xi)=> [e|b].
   elim/arity_ind: {yi} (nth_fin yi) / (hnth _ _) xargs yargs h
       => [[] []|R As cAs IH|As cAs IH] //=.
     case=> [x xargs] [y yargs] /=.
-    rewrite eq_sym; case: (altP (_ =P _))=> [-> /IH ->|yx] //.
+    rewrite eq_sym; case: (altP (_ =P _))=> [-> /IH <-|yx] //.
     by move=> /le_anti e; rewrite e eqxx in yx.
   case=> [[x xP] xargs] [y yargs] /=.
-  rewrite eq_sym; case: (altP (_ =P _))=> [-> /IH ->|yx /xP e] //.
+  rewrite eq_sym; case: (altP (_ =P _))=> [-> /IH <-|yx /xP e] //.
   by rewrite e eqxx in yx.
 case: (leq_fin xi yi) (leq_nat_of_fin xi yi)=> [e|b'].
   by rewrite e leq_finii in ie.
@@ -466,7 +466,7 @@ elim/arity_ind: {yi} _ / (hnth _ _) xargs yargs=> [[] []|R|] //= As cAs IH.
   rewrite eq_sym; case: (altP eqP)=> [{y} _|]; first exact: IH.
   by rewrite le_total.
 case=> /= [[x xP] xargs] [y yargs] /=.
-by rewrite eq_sym; case: (altP eqP).
+by rewrite eq_sym; case: (altP eqP)=> ?; [apply: IH|apply: xP].
 Qed.
 
 Definition ind_porderMixin :=
