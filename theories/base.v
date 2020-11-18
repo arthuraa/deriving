@@ -416,50 +416,6 @@ Fixpoint fin_countMixin n : Countable.mixin_of (fin n) :=
 Canonical fin_countType n :=
   Eval hnf in CountType (fin n) (fin_countMixin n).
 
-Section Tuple.
-
-Unset Elimination Schemes.
-Record tuple T n := Tuple { tval : seq T; tvalP : size tval = n }.
-Arguments Tuple {T n} _ _.
-Set Elimination Schemes.
-
-Definition nil_tuple T : tuple T 0 := Tuple [::] erefl.
-Definition cons_tuple T n x xs : tuple T n.+1 :=
-  Tuple (x :: tval xs) (congr1 succn (tvalP xs)).
-Arguments nil_tuple {T}.
-Arguments cons_tuple {T n} _ _.
-
-Lemma tval_inj T n : injective (@tval T n).
-Proof.
-case=> [xs xsP] [ys ysP] /= e.
-by case: ys / e ysP => ysP; rewrite (eq_irrelevance xsP ysP).
-Qed.
-
-Definition head T n (xs : tuple T n.+1) : T :=
-  match tval xs as xs return size xs = n.+1 -> T with
-  | [::]   => fun _ => ltac:(done)
-  | x :: _ => fun _ => x
-  end (tvalP xs).
-
-Definition tail T n (xs : tuple T n.+1) : tuple T n :=
-  match tval xs as xs return size xs = n.+1 -> tuple T n with
-  | [::]    => fun _ => ltac:(done)
-  | _ :: xs => fun e => Tuple xs (congr1 predn e)
-  end (tvalP xs).
-
-Fixpoint tnth T n : tuple T n -> fin n -> T :=
-  match n with
-  | 0    => fun xs i => match i with end
-  | n.+1 => fun xs i => if i is Some j then tnth (tail xs) j else head xs
-  end.
-
-Definition tuple_of_seq T (xs : seq T) : tuple T (size xs) := Tuple xs erefl.
-
-Definition map_tuple T S n (f : T -> S) (xs : tuple T n) : tuple S n :=
-  Tuple (map f (tval xs)) (size_map f _ * tvalP xs).
-
-End Tuple.
-
 Section Ilist.
 
 Variables (T : Type).
