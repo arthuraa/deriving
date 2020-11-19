@@ -176,8 +176,18 @@ Definition empty_decl : declaration :=
   fun _ => [::].
 
 Definition add_arity (D : declaration) i As : declaration :=
-  fun j => if leq_fin i j is inl _ then As :: D j
+  fun j => if leq_fin i j is inl _ then As :: D i
            else D j.
+
+Definition add_arity_ind (P : fin n -> signature -> Type) D i As j :
+  P i (As :: D i) -> P j (D j) -> P j (add_arity D i As j) :=
+  fun H1 H2 =>
+    match leq_fin i j
+    as X
+    return P j (if X is inl _ then As :: D i else D j) with
+    | inl e => cast (fun k => P k (As :: D i)) e H1
+    | inr _ => H2
+    end.
 
 Variables (K : Type) (sort : K -> Type).
 
@@ -211,9 +221,13 @@ Arguments SigInst : clear implicits.
 Record decl_inst := DeclInst {
   decl_inst_len   :  nat;
   decl_inst_sort  :> fin decl_inst_len -> signature;
-  decl_inst_class :  forall i, sig_class (decl_inst_sort i)
+  _               :  forall i, sig_class (decl_inst_sort i)
 }.
 Arguments DeclInst : clear implicits.
+
+Definition decl_inst_class (d : decl_inst) :
+  forall i, sig_class (@decl_inst_sort d i) :=
+  let: DeclInst _ _ d := d in d.
 
 Implicit Types (A : arg) (As : arity) (Σ : signature).
 Implicit Types (Ai : arg_inst) (Asi : arity_inst) (Σi : sig_inst).
@@ -244,13 +258,18 @@ Canonical cons_sig_inst Asi Σi :=
   SigInst (arity_inst_sort Asi :: sig_inst_sort Σi)
           (arity_inst_class Asi ::: sig_inst_class Σi).
 
-Canonical nil_decl_inst :=
-  DeclInst 0 tt tt.
+Canonical nil_decl_inst f :=
+  DeclInst 0 f (fun i => match i with end).
 
-Canonical cons_decl_inst Σi Di :=
+Canonical cons_decl_inst Σi Di
+  (D : fun_split (sig_inst_sort Σi) (@decl_inst_sort Di)) :=
   DeclInst (decl_inst_len Di).+1
-           (sig_inst_sort Σi  ::: decl_inst_sort Di)
-           (sig_inst_class Σi ::: decl_inst_class Di).
+           (fs_fun D)
+           (fun i =>
+              match i with
+              | None => cast sig_class (fsE1 D) (sig_inst_class Σi)
+              | Some i => cast sig_class (fsE2 D i) (@decl_inst_class Di i)
+              end).
 
 Definition arity_rec (P : arity -> Type)
   (Pnil    : P [::])
@@ -290,6 +309,8 @@ Hint Unfold
   signature
   declaration
   empty_decl
+  add_arity
+  add_arity_ind
   arg_class
   arg_inst_sort
   arg_inst_class
@@ -326,17 +347,9 @@ Hint Unfold arg_class_map : deriving.
 
 Unset Universe Polymorphism.
 
+Arguments add_arity_ind {n} P D i As j H1 H2.
+Arguments empty_decl {n}.
 Arguments arity_rec {n K} _ _ _ _ _.
-
-Unset Elimination Schemes.
-Inductive foo := Foo of bar
-with bar := Bar of foo.
-Set Elimination Schemes.
-
-Scheme foo_rect := Induction for foo Sort Type
-with   bar_rect := Induction for bar Sort Type.
-
-Combined Scheme foo_bar_rect from foo_rect, bar_rect.
 
 Module Ind.
 
@@ -349,7 +362,7 @@ Implicit Types (T S : fin n -> Type).
 
 Import PolyType.
 
-Definition Cidx D i := fin (size (inth D i)).
+Definition Cidx D i := fin (size (D i)).
 Arguments Cidx : clear implicits.
 
 Definition args D T i (j : Cidx D i) : Type :=
@@ -360,10 +373,23 @@ Definition args_map D T S (f : T -F> S) i j (xs : @args D T i j) :
   hmap' (type_of_arg_map f) xs.
 
 Definition constructors D T :=
-  hlist (fun Ti : fin n =>
-  hlist (fun Ci : Cidx D Ti =>
-    hfun' (type_of_arg T) (nth_fin Ci) (T Ti))).
-Identity Coercion hlist_of_cons : constructors >-> hlist.
+  forall (Ti : fin n) (Ci : Cidx D Ti),
+    hfun' (type_of_arg T) (nth_fin Ci) (T Ti).
+
+Definition empty_cons T : constructors empty_decl T :=
+  fun Ti Ci => match Ci with end.
+
+Definition add_cons D T (Cs : constructors D T) Ti As
+  (C : hfun' (type_of_arg T) As (T Ti))
+  : constructors (add_arity D Ti As) T :=
+  fun Ti' =>
+    add_arity_ind
+      (fun Ti' Σ =>
+         forall Ci : fin (size Σ),
+           hfun' (type_of_arg T) (nth_fin Ci) (T Ti'))
+      D Ti As Ti'
+      (fun Ci => if Ci is Some Ci then Cs Ti Ci else C)
+      (Cs Ti').
 
 Fixpoint rec_branch' T S i As : Type :=
   match As with
@@ -450,7 +476,7 @@ Definition recursor_eq D T (Cs : constructors D T) (r : recursor D T) :=
     r S bs _ (Cs i j xs) =
     bs i j (args_map (fun k x => (x, r S bs k x)) xs))))).
 
-Definition des_branch D T S i (j : fin (size (inth D i))) :=
+Definition des_branch D T S i (j : Cidx D i) :=
   hfun' (type_of_arg T) (nth_fin j) (S i).
 
 Definition destructor D T :=
@@ -460,7 +486,7 @@ Definition destructor_eq D T (Cs : constructors D T) (d : destructor D T) :=
   forall S,
   all_hlist2 (fun bs : hlist2 (des_branch T S) =>
   all_fin    (fun i  : fin n                   =>
-  all_fin    (fun j  : fin (size (inth D i))   =>
+  all_fin    (fun j  : Cidx D i                =>
   all_hlist  (fun xs : args T j                =>
     d S bs _ (Cs i j xs) = bs i j xs)))).
 
@@ -515,7 +541,6 @@ Definition indP (m : mixin_of T) :=
 End ClassDef.
 
 Module Exports.
-Identity Coercion hlist_of_cons : constructors >-> hlist.
 Identity Coercion hdfun_of_induction : induction >-> hdfun.
 Coercion sort : type >-> Funclass.
 Coercion class : type >-> mixin_of.
@@ -563,7 +588,7 @@ Implicit Types (T S : fin n -> Type).
 Notation size := PolyType.size.
 
 Record fobj T (i : fin n) := Cons {
-  constr : fin (size (inth D i));
+  constr : Ind.Cidx D i;
   args : hlist' (type_of_arg T) (nth_fin constr)
 }.
 
@@ -598,7 +623,7 @@ Qed.
 
 Canonical functor := Functor fmap_eq fmap1 fmap_comp.
 
-Lemma inj T (i : fin n) (j : fin (size (inth D i)))
+Lemma inj T (i : fin n) (j : Ind.Cidx D i)
   (a b : hlist' (type_of_arg T) (nth_fin j)) :
   Cons j a = Cons j b -> a = b.
 Proof.
@@ -764,51 +789,61 @@ Arguments infer_decl : clear implicits.
 Global Instance infer_decl_end n T P :
   infer_decl n T P
              (Ind.hlist1V (fun i => forall (x : T i), P i x))
-             (D :
-
-
-
-
-Class infer_decl
-  n T (P : forall i, T i -> Type) (m : fin n)
-  (elimT : Type) (D : ilist (signature n) (nat_of_fin m))
-  (CsD : hlist (fun Ti : fin (nat_of_fin m) =>
-         hlist (fun Ci : fin (size (inth D Ti)) =>
-         hfun' (type_of_arg T) (nth_fin Ci) (T (finW Ti)))))
-  : Type.
-Arguments infer_decl : clear implicits.
-
-Global Instance infer_decl_end n T P :
-  infer_decl n.+1 T P None
-    (Ind.hlist1V (fun i => forall (x : T i), P i x)) tt tt.
+             empty_decl
+             (@Ind.empty_cons _ _).
 Defined.
 
+Global Instance infer_decl_cons n T P
+  (branchT : Type) Ti As C
+  (_ : infer_arity n T P Ti branchT As C)
+  (elimT : Type) D Cs
+  (_ : infer_decl n T P elimT D Cs)
+  : infer_decl n T P (branchT -> elimT) (add_arity D Ti As) (Ind.add_cons Cs C).
 Defined.
-
-Global Instance infer_sig_branch
-  n T P i
-  (branchT : Type) As C (_ : infer_arity n T P i branchT As C)
-  (elimT : Type) (Σ : signature n) Cs (_ : infer_sig n T P i elimT Σ Cs) :
-  infer_sig n T P i (branchT -> elimT) (As :: Σ) (C ::: Cs).
-Defined.
-
-Class infer_decl
-  n T (P : forall t, T i -> Type) (i : fin n)
-  (
-
 
 End InferInstances.
 
 Arguments infer_arity : clear implicits.
-Arguments infer_sig : clear implicits.
+Arguments infer_decl : clear implicits.
 
 Hint Unfold
   infer_arity_end
   infer_arity_rec
   infer_arity_nonrec
-  infer_sig_end
-  infer_sig_branch
+  infer_decl_end
+  infer_decl_cons
   : deriving.
+
+Unset Elimination Schemes.
+Inductive foo := Foo of bar
+with bar := Bar of foo.
+Set Elimination Schemes.
+
+Scheme foo_rect := Induction for foo Sort Type
+with   bar_rect := Induction for bar Sort Type.
+
+Combined Scheme foo_bar_rect from foo_rect, bar_rect.
+
+Ltac rearrange_rect elimT :=
+  lazymatch eval simpl in elimT with
+  | forall (Pv : ?T -> Type), @?elimT Pv =>
+    let P := fresh "P" in
+    let elimT := constr:(forall P : T -> Type, ltac:(rearrange_rect (elimT P))) in
+    match elimT with
+    | forall (Pv : T -> Type) (Psv : forall i : fin ?n, @?Ts i -> Type),
+        @?elimT Pv Psv =>
+      let Ts' := constr:(@fcons n Type T Ts) in
+      exact (forall (Psv : forall i, Ts' i -> Type),
+                elimT (Psv None) (fun i => Psv (Some i)))
+    end
+  | ?elimT =>
+    exact (forall (Psv : forall i, @fnil Type i -> Type), elimT)
+  end.
+
+Definition blah := ltac:(
+  let T := type of foo_bar_rect in
+  rearrange_rect T
+).
 
 Module InitAlgEqType.
 

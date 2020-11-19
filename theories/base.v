@@ -193,6 +193,14 @@ Definition fnth T S (f : T -> S) (xs : seq T) (i : fin (size xs)) : S :=
 Arguments fnth {T S} f xs i.
 Hint Unfold fnth : deriving.
 
+Definition fcons n T (x : T) (f : fin n -> T) : fin n.+1 -> T :=
+  fun i => if i is Some i then f i else x.
+Hint Unfold fcons : deriving.
+
+Definition fnil T : fin 0 -> T :=
+  fun i => match i with end.
+Hint Unfold fnil : deriving.
+
 Fixpoint leq_fin n : forall i j : fin n, (i = j) + bool :=
   match n with
   | 0    => fun i => match i with end
@@ -1056,3 +1064,21 @@ Definition hlist_countMixin n (T_ : fin n -> countType) :=
   cast Countable.mixin_of (svalP lift) (Countable.mixin (Countable.class (sval lift))).
 Canonical hlist_countType n T_ :=
   Eval hnf in CountType (hlist _) (@hlist_countMixin n T_).
+
+Record fun_split n (R : Type) (T : R) (Ts : fin n -> R) := FunSplit {
+  fs_fun :> fin n.+1 -> R;
+  _      :  T = fs_fun None;
+  _      :  forall i, Ts i = fs_fun (Some i);
+}.
+
+Definition fsE1 n R T Ts (TTs : @fun_split n R T Ts) : T = TTs None :=
+  let: FunSplit _ e _ := TTs in e.
+
+Definition fsE2 n R T Ts (TTs : @fun_split n R T Ts) :
+  forall i, Ts i = TTs (Some i) :=
+  let: FunSplit _ _ e := TTs in e.
+
+Canonical fun_split1 n R (TTs : fin n.+1 -> R) :=
+  @FunSplit n R (TTs None) (fun i => TTs (Some i)) TTs erefl (fun=> erefl).
+
+Hint Unfold fs_fun fsE1 fsE2 fun_split1 : deriving.
