@@ -23,6 +23,14 @@ Notation "e ^-1" := (esym e) : deriving_scope.
 (* We redefine some constants of the standard library here to avoid problems
    with universe inconsistency and opacity. *)
 
+Definition castK T (P : T -> Type) x y (e : x = y) :
+  cancel (cast P e) (cast P e^-1) :=
+  match e with erefl => fun _ => erefl end.
+
+Definition castKV T (P : T -> Type) x y (e : x = y) :
+  cancel (cast P e^-1) (cast P e) :=
+  match e with erefl => fun _ => erefl end.
+
 Definition congr1 T S (f : T -> S) x y (e : x = y) : f x = f y :=
   match e with erefl => erefl end.
 
@@ -213,6 +221,21 @@ Fixpoint nat_of_fin n : fin n -> nat :=
   | n.+1 => fun i => if i is Some i then (nat_of_fin i).+1 else 0
   end.
 Hint Unfold nat_of_fin : deriving.
+
+Fixpoint finW n : forall (m : fin n), fin (nat_of_fin m) -> fin n :=
+  match n with
+  | 0 => fun m => match m with end
+  | n.+1 => fun m =>
+    match m with
+    | None => fun i => match i with end
+    | Some m => fun i =>
+      match i with
+      | None => None
+      | Some i => Some (@finW n m i)
+      end
+    end
+  end.
+Hint Unfold finW : deriving.
 
 Lemma leq_nat_of_fin n (i j : fin n) :
   (nat_of_fin i <= nat_of_fin j) = if leq_fin i j is inr b then b else true.
@@ -555,6 +578,10 @@ Definition hlist' I (T_ : I -> Type) (xs : seq I) :=
   hlist (fnth T_ xs).
 Identity Coercion hlist_of_hlist' : hlist' >-> hlist.
 
+Definition hlist2 n (m : fin n -> nat) (T : forall i, fin (m i) -> Type) :=
+  hlist (fun i => hlist (T i)).
+Identity Coercion hlist_of_hlist2 : hlist2 >-> hlist.
+
 Fixpoint hfun n : (fin n -> Type) -> Type -> Type :=
   match n with
   | 0    => fun T_ S => S
@@ -570,6 +597,7 @@ Fixpoint happ n : forall (T_ : fin n -> Type) S, hfun T_ S -> hlist T_ -> S :=
   | 0    => fun T_ S f xs => f
   | n.+1 => fun T_ S f xs => happ (f xs.(hd)) xs.(tl)
   end.
+Coercion happ : hfun >-> Funclass.
 
 Fixpoint hcurry n : forall (T_ : fin n -> Type) S, (hlist T_ -> S) -> hfun T_ S :=
   match n with
@@ -581,6 +609,38 @@ Lemma hcurryK n (T_ : fin n -> Type) S (f : hlist T_ -> S) xs : happ (hcurry f) 
 Proof.
 by elim: n T_ S f xs=> [??? [] //|n IH] /= ? /= ??[??]; rewrite IH.
 Qed.
+
+Fixpoint hfun2 n :
+  forall (m : fin n -> nat) (T : forall i, fin (m i) -> Type) (S : Type), Type :=
+  match n with
+  | 0    => fun m T S =>
+    S
+  | n.+1 => fun m T S =>
+    @hfun (m None) (T None) (@hfun2 n _ (fun i => T (Some i)) S)
+  end.
+
+Fixpoint happ2 n :
+  forall (m : fin n -> nat) (T : forall i, fin (m i) -> Type) S,
+    hfun2 T S ->
+    hlist2 T ->
+    S :=
+  match n with
+  | 0 => fun m T S f xs =>
+    f
+  | n.+1 => fun m T S f xs =>
+    @happ2 n _ (fun i => T (Some i)) S (f xs.(hd)) xs.(tl)
+  end.
+Coercion happ2 : hfun2 >-> Funclass.
+
+Fixpoint hcurry2 n :
+  forall (m : fin n -> nat) (T : forall i, fin (m i) -> Type) S,
+    (hlist2 T -> S) -> hfun2 T S :=
+  match n with
+  | 0 => fun m T S f => f tt
+  | n.+1 => fun m T S f =>
+    hcurry (fun x =>
+    @hcurry2 n _ (fun i => T (Some i)) S (fun xs => f (x ::: xs)))
+  end.
 
 Fixpoint hdfun n : forall (T : fin n -> Type), (hlist T -> Type) -> Type :=
   match n with
@@ -679,6 +739,29 @@ split.
 - by move=> H x; apply/IH=> ?.
 Qed.
 
+Fixpoint all_hlist2 n :
+  forall (m : fin n -> nat)
+         (T : forall i, fin (m i) -> Type),
+    (hlist2 T -> Prop) -> Prop :=
+  match n with
+  | 0 => fun m T P =>
+    P tt
+  | n.+1 => fun m T P =>
+    all_hlist (fun x =>
+    @all_hlist2 n _ (fun i => T (Some i)) (fun xs => P (x ::: xs)))
+  end.
+
+Lemma all_hlist2P n m (T : forall i, fin (m i) -> Type) P : 
+  @all_hlist2 n m T P <-> (forall xs, P xs).
+Proof.
+elim: n m T P => /= [???|n IH m T P /=].
+  split; last exact; by move=> ? [].
+rewrite all_hlistP; split.
+- move=> H [x xs].
+  by move/(_ x): H; rewrite IH; apply.
+- by move=> H x; apply/IH=> ?.
+Qed.
+
 Fixpoint hfold S n :
   forall (T_ : fin n -> Type),
     (forall i : fin n, T_ i -> S -> S) -> S -> hlist T_ -> S :=
@@ -691,10 +774,14 @@ End Hlist.
 
 Hint Unfold hlist : deriving.
 Hint Unfold hlist' : deriving.
+Hint Unfold hlist2 : deriving.
 Hint Unfold hfun : deriving.
 Hint Unfold hfun' : deriving.
 Hint Unfold happ : deriving.
 Hint Unfold hcurry : deriving.
+Hint Unfold hfun2 : deriving.
+Hint Unfold happ2 : deriving.
+Hint Unfold hcurry2 : deriving.
 Hint Unfold hdfun : deriving.
 Hint Unfold hdapp : deriving.
 Hint Unfold hnth : deriving.
@@ -702,9 +789,8 @@ Hint Unfold seq_of_hlist : deriving.
 Hint Unfold hlist_of_seq : deriving.
 Hint Unfold hlist_of_fun : deriving.
 Hint Unfold all_hlist : deriving.
+Hint Unfold all_hlist2 : deriving.
 Hint Unfold hfold : deriving.
-
-Coercion happ : hfun >-> Funclass.
 
 Fixpoint hmap n :
   forall (T_ S_ : fin n -> Type) (f : forall i, T_ i -> S_ i), hlist T_ -> hlist S_ :=
@@ -713,6 +799,11 @@ Fixpoint hmap n :
   | n.+1 => fun _ _ f xs => f None xs.(hd) ::: hmap (fun j => f (Some j)) xs.(tl)
   end.
 Hint Unfold hmap : deriving.
+
+Definition hmap2 n (m : fin n -> nat) (T S : forall i, fin (m i) -> Type)
+  (f : forall i j, T i j -> S i j) : hlist2 T -> hlist2 S :=
+  hmap (fun i => hmap (fun j => f i j)).
+Hint Unfold hmap2 : deriving.
 
 Definition hmap' I T_ S_ (f : forall i : I, T_ i -> S_ i) xs :
   hlist' T_ xs -> hlist' S_ xs :=
