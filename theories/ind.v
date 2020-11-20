@@ -555,7 +555,12 @@ Export Ind.Exports.
 Coercion Ind.hnth1V : Ind.hlist1V >-> Funclass.
 
 Hint Unfold
+  Ind.Cidx
+  Ind.args
+  Ind.args_map
   Ind.constructors
+  Ind.empty_cons
+  Ind.add_cons
   Ind.rec_branch'
   Ind.rec_branch
   Ind.recursor
@@ -832,7 +837,8 @@ Arguments bless_rect : clear implicits.
 
 Class infer_ind rectT (rect : rectT)
   n Ts (D : declaration n) (Cs : Ind.constructors D Ts)
-  (rect' : Ind.recursor D Ts).
+  (rectT' : (forall i, Ts i -> Type) -> Type) (rect' : forall P, rectT' P)
+  (rect'' : Ind.recursor D Ts).
 Arguments infer_ind : clear implicits.
 
 Global Instance do_infer_ind rectT rect
@@ -842,7 +848,7 @@ Global Instance do_infer_ind rectT rect
   (_ : forall P, infer_decl n Ts P (rectT' P) D Cs)
   rect''
   (_ : bless_rect n Ts D Cs rectT' rect' rect'')
-  : infer_ind rectT rect n Ts D Cs rect''.
+  : infer_ind rectT rect n Ts D Cs rectT' rect' rect''.
 Defined.
 
 End InferInstances.
@@ -863,22 +869,6 @@ Hint Unfold
   read_rect_done
   do_infer_ind
   : deriving.
-
-Unset Elimination Schemes.
-Inductive foo := Foo of bar
-with bar := Bar of foo.
-Set Elimination Schemes.
-
-Scheme foo_rect := Induction for foo Sort Type
-with   bar_rect := Induction for bar Sort Type.
-
-Combined Scheme foo_bar_rect from foo_rect, bar_rect.
-
-Definition foo_bar : fin 2 -> Type :=
-  fun i => if i is None then foo else bar.
-
-Definition arity1 (Ps : forall i, foo_bar i -> Type) :=
-  forall b : bar, Ps (Some None) b -> Ps None (Foo b).
 
 Ltac infer_arity :=
   cbv beta;

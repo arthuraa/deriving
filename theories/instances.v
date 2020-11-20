@@ -12,25 +12,33 @@ Unset Printing Implicit Defensive.
 Open Scope deriving_scope.
 
 Ltac unwind_recursor rec :=
+  try red;
   match goal with
   | |- ?F -> ?G =>
     let X := fresh "X" in
     intros X; unwind_recursor (rec X)
+  | |- prod ?T1 ?T2 =>
+    let rec1 := eval simpl in rec.1 in
+    let rec2 := eval simpl in rec.2 in
+    split; [unwind_recursor rec1|unwind_recursor rec2]
   | |- forall x, _ =>
-    intros x; destruct x; apply rec
+    let rec' := eval red in rec in
+    intros x; destruct x; apply rec'
   end.
 
 Ltac ind_mixin rec :=
-  match type of rec with
-  | forall (P : ?T -> Type), @?elimT P =>
-    let Rec  := eval red in rec in
-    let ΣCs  := constr:((fun Σ Cs (_ : forall P, infer_sig T P (elimT P) Σ Cs) => (Σ, Cs)) _ _ _) in
-    let Σ    := eval simpl in ΣCs.1 in
-    let Cs   := eval simpl in ΣCs.2 in
-    let case := constr:(ltac:(intros P; simpl; unwind_recursor (Rec P)) : forall P, elimT P) in
-    let case := constr:(@Ind.destructor_of_recursor Σ T (fun S => case (fun _ => S))) in
+  let Rec := eval red in rec in
+  let H   := constr:((fun n Ts D Cs RecT' Rec' Rec'' =>
+                      fun (H : infer_ind _ Rec n Ts D Cs RecT' Rec' Rec'') => H)
+                     _ _ _ _ _ _ _ _) in
+  match type of H with
+  | infer_ind _ _ ?n ?Ts ?D ?Cs ?RecT' ?Rec' ?Rec'' =>
+    let case := constr:(ltac:(intros P; deriving_compute; unwind_recursor (Rec' P))
+                        : forall P, RecT' P) in
+    let case := constr:(fun S : fin n -> Type => case (fun i _ => S i)) in
+    let case := constr:(@Ind.destructor_of_recursor n D Ts case) in
     let case := eval deriving_compute in case in
-    refine (@IndMixin Σ T Cs (fun S => Rec (fun _ => S)) case _ _ rec);
+    refine (@IndMixin n D Ts Cs (fun S => Rec' (fun i _ => S i)) case _ _ rec);
     abstract (deriving_compute; intuition)
   end.
 
