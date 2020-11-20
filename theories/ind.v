@@ -757,28 +757,30 @@ Section InferInstances.
 Import PolyType.
 
 Class infer_arity
-  n (T : fin n -> Type) (P : forall i, T i -> Type) (i : fin n)
-  (branchT : Type) (As : arity n) (C : hfun' (type_of_arg T) As (T i)) : Type.
+  n (T : fin n -> Type) (P : forall i, T i -> Type)
+  (branchT : Type) (As : arity n) (i : fin n)
+  (C : hfun' (type_of_arg T) As (T i)) : Type.
 Arguments infer_arity : clear implicits.
 
-Global Instance infer_arity_end
+Instance infer_arity_end
   n T P i (x : T i) :
-  infer_arity n T P i (P i x) [::] x.
+  infer_arity n T P (P i x) [::] i x.
 Defined.
 
-Global Instance infer_arity_rec
-  n T P i j
-  (branchT : T j -> Type) (As : arity n)
-  (C : T j -> hfun' (type_of_arg T) As (T i))
-  (_ : forall x, infer_arity n T P i (branchT x) As (C x)) :
-  infer_arity n T P i (forall x, P j x -> branchT x) (Rec j :: As) C.
+Instance infer_arity_rec
+  n Ts P j
+  (branchT : Ts j -> Type)
+  i (As : arity n)
+  (C : Ts j -> hfun' (type_of_arg Ts) As (Ts i))
+  (_ : forall x, infer_arity n Ts P (branchT x) As i (C x)) :
+  infer_arity n Ts P (forall x, P j x -> branchT x) (Rec j :: As) i C.
 Defined.
 
-Global Instance infer_arity_nonrec
-  n T P i S
-  (branchT : S -> Type) As (C : S -> hfun' (type_of_arg T) As (T i))
-  (_ : forall x, infer_arity n T P i (branchT x) As (C x)) :
-  infer_arity n T P i (forall x, branchT x) (NonRec n S :: As) C.
+Instance infer_arity_nonrec
+  n T P S
+  (branchT : S -> Type) i As (C : S -> hfun' (type_of_arg T) As (T i))
+  (_ : forall x, infer_arity n T P (branchT x) As i (C x)) :
+  infer_arity n T P (forall x, branchT x) (NonRec n S :: As) i C.
 Defined.
 
 Class infer_decl
@@ -795,16 +797,61 @@ Defined.
 
 Global Instance infer_decl_cons n T P
   (branchT : Type) Ti As C
-  (_ : infer_arity n T P Ti branchT As C)
+  (_ : infer_arity n T P branchT As Ti C)
   (elimT : Type) D Cs
   (_ : infer_decl n T P elimT D Cs)
   : infer_decl n T P (branchT -> elimT) (add_arity D Ti As) (Ind.add_cons Cs C).
+Defined.
+
+Class read_rect (rectT : Type) (rect : rectT)
+  (n : nat) (Ts : fin n -> Type)
+  (rectT' : (forall i, Ts i -> Type) -> Type)
+  (rect' : forall Ps, rectT' Ps).
+Arguments read_rect : clear implicits.
+
+Global Instance read_rect_type
+  (T : Type) (rectT : (T -> Type) -> Type) (rect : forall P, rectT P)
+  n Ts rectT' rect'
+  (_ : forall P, read_rect (rectT P) (rect P) n Ts (rectT' P) (rect' P))
+  : read_rect (forall P, rectT P) rect n.+1
+              (fcons T Ts)
+              (fun Ps => rectT' (Ps None) (fun i => Ps (Some i)))
+              (fun Ps => rect' (Ps None) (fun i => Ps (Some i))) | 1.
+Defined.
+
+Global Instance read_rect_done rectT rect :
+  read_rect rectT rect 0 (fnil Type) (fun _ => rectT) (fun _ => rect) | 2.
+Defined.
+
+Class bless_rect
+  n Ts (D : declaration n) (Cs : Ind.constructors D Ts)
+  (rectT : (forall i, Ts i -> Type) -> Type)
+  (rect  : forall P, rectT P)
+  (rect' : Ind.recursor D Ts).
+Arguments bless_rect : clear implicits.
+
+Class infer_ind rectT (rect : rectT)
+  n Ts (D : declaration n) (Cs : Ind.constructors D Ts)
+  (rect' : Ind.recursor D Ts).
+Arguments infer_ind : clear implicits.
+
+Global Instance do_infer_ind rectT rect
+  n Ts rectT' rect'
+  (_ : read_rect rectT rect n Ts rectT' rect')
+  D Cs
+  (_ : forall P, infer_decl n Ts P (rectT' P) D Cs)
+  rect''
+  (_ : bless_rect n Ts D Cs rectT' rect' rect'')
+  : infer_ind rectT rect n Ts D Cs rect''.
 Defined.
 
 End InferInstances.
 
 Arguments infer_arity : clear implicits.
 Arguments infer_decl : clear implicits.
+Arguments read_rect : clear implicits.
+Arguments bless_rect : clear implicits.
+Arguments infer_ind : clear implicits.
 
 Hint Unfold
   infer_arity_end
@@ -812,6 +859,9 @@ Hint Unfold
   infer_arity_nonrec
   infer_decl_end
   infer_decl_cons
+  read_rect_type
+  read_rect_done
+  do_infer_ind
   : deriving.
 
 Unset Elimination Schemes.
@@ -824,43 +874,63 @@ with   bar_rect := Induction for bar Sort Type.
 
 Combined Scheme foo_bar_rect from foo_rect, bar_rect.
 
-Ltac rearrange_rect elimT :=
-  lazymatch eval simpl in elimT with
-  | forall (Pv : ?T -> Type), @?elimT Pv =>
-    let P := fresh "P" in
-    let elimT := constr:(forall P : T -> Type, ltac:(rearrange_rect (elimT P))) in
-    match elimT with
-    | forall (Pv : T -> Type) (Psv : forall i : fin ?n, @?Ts i -> Type),
-        @?elimT Pv Psv =>
-      let Ts' := constr:(@fcons n Type T Ts) in
-      exact (forall (Psv : forall i, Ts' i -> Type),
-                elimT (Psv None) (fun i => Psv (Some i)))
-    end
-  | ?elimT =>
-    exact (forall (Psv : forall i, @fnil Type i -> Type), elimT)
+Definition foo_bar : fin 2 -> Type :=
+  fun i => if i is None then foo else bar.
+
+Definition arity1 (Ps : forall i, foo_bar i -> Type) :=
+  forall b : bar, Ps (Some None) b -> Ps None (Foo b).
+
+Ltac infer_arity :=
+  cbv beta;
+  match goal with
+  | |- infer_arity ?n ?Ts ?Ps (?Ps ?i ?x) _ _ _ =>
+    exact (@infer_arity_end n Ts Ps i x)
+  | |- infer_arity ?n ?Ts ?Ps (forall x, ?Ps ?j x -> @?branchT x) _ _ _ =>
+    eapply (@infer_arity_rec n Ts Ps j branchT)
+  | |- infer_arity ?n ?Ts ?Ps (forall x : ?S, @?branchT x) _ _ _ =>
+    eapply (@infer_arity_nonrec n Ts Ps branchT)
   end.
 
-Definition blah := ltac:(
-  let T := type of foo_bar_rect in
-  rearrange_rect T
-).
+Hint Extern 0 (infer_arity _ _ _ _ _ _ _) => infer_arity : typeclass_instances.
+
+Ltac infer_decl :=
+  cbv beta;
+  match goal with
+  | |- infer_decl ?n ?Ts ?Ps (?branchT -> ?rectT) _ _ =>
+    eapply (@infer_decl_cons n Ts Ps branchT _ _ _ _ rectT)
+  | |- infer_decl ?n ?Ts ?Ps _ _ _ =>
+    eapply (@infer_decl_end n Ts Ps)
+  end.
+
+Hint Extern 0 (infer_decl _ _ _ _ _ _) => infer_decl : typeclass_instances.
+
+Ltac bless_rect :=
+  cbv beta;
+  match goal with
+  | |- bless_rect ?n ?Ts ?D ?Cs ?rectT ?rect _ =>
+     exact (@Build_bless_rect n Ts D Cs rectT rect
+                             (fun P => rect (fun i _ => P i)))
+  end.
+
+Hint Extern 0 (bless_rect _ _ _ _ _ _ _) => bless_rect : typeclass_instances.
 
 Module InitAlgEqType.
 
-Record type (F : functor) := Pack {
-  sort           : Type;
-  eq_class       : Equality.class_of sort;
+Record type I (F : functor I) := Pack {
+  sort           : I -> Type;
+  eq_class       : forall i, Equality.class_of (sort i);
   init_alg_class : InitAlg.mixin_of sort F;
 }.
 
-Definition eqType F (T : type F) := Equality.Pack (eq_class T).
-Definition initAlgType F (T : type F) := InitAlg.Pack (init_alg_class T).
+Definition eqType I F (T : type F) (i : I) :=
+  Equality.Pack (eq_class T i).
+Definition initAlgType I (F : functor I) (T : type F) :=
+  InitAlg.Pack (init_alg_class T).
 
 Module Import Exports.
 Notation initAlgEqType := type.
 Notation InitAlgEqType := Pack.
-Coercion sort : type >-> Sortclass.
-Coercion eqType : type >-> Equality.type.
+Coercion sort : type >-> Funclass.
 Canonical eqType.
 Coercion initAlgType : type >-> InitAlg.type.
 Canonical initAlgType.
@@ -880,23 +950,21 @@ Hint Unfold
 
 Module InitAlgChoiceType.
 
-Record type (F : functor) := Pack {
-  sort           : Type;
-  choice_class   : Choice.class_of sort;
+Record type I (F : functor I) := Pack {
+  sort           : I -> Type;
+  choice_class   : forall i, Choice.class_of (sort i);
   init_alg_class : InitAlg.mixin_of sort F;
 }.
 
-Definition eqType F (T : type F) := Equality.Pack (choice_class T).
-Definition choiceType F (T : type F) := Choice.Pack (choice_class T).
-Definition initAlgType F (T : type F) := InitAlg.Pack (init_alg_class T).
+Definition eqType I F (T : type F) (i : I) := Equality.Pack (choice_class T i).
+Definition choiceType I F (T : type F) (i : I) := Choice.Pack (choice_class T i).
+Definition initAlgType I (F : functor I) (T : type F) := InitAlg.Pack (init_alg_class T).
 
 Module Import Exports.
 Notation initAlgChoiceType := type.
 Notation InitAlgChoiceType := Pack.
-Coercion sort : type >-> Sortclass.
-Coercion eqType : type >-> Equality.type.
+Coercion sort : type >-> Funclass.
 Canonical eqType.
-Coercion choiceType : type >-> Choice.type.
 Canonical choiceType.
 Coercion initAlgType : type >-> InitAlg.type.
 Canonical initAlgType.
