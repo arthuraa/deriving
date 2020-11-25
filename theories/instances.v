@@ -76,23 +76,23 @@ Definition eq_op_branch As (cAs : hlist' arg_class As) :
     As cAs.
 
 Definition eq_op : forall i, T i -> T i -> bool :=
-  rec   (fun i args1 =>
-  case1 (fun   args2 =>
-          match leq_fin (MutIndF.constr args2) (MutIndF.constr args1) with
-          | inl e =>
-            eq_op_branch
-              (hnth (decl_inst_class D i) (MutIndF.constr args1))
-              (MutIndF.args args1)
-              (cast (hlist' (type_of_arg T) \o @nth_fin _ _) e (MutIndF.args args2))
-              true
-          | inr _ => false
-          end)).
+  rec  (fun i args1 =>
+  case (fun   args2 =>
+        match leq_fin (MutIndF.constr args2) (MutIndF.constr args1) with
+         | inl e =>
+           eq_op_branch
+             (hnth (decl_inst_class D i) (MutIndF.constr args1))
+             (MutIndF.args args1)
+             (cast (hlist' (type_of_arg T) \o @nth_fin _ _) e (MutIndF.args args2))
+             true
+         | inr _ => false
+         end)).
 
 Lemma eq_opP i : Equality.axiom (@eq_op i).
 Proof.
 elim/indP: i / => i [xC xargs] y.
 rewrite /eq_op recE /= -[rec _]/(eq_op) /=.
-rewrite -[y]unrollK case1E; move: {y} (unroll y)=> [yC yargs] /=.
+rewrite -[y]unrollK caseE; move: {y} (unroll y)=> [yC yargs] /=.
 case le: (leq_fin yC xC)=> [e|b]; last first.
   constructor=> /(@Roll_inj _ _ _ i) /= [] e _.
   by move: le; rewrite e leq_finii.
@@ -130,31 +130,13 @@ Ltac derive_eqMixin T :=
   match eval hnf in (@DerEqType.pack T _ _ _ id _ id _ _ _ id) with
   | @EqMixin _ ?op ?opP =>
     let op := eval unfold DerEqType.eq_op, DerEqType.eq_op_branch in op in
-      let op := eval deriving_compute in op in
+    let op := eval deriving_compute in op in
     exact (@EqMixin T op opP)
   end.
 
 Notation "[ 'derive' 'eqMixin' 'for' T ]" :=
   (ltac:(derive_eqMixin T))
   (at level 0) : form_scope.
-
-Definition unit_indMixin :=
-  Eval simpl in [indMixin for unit_rect].
-Canonical unit_indType :=
-  Eval hnf in IndType _ unit unit_indMixin.
-
-Set Printing All.
-
-Definition foo :=
-  Eval hnf in @DerEqType.pack unit _ _ _ id _ id _ _ _ id.
-
-Definition unit_eqMixin :=
-  [derive eqMixin for unit].
-
-Definition op :=
-  Eval hnf in Equality.op unit_eqMixin.
-
-Compute op.
 
 Section TreeOfInd.
 

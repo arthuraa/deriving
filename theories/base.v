@@ -11,6 +11,17 @@ Delimit Scope deriving_scope with deriving.
 Open Scope deriving_scope.
 Create HintDb deriving.
 
+Definition eq_eqb (T : eqType) x y (p q : x = y :> T) := true.
+
+Lemma eq_eqbP T x y : Equality.axiom (@eq_eqb T x y).
+Proof.
+move=> p q; apply: ReflectT; apply: eq_irrelevance.
+Qed.
+
+Definition eq_eqMixin T x y := EqMixin (@eq_eqbP T x y).
+
+Canonical eq_eqType T x y := EqType (x = y) (@eq_eqMixin T x y).
+
 Definition cast T (P : T -> Type) x y (e : x = y) : P x -> P y :=
   match e with erefl => id end.
 
@@ -225,10 +236,22 @@ Fixpoint leq_fin n : forall i j : fin n, (i = j) + bool :=
   end.
 Hint Unfold leq_fin : deriving.
 
-Lemma leq_finii n i : @leq_fin n i i = inl erefl.
-Proof.
-elim: n i=> [|n IH] // [i|] //=; by rewrite IH.
-Qed.
+Fixpoint leq_finii n : forall i : fin n, @leq_fin n i i = inl erefl :=
+  match n return forall i : fin n, leq_fin i i = inl erefl with
+  | 0    => fun i => match i with end
+  | n.+1 =>
+    fun i => match i return @leq_fin n.+1 i i = inl erefl with
+             | None => erefl
+             | Some i =>
+               congr1 (fun r =>
+                         match r with
+                         | inl e => inl (congr1 Some e)
+                         | inr b => inr b
+                         end)
+                      (@leq_finii n i)
+             end
+  end.
+Hint Unfold leq_finii : deriving.
 
 Fixpoint nat_of_fin n : fin n -> nat :=
   match n with
