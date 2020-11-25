@@ -38,13 +38,17 @@ Ltac mut_ind_type rec :=
     let case := constr:(fun S : fin n -> Type => case (fun i _ => S i)) in
     let case := constr:(@MutInd.destructor_of_recursor n D Ts case) in
     let case := eval deriving_compute in case in
-    refine (@MutIndType n D Ts Cs (fun S => Rec' (fun i _ => S i)) case _ _ rec);
+    refine (MutIndType (@MutInd.Class n D Ts Cs (fun S => Rec' (fun i _ => S i)) case _ _ rec));
     abstract (deriving_compute; intuition)
   end.
 
 Notation "[ 'mutIndType' 'for' rect ]" :=
   (ltac:(mut_ind_type rect))
   (at level 0) : form_scope.
+
+(** Compatibility *)
+Notation "[ 'indMixin' 'for' rect ]" :=
+  [mutIndType for rect] (at level 0) : form_scope.
 
 Module DerEqType.
 
@@ -111,30 +115,46 @@ Qed.
 
 End EqType.
 
+Definition pack :=
+  fun (T : Type) =>
+  fun n D (T_ind : @indType n D) & phant_id T (Ind.sort T_ind) =>
+  fun (D_eq : decl_inst n Equality.sort n) & phant_id D (untag_decl D_eq) =>
+  fun Ts cTs idx (T_ind' := @Ind.Pack n D_eq (@MutInd.Pack _ _ Ts cTs) T idx) =>
+  fun & phant_id T_ind T_ind' =>
+  cast Equality.mixin_of (type_idxP T_ind')^-1
+    (@EqMixin _ _ (@eq_opP n D_eq (MutIndF.initAlgType T_ind') (type_idx T_ind'))).
+
 End DerEqType.
 
 Ltac derive_eqMixin T :=
-  let sT := eval hnf in [the indType _ of T by @Ind.sort _ _] in
-  match sT with @Ind.Pack ?n ?D ?sTs ?cT ?pfs =>
-  let sTs := eval hnf in sTs in
-  match sTs with @MutInd.Pack _ _ ?Ts ?cTs =>
-  let Ts   := eval red in Ts in
-  let sTs  := constr:(@MutInd.Pack n D Ts cTs) in
-  let sTs' := constr:(@MutIndF.initAlgType sTs) in
-  let sD   := eval hnf in (@pack_decl_inst n D n _ id) in
-  let cD   := eval hnf in (decl_inst_class sD) in
-  let cD   := eval deriving_compute in cD in
-  let op   := constr:(@DerEqType.eq_op (@DeclInst _ _ _ D cD) sTs') in
-  let op   := eval cbv delta [DerEqType.eq_op DerEqType.eq_op_branch] in op in
-  let op   := eval deriving_compute in op in
-  let op   := eval simpl in op in
-  exact (@EqMixin _ op (@DerEqType.eq_opP sD sTs'))
-  end
+  match eval hnf in (@DerEqType.pack T _ _ _ id _ id _ _ _ id) with
+  | @EqMixin _ ?op ?opP =>
+    let op := eval unfold DerEqType.eq_op, DerEqType.eq_op_branch in op in
+      let op := eval deriving_compute in op in
+    exact (@EqMixin T op opP)
   end.
 
 Notation "[ 'derive' 'eqMixin' 'for' T ]" :=
   (ltac:(derive_eqMixin T))
   (at level 0) : form_scope.
+
+Definition unit_indMixin :=
+  Eval simpl in [indMixin for unit_rect].
+Canonical unit_indType :=
+  Eval hnf in IndType _ unit unit_indMixin.
+
+Set Printing All.
+
+Definition foo :=
+  Eval hnf in @DerEqType.pack unit _ _ _ id _ id _ _ _ id.
+
+Definition unit_eqMixin :=
+  [derive eqMixin for unit].
+
+Definition op :=
+  Eval hnf in Equality.op unit_eqMixin.
+
+Compute op.
 
 Section TreeOfInd.
 

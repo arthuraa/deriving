@@ -33,6 +33,8 @@ Record functor I := Functor {
                  fmap (fun i => g i \o f i) x = fmap g (fmap f x);
 }.
 
+Hint Unfold fobj fmap : deriving.
+
 Lemma fmapK I (F : functor I) (T S : I -> Type) (f : T -F> S) (g : S -F> T) :
   (forall i, cancel (f i) (g i)) ->
   forall i, cancel (@fmap I F _ _ f i) (@fmap _ _ _ _ g i).
@@ -337,6 +339,9 @@ Hint Unfold
   sig_class
   sig_inst_sort
   sig_inst_class
+  untag_decl
+  decl_inst_sort
+  decl_inst_class
   NonRec_arg_inst
   Rec_arg_inst
   nth_fin_arg_inst
@@ -344,6 +349,8 @@ Hint Unfold
   cons_arity_inst
   nil_sig_inst
   cons_sig_inst
+  nil_decl_tag
+  cons_decl_tag
   nil_decl_inst
   cons_decl_inst
   arity_rec
@@ -500,8 +507,7 @@ Section ClassDef.
 
 Variables (n : nat) (D : declaration n).
 
-Record type := Pack {
-  sorts     : fin n -> Type;
+Record class_of sorts := Class {
   Cons      : constructors D sorts;
   rec       : recursor D sorts;
   case      : destructor D sorts;
@@ -510,11 +516,17 @@ Record type := Pack {
   indP      : induction Cons;
 }.
 
+Record type := Pack {
+  sorts     : fin n -> Type;
+  class     : class_of sorts;
+}.
+
 End ClassDef.
 
 Module Exports.
 Identity Coercion hdfun_of_induction : induction >-> hdfun.
 Coercion sorts : type >-> Funclass.
+Coercion class : type >-> class_of.
 Notation mutIndType := type.
 Notation MutIndType := Pack.
 End Exports.
@@ -547,6 +559,7 @@ Hint Unfold
   MutInd.rec
   MutInd.case
   MutInd.sorts
+  MutInd.class
   : deriving.
 
 Module MutIndF.
@@ -610,7 +623,7 @@ Qed.
 Variable T : mutIndType D.
 
 Definition Roll i (x : F T i) : T i :=
-  @MutInd.Cons _ _ T i (constr x) (args x).
+  @MutInd.Cons _ _ _ T i (constr x) (args x).
 
 Definition rec_branches_of_fun S (body : F (T *F S) -F> S) :
   hlist2 (@MutInd.rec_branch _ D T S) :=
@@ -621,7 +634,7 @@ Definition rec_branches_of_fun S (body : F (T *F S) -F> S) :
          (fun l => body i (Cons j l))))).
 
 Definition rec S (body : F (T *F S) -F> S) :=
-  @MutInd.rec _ _ T S (rec_branches_of_fun body).
+  @MutInd.rec _ _ _ T S (rec_branches_of_fun body).
 
 Definition des_branches_of_fun S (body : F T -F> S) :
   hlist2 (@MutInd.des_branch _ D T S) :=
@@ -630,7 +643,7 @@ Definition des_branches_of_fun S (body : F T -F> S) :
     hcurry (fun l => body i (Cons j l)))).
 
 Definition case S (body : F T -F> S) :=
-  @MutInd.case _ _ T S (des_branches_of_fun body).
+  @MutInd.case _ _ _ T S (des_branches_of_fun body).
 
 Lemma recE S f i (a : F T i) :
   @rec S f i (Roll a) =
@@ -680,7 +693,7 @@ have {}IH i (a : F (fun j => {x & Q j x}) i) :
   by apply: (Q_of_P); apply: IH.
 move=> i x {P_of_QK Q_of_PK Q_of_P TP_of_TQ}; apply: P_of_Q.
 move: {P} Q IH i x.
-rewrite /Roll; case: (T) => [/= S Cs _ _ _ _ indP] P.
+rewrite /Roll; case: (T) => S [/= Cs _ _ _ _ indP] P.
 have {}indP :
     (forall i j, MutInd.ind_branch' P (Cs i j)) ->
     (forall i x, P i x).
