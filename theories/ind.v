@@ -98,12 +98,20 @@ Definition Roll := (InitAlg.Roll (InitAlg.class T)).
 Definition case := (InitAlg.case (InitAlg.class T)).
 Definition rec  := (InitAlg.rec  (InitAlg.class T)).
 
+Definition case1 i S (f : F T i -> S) (x : T i) : S :=
+  @case (fun j => j = i -> S)
+        (fun j a e => f (cast (F T) e a))
+        i x erefl.
+
 Lemma recE S f i a : rec f (Roll a) =
                      f i (fmap (fun i x => (x, rec f x)) a) :> S i.
 Proof. by rewrite /Roll /rec; case: (T) f a=> [? []]. Qed.
 
 Lemma caseE S f i a : case f (Roll a) = f i a :> S i.
 Proof. by rewrite /Roll /case; case: (T) f a=> [? []]. Qed.
+
+Lemma case1E i S f (a : F T i) : case1 f (Roll a) = f a :> S.
+Proof. by rewrite /case1 caseE. Qed.
 
 Lemma indP P :
   (forall i (a : F (fun i => {x & P i x}) i),
@@ -135,6 +143,7 @@ Hint Unfold
   InitAlg.sort
   Roll
   case
+  case1
   rec
   unroll
   : deriving.
@@ -191,8 +200,10 @@ Definition add_arity_ind (P : fin n -> signature -> Type) D i As j :
 
 Variables (K : Type) (sort : K -> Type).
 
+Definition eq_class X := {sX : K | sort sX = X}.
+
 Definition arg_class A :=
-  if A is NonRec T then {sT : K | sort sT = T} else unit.
+  if A is NonRec T then eq_class T else unit.
 
 Record arg_inst := ArgInst {
   arg_inst_sort  :> arg;
@@ -218,16 +229,19 @@ Record sig_inst := SigInst {
 }.
 Arguments SigInst : clear implicits.
 
-Record decl_inst := DeclInst {
-  decl_inst_len   :  nat;
-  decl_inst_sort  :> fin decl_inst_len -> signature;
+Record tagged_decl k := TaggedDecl {
+  untag_decl :> fin k -> signature;
+}.
+
+Record decl_inst k := DeclInst {
+  decl_inst_sort  :> tagged_decl k;
   _               :  forall i, sig_class (decl_inst_sort i)
 }.
 Arguments DeclInst : clear implicits.
 
-Definition decl_inst_class (d : decl_inst) :
-  forall i, sig_class (@decl_inst_sort d i) :=
-  let: DeclInst _ _ d := d in d.
+Definition decl_inst_class k (d : decl_inst k) :
+  forall i, sig_class (@decl_inst_sort k d i) :=
+  let: DeclInst _ d := d in d.
 
 Implicit Types (A : arg) (As : arity) (Σ : signature).
 Implicit Types (Ai : arg_inst) (Asi : arity_inst) (Σi : sig_inst).
@@ -258,17 +272,20 @@ Canonical cons_sig_inst Asi Σi :=
   SigInst (arity_inst_sort Asi :: sig_inst_sort Σi)
           (arity_inst_class Asi ::: sig_inst_class Σi).
 
-Canonical nil_decl_inst f :=
-  DeclInst 0 f (fun i => match i with end).
+Definition nil_decl_tag k (D : fin k -> signature) := TaggedDecl D.
+Canonical cons_decl_tag k (D : fin k -> signature) := nil_decl_tag D.
 
-Canonical cons_decl_inst Σi Di
-  (D : fun_split (sig_inst_sort Σi) (@decl_inst_sort Di)) :=
-  DeclInst (decl_inst_len Di).+1
-           (fs_fun D)
+Canonical nil_decl_inst f :=
+  DeclInst 0 (nil_decl_tag f) (fun i => match i with end).
+
+Canonical cons_decl_inst k Σi Di
+  (D : fun_split (sig_inst_sort Σi) (untag_decl (@decl_inst_sort k Di))) :=
+  DeclInst k.+1
+           (cons_decl_tag (fs_fun D))
            (fun i =>
               match i with
               | None => cast sig_class (fsE1 D) (sig_inst_class Σi)
-              | Some i => cast sig_class (fsE2 D i) (@decl_inst_class Di i)
+              | Some i => cast sig_class (fsE2 D i) (@decl_inst_class k Di i)
               end).
 
 Definition arity_rec (P : arity -> Type)
@@ -345,13 +362,17 @@ Definition arg_class_map
 
 Hint Unfold arg_class_map : deriving.
 
+Definition pack_decl_inst
+  n (D : declaration n) (Di : decl_inst n Equality.sort n)
+  of phant_id D (untag_decl (decl_inst_sort Di)) := Di.
+
 Unset Universe Polymorphism.
 
 Arguments add_arity_ind {n} P D i As j H1 H2.
 Arguments empty_decl {n}.
 Arguments arity_rec {n K} _ _ _ _ _.
 
-Module Ind.
+Module MutInd.
 
 Section Basic.
 
@@ -519,70 +540,58 @@ Section ClassDef.
 
 Variables (n : nat) (D : declaration n).
 
-Record mixin_of T := Mixin {
-  Cons      : constructors D T;
-  rec       : recursor D T;
-  case      : destructor D T;
-  _         : recursor_eq Cons rec;
-  _         : destructor_eq Cons case;
-  _         : induction Cons;
+Record type := Pack {
+  sorts     : fin n -> Type;
+  Cons      : constructors D sorts;
+  rec       : recursor D sorts;
+  case      : destructor D sorts;
+  recE      : recursor_eq Cons rec;
+  caseE     : destructor_eq Cons case;
+  indP      : induction Cons;
 }.
-
-Record type := Pack {sort : fin n -> Type; class : mixin_of sort}.
-Variables (T : fin n -> Type).
-Definition recE (m : mixin_of T) : recursor_eq (Cons m) (rec m) :=
-  let: Mixin _ _ _ recE _ _ := m in recE.
-Definition caseE (m : mixin_of T) : destructor_eq (Cons m) (case m) :=
-  let: Mixin _ _ _ _ caseE _ := m in caseE.
-Definition indP (m : mixin_of T) :=
-  let: Mixin _ _ _ _ _ indP := m
-  return induction (Cons m) in indP.
 
 End ClassDef.
 
 Module Exports.
 Identity Coercion hdfun_of_induction : induction >-> hdfun.
-Coercion sort : type >-> Funclass.
-Coercion class : type >-> mixin_of.
-Notation indType := type.
-Notation IndType m := (@Pack _ _ _ m).
-Notation IndMixin := Mixin.
+Coercion sorts : type >-> Funclass.
+Notation mutIndType := type.
+Notation MutIndType := Pack.
 End Exports.
 
-End Ind.
-Export Ind.Exports.
+End MutInd.
+Export MutInd.Exports.
 
-Coercion Ind.hnth1V : Ind.hlist1V >-> Funclass.
+Coercion MutInd.hnth1V : MutInd.hlist1V >-> Funclass.
 
 Hint Unfold
-  Ind.Cidx
-  Ind.args
-  Ind.args_map
-  Ind.constructors
-  Ind.empty_cons
-  Ind.add_cons
-  Ind.rec_branch'
-  Ind.rec_branch
-  Ind.recursor
-  Ind.rec_branch'_of_hfun'
-  Ind.hfun'_of_rec_branch'
-  Ind.recursor_eq
-  Ind.des_branch
-  Ind.destructor
-  Ind.destructor_eq
-  Ind.rec_of_des_branch
-  Ind.destructor_of_recursor
-  Ind.ind_branch'
-  Ind.ind_branch
-  Ind.induction
-  Ind.Cons
-  Ind.rec
-  Ind.case
-  Ind.sort
-  Ind.class
+  MutInd.Cidx
+  MutInd.args
+  MutInd.args_map
+  MutInd.constructors
+  MutInd.empty_cons
+  MutInd.add_cons
+  MutInd.rec_branch'
+  MutInd.rec_branch
+  MutInd.recursor
+  MutInd.rec_branch'_of_hfun'
+  MutInd.hfun'_of_rec_branch'
+  MutInd.recursor_eq
+  MutInd.des_branch
+  MutInd.destructor
+  MutInd.destructor_eq
+  MutInd.rec_of_des_branch
+  MutInd.destructor_of_recursor
+  MutInd.ind_branch'
+  MutInd.ind_branch
+  MutInd.induction
+  MutInd.Cons
+  MutInd.rec
+  MutInd.case
+  MutInd.sorts
   : deriving.
 
-Module IndF.
+Module MutIndF.
 
 Section TypeDef.
 
@@ -593,7 +602,7 @@ Implicit Types (T S : fin n -> Type).
 Notation size := PolyType.size.
 
 Record fobj T (i : fin n) := Cons {
-  constr : Ind.Cidx D i;
+  constr : MutInd.Cidx D i;
   args : hlist' (type_of_arg T) (nth_fin constr)
 }.
 
@@ -628,60 +637,61 @@ Qed.
 
 Canonical functor := Functor fmap_eq fmap1 fmap_comp.
 
-Lemma inj T (i : fin n) (j : Ind.Cidx D i)
+Lemma inj T (i : fin n) (j : MutInd.Cidx D i)
   (a b : hlist' (type_of_arg T) (nth_fin j)) :
   Cons j a = Cons j b -> a = b.
 Proof.
 pose get x :=
   if leq_fin (constr x) j is inl e then
-    cast (fun j : Ind.Cidx D i => hlist' (type_of_arg T) (nth_fin j)) e (args x)
+    cast (fun j : MutInd.Cidx D i =>
+            hlist' (type_of_arg T) (nth_fin j)) e (args x)
   else a.
 by move=> /(congr1 get); rewrite /get /= leq_finii /=.
 Qed.
 
-Variable T : indType D.
+Variable T : mutIndType D.
 
 Definition Roll i (x : F T i) : T i :=
-  @Ind.Cons _ _ _ T i (constr x) (args x).
+  @MutInd.Cons _ _ T i (constr x) (args x).
 
 Definition rec_branches_of_fun S (body : F (T *F S) -F> S) :
-  hlist2 (@Ind.rec_branch _ D T S) :=
+  hlist2 (@MutInd.rec_branch _ D T S) :=
   hlist_of_fun (fun i =>
-  hlist_of_fun (fun j : Ind.Cidx D i =>
-    Ind.rec_branch'_of_hfun'
+  hlist_of_fun (fun j : MutInd.Cidx D i =>
+    MutInd.rec_branch'_of_hfun'
       (hcurry
          (fun l => body i (Cons j l))))).
 
 Definition rec S (body : F (T *F S) -F> S) :=
-  @Ind.rec _ _ _ T S (rec_branches_of_fun body).
+  @MutInd.rec _ _ T S (rec_branches_of_fun body).
 
 Definition des_branches_of_fun S (body : F T -F> S) :
-  hlist2 (@Ind.des_branch _ D T S) :=
+  hlist2 (@MutInd.des_branch _ D T S) :=
   hlist_of_fun (fun i =>
-  hlist_of_fun (fun j : Ind.Cidx D i =>
+  hlist_of_fun (fun j : MutInd.Cidx D i =>
     hcurry (fun l => body i (Cons j l)))).
 
 Definition case S (body : F T -F> S) :=
-  @Ind.case _ _ _ T S (des_branches_of_fun body).
+  @MutInd.case _ _ T S (des_branches_of_fun body).
 
 Lemma recE S f i (a : F T i) :
   @rec S f i (Roll a) =
   f i (fmap (fun j (x : T j) => (x, rec f j x)) a).
 Proof.
-case: a=> [j args]; have := Ind.recE T S.
+case: a=> [j args]; have := MutInd.recE T S.
 move/all_hlist2P/(_ (rec_branches_of_fun f)).
 move/all_finP/(_ i).
 move/all_finP/(_ j).
 move/all_hlistP/(_ args).
 rewrite /rec_branches_of_fun hnth_of_fun.
 rewrite /rec /Roll => -> /=.
-by rewrite /= hnth_of_fun Ind.rec_branch_of_hfunK hcurryK.
+by rewrite /= hnth_of_fun MutInd.rec_branch_of_hfunK hcurryK.
 Qed.
 
 Lemma caseE S f i (a : F T i) :
   case f i (Roll a) = f i a :> S i.
 Proof.
-case: a => [j args]; have := Ind.caseE T S.
+case: a => [j args]; have := MutInd.caseE T S.
 move/all_hlist2P/(_ (des_branches_of_fun f)).
 move/all_finP/(_ i).
 move/all_finP/(_ j).
@@ -712,12 +722,12 @@ have {}IH i (a : F (fun j => {x & Q j x}) i) :
   by apply: (Q_of_P); apply: IH.
 move=> i x {P_of_QK Q_of_PK Q_of_P TP_of_TQ}; apply: P_of_Q.
 move: {P} Q IH i x.
-rewrite /Roll; case: (T) => S [/= Cs _ _ _ _ indP] P.
+rewrite /Roll; case: (T) => [/= S Cs _ _ _ _ indP] P.
 have {}indP :
-    (forall i j, Ind.ind_branch' P (Cs i j)) ->
+    (forall i j, MutInd.ind_branch' P (Cs i j)) ->
     (forall i x, P i x).
   move=> hyps i x.
-  pose bs : hlist2 (Ind.ind_branch P Cs) :=
+  pose bs : hlist2 (MutInd.ind_branch P Cs) :=
     hlist_of_fun (fun i => hlist_of_fun (fun j => hyps i j)).
   exact: (hdapp indP P bs i x).
 move=> hyps; apply: indP=> i j.
@@ -738,24 +748,97 @@ Canonical initAlgType :=
 
 End TypeDef.
 
-End IndF.
+End MutIndF.
 
 Hint Unfold
-  IndF.constr
-  IndF.args
-  IndF.fmap
-  IndF.functor
-  IndF.Roll
-  IndF.rec_branches_of_fun
-  IndF.rec
-  IndF.des_branches_of_fun
-  IndF.case
-  IndF.initAlgType
+  MutIndF.constr
+  MutIndF.args
+  MutIndF.fmap
+  MutIndF.functor
+  MutIndF.Roll
+  MutIndF.rec_branches_of_fun
+  MutIndF.rec
+  MutIndF.des_branches_of_fun
+  MutIndF.case
+  MutIndF.initAlgType
   : deriving.
 
-Canonical IndF.functor.
-Canonical IndF.initAlgType.
-Coercion IndF.initAlgType : indType >-> initAlgType.
+Canonical MutIndF.functor.
+Canonical MutIndF.initAlgType.
+Coercion MutIndF.initAlgType : mutIndType >-> initAlgType.
+
+Module Ind.
+
+Import PolyType.
+
+Record type n (D : declaration n) := Pack {
+  mutInd : mutIndType D;
+  sort   : Type;
+  _      : {i : fin n | sort = mutInd i}
+}.
+
+Module Exports.
+Coercion mutInd : type >-> mutIndType.
+Coercion sort : type >-> Sortclass.
+Notation indType := type.
+End Exports.
+End Ind.
+
+Export Ind.Exports.
+
+Section IndTheory.
+
+Variables (n : nat) (D : declaration n).
+
+Import PolyType.
+
+Definition type_idx (T : indType D) : fin n :=
+  let: Ind.Pack _ _ i := T in sval i.
+
+Definition type_idxP (T : indType D) : T = T (type_idx T) :> Type :=
+  let: Ind.Pack _ _ i := T in svalP i.
+
+End IndTheory.
+
+Hint Unfold
+  Ind.mutInd
+  Ind.sort
+  type_idx
+  type_idxP
+  : deriving.
+
+Class find_idx n (Ts : fin n -> Type) (T : Type) i (e : T = Ts i) :=
+  make_find_idx { }.
+Arguments find_idx : clear implicits.
+Arguments make_find_idx {_ _ _ _ _}.
+
+Definition find_idx_here n (Ts : fin n.+1 -> Type) :
+  find_idx n.+1 Ts (Ts None) None erefl := make_find_idx.
+
+Definition find_idx_there n (Ts : fin n.+1 -> Type) T i e
+  (_ : find_idx n (fun i => Ts (Some i)) T i e) :
+  find_idx n.+1 Ts T (Some i) e :=
+  make_find_idx.
+
+Hint Extern 1 (find_idx ?n.+1 ?Ts ?T _ _) =>
+  eapply (@find_idx_here n Ts) : typeclass_instances.
+
+Hint Extern 2 (find_idx ?n.+1 ?Ts ?T _ _) =>
+  eapply (@find_idx_there n Ts) : typeclass_instances.
+
+Definition pack_indIdx
+  n (D : declaration n) T (Ts : indType D) i e
+  of find_idx n Ts T i e :=
+  @Ind.Pack n D Ts T (PolyType.exist _ i e).
+
+Hint Unfold
+  find_idx_here
+  find_idx_there
+  pack_indIdx : deriving.
+
+Notation "[ 'indType' 'of' T 'for' Ts ]" :=
+  (@pack_indIdx _ _ T Ts _ _ _)
+  (format "[ 'indType'  'of'  T  'for'  Ts ]").
 
 Section InferInstances.
 
@@ -790,14 +873,14 @@ Defined.
 
 Class infer_decl
   n T (P : forall i, T i -> Type)
-  (elimT : Type) (D : declaration n) (Cs : Ind.constructors D T) : Type.
+  (elimT : Type) (D : declaration n) (Cs : MutInd.constructors D T) : Type.
 Arguments infer_decl : clear implicits.
 
 Global Instance infer_decl_end n T P :
   infer_decl n T P
-             (Ind.hlist1V (fun i => forall (x : T i), P i x))
+             (MutInd.hlist1V (fun i => forall (x : T i), P i x))
              empty_decl
-             (@Ind.empty_cons _ _).
+             (@MutInd.empty_cons _ _).
 Defined.
 
 Global Instance infer_decl_cons n T P
@@ -805,7 +888,7 @@ Global Instance infer_decl_cons n T P
   (_ : infer_arity n T P branchT As Ti C)
   (elimT : Type) D Cs
   (_ : infer_decl n T P elimT D Cs)
-  : infer_decl n T P (branchT -> elimT) (add_arity D Ti As) (Ind.add_cons Cs C).
+  : infer_decl n T P (branchT -> elimT) (add_arity D Ti As) (MutInd.add_cons Cs C).
 Defined.
 
 Class read_rect (rectT : Type) (rect : rectT)
@@ -829,16 +912,16 @@ Global Instance read_rect_done rectT rect :
 Defined.
 
 Class bless_rect
-  n Ts (D : declaration n) (Cs : Ind.constructors D Ts)
+  n Ts (D : declaration n) (Cs : MutInd.constructors D Ts)
   (rectT : (forall i, Ts i -> Type) -> Type)
   (rect  : forall P, rectT P)
-  (rect' : Ind.recursor D Ts).
+  (rect' : MutInd.recursor D Ts).
 Arguments bless_rect : clear implicits.
 
 Class infer_ind rectT (rect : rectT)
-  n Ts (D : declaration n) (Cs : Ind.constructors D Ts)
+  n Ts (D : declaration n) (Cs : MutInd.constructors D Ts)
   (rectT' : (forall i, Ts i -> Type) -> Type) (rect' : forall P, rectT' P)
-  (rect'' : Ind.recursor D Ts).
+  (rect'' : MutInd.recursor D Ts).
 Arguments infer_ind : clear implicits.
 
 Global Instance do_infer_ind rectT rect
@@ -903,6 +986,51 @@ Ltac bless_rect :=
   end.
 
 Hint Extern 0 (bless_rect _ _ _ _ _ _ _) => bless_rect : typeclass_instances.
+
+Section LiftClass.
+
+Import PolyType.
+
+Record tagged_sort n := TaggedSort {
+  untag_sort :> fin n -> Type;
+}.
+
+Definition ts_nil_tag n Ts := @TaggedSort n Ts.
+Canonical ts_cons_tag n Ts := @ts_nil_tag n Ts.
+
+Record lift_class n K (sort : K -> Type) := LiftClass {
+  lift_class_sort  :> tagged_sort n;
+  lift_class_class :  forall i, eq_class sort (lift_class_sort i);
+}.
+
+Canonical nil_lift_class K (sort : K -> Type) f :=
+  @LiftClass 0 K sort (ts_nil_tag f) (fun i => match i with end).
+
+Canonical cons_lift_class n K (sort : K -> Type)
+  (sT : K) (f : lift_class n sort) (g : fun_split (sort sT) f) :=
+  @LiftClass n.+1 K sort (ts_cons_tag g)
+             (fun i =>
+                match i with
+                | None   => cast (eq_class sort) (fsE1 g)   (exist _ sT erefl)
+                | Some i => cast (eq_class sort) (fsE2 g i) (lift_class_class f i)
+                end).
+
+Definition lift_class_proj n K (sort : K -> Type) cK
+           (class : forall sT, cK (sort sT))
+           (sTs : lift_class n sort) (i : fin n)
+  : cK (sTs i) :=
+  cast cK (svalP (lift_class_class sTs i)) (class _).
+
+End LiftClass.
+
+Hint Unfold
+  untag_sort
+  ts_nil_tag
+  ts_cons_tag
+  nil_lift_class
+  cons_lift_class
+  lift_class_proj
+  : deriving.
 
 Module InitAlgEqType.
 

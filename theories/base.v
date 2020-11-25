@@ -181,6 +181,13 @@ split; elim: n P=> [|n IH] P //=.
 - by move=> H; split; [exact: (H None)|apply: IH; eauto].
 Qed.
 
+Fixpoint all_finb n : (fin n -> bool) -> bool :=
+  match n with
+  | 0    => fun f => true
+  | n.+1 => fun f => f None && @all_finb n (fun i => f (Some i))
+  end.
+Hint Unfold all_finb : deriving.
+
 Fixpoint nth_fin T (xs : seq T) : fin (size xs) -> T :=
   match xs with
   | [::]    => fun n => match n with end
@@ -538,7 +545,7 @@ Fixpoint hsum n : (fin n -> Type) -> Type :=
   | n.+1 => fun T_ => (T_ None + hsum (fun i => T_ (Some i)))%type
   end.
 
-Definition hsum' I T_ (xs : seq I) :=
+Definition hsum' I (T_ : I -> Type) (xs : seq I) :=
   hsum (fnth T_ xs).
 
 Fixpoint hin n : forall (T_ : fin n -> Type) i, T_ i -> hsum T_ :=
@@ -567,12 +574,21 @@ Proof.
 by elim: n T_ f i x=> [_ _ []|n IH] T_ f /= [i|//] x /=; rewrite IH.
 Qed.
 
+Definition hproj n (T_ : fin n -> Type) i : hsum T_ -> option (T_ i) :=
+  hcase (fun j x =>
+           if leq_fin j i is inl e then Some (cast T_ e x)
+           else None).
+
+Lemma hinK n (T_ : fin n -> Type) i : pcancel (@hin n T_ i) (@hproj n T_ i).
+Proof. by move=> x; rewrite /hproj hcaseE leq_finii. Qed.
+
 End Hsum.
 
 Hint Unfold hsum : deriving.
 Hint Unfold hsum' : deriving.
 Hint Unfold hin : deriving.
 Hint Unfold hcase : deriving.
+Hint Unfold hproj : deriving.
 
 Section Hlist.
 
