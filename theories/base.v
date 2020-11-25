@@ -1098,3 +1098,51 @@ Canonical fun_split1 n R (TTs : fin n.+1 -> R) :=
   @FunSplit n R (TTs None) (fun i => TTs (Some i)) TTs erefl (fun=> erefl).
 
 Hint Unfold fs_fun fsE1 fsE2 fun_split1 : deriving.
+
+(** An alternative version of hlist for expressing the result types of recursors
+of mutually inductive types. *)
+Fixpoint hlist1V' m acc : (fin m -> Type) -> Type :=
+  match m with
+  | 0    => fun _ => acc
+  | m.+1 => fun X => hlist1V' (acc * (X None)) (fun i => X (Some i))
+  end%type.
+Hint Unfold hlist1V' : deriving.
+
+Fixpoint hd_hlist1V' m acc :
+  forall (X : fin m -> Type), hlist1V' acc X -> acc :=
+  match m with
+  | 0    => fun X l => l
+  | m.+1 => fun X l => (@hd_hlist1V' m _ (fun i => X (Some i)) l).1
+  end.
+Hint Unfold hd_hlist1V' : deriving.
+
+Fixpoint tl_hlist1V' m acc :
+  forall (X : fin m -> Type), hlist1V' acc X -> forall i, X i :=
+  match m with
+  | 0    => fun X l i => match i with end
+  | m.+1 => fun X l i =>
+    match i with
+    | None => (@hd_hlist1V' m _ _ l).2
+    | Some i => @tl_hlist1V' m _ _ l i
+    end
+  end.
+Hint Unfold tl_hlist1V' : deriving.
+
+Definition hlist1V m :=
+  match m return (fin m -> Type) -> Type with
+  | 0 => fun _ => unit
+  | n.+1 => fun X => hlist1V' (X None) (fun i => X (Some i))
+  end.
+Hint Unfold hlist1V : deriving.
+
+Definition hnth1V m :=
+  match m return forall (T : fin m -> Type) (l : hlist1V T) i, T i with
+  | 0 => fun _ _ i => match i with end
+  | n.+1 => fun X l i =>
+    match i with
+    | None => hd_hlist1V' l
+    | Some i => tl_hlist1V' l i
+    end
+  end.
+Coercion hnth1V : hlist1V >-> Funclass.
+Hint Unfold hnth1V : deriving.
