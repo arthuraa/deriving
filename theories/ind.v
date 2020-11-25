@@ -827,7 +827,7 @@ Hint Extern 2 (find_idx ?n.+1 ?Ts ?T _ _) =>
   eapply (@find_idx_there n Ts) : typeclass_instances.
 
 Definition pack_indIdx
-  n (D : declaration n) T (Ts : indType D) i e
+  n (D : declaration n) T (Ts : mutIndType D) i e
   of find_idx n Ts T i e :=
   @Ind.Pack n D Ts T (PolyType.exist _ i e).
 
@@ -836,9 +836,7 @@ Hint Unfold
   find_idx_there
   pack_indIdx : deriving.
 
-Notation "[ 'indType' 'of' T 'for' Ts ]" :=
-  (@pack_indIdx _ _ T Ts _ _ _)
-  (format "[ 'indType'  'of'  T  'for'  Ts ]").
+Notation IndType D T Ts := (@pack_indIdx _ _ T Ts _ _ _).
 
 Section InferInstances.
 
@@ -961,7 +959,7 @@ Ltac infer_arity :=
   | |- infer_arity ?n ?Ts ?Ps (forall x, ?Ps ?j x -> @?branchT x) _ _ _ =>
     eapply (@infer_arity_rec n Ts Ps j branchT)
   | |- infer_arity ?n ?Ts ?Ps (forall x : ?S, @?branchT x) _ _ _ =>
-    eapply (@infer_arity_nonrec n Ts Ps branchT)
+    eapply (@infer_arity_nonrec n Ts Ps S branchT)
   end.
 
 Hint Extern 0 (infer_arity _ _ _ _ _ _ _) => infer_arity : typeclass_instances.
