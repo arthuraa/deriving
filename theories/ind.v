@@ -11,6 +11,81 @@ Unset Printing Implicit Defensive.
 
 Open Scope deriving_scope.
 
+Record fun_split n (R : Type) (T : R) (Ts : fin n -> R) := FunSplit {
+  fs_fun :> fin n.+1 -> R;
+  _      :  T = fs_fun None;
+  _      :  forall i, Ts i = fs_fun (Some i);
+}.
+
+Definition fsE1 n R T Ts (TTs : @fun_split n R T Ts) : T = TTs None :=
+  let: FunSplit _ e _ := TTs in e.
+
+Definition fsE2 n R T Ts (TTs : @fun_split n R T Ts) :
+  forall i, Ts i = TTs (Some i) :=
+  let: FunSplit _ _ e := TTs in e.
+
+Canonical fun_split1 n R (TTs : fin n.+1 -> R) :=
+  @FunSplit n R (TTs None) (fun i => TTs (Some i)) TTs erefl (fun=> erefl).
+
+Hint Unfold fs_fun fsE1 fsE2 fun_split1 : deriving.
+
+Section LiftClass.
+
+Import PolyType.
+
+Variables (K : Type) (sort : K -> Type).
+
+Definition eq_class X := {sX : K | sort sX = X}.
+
+Record tagged_sort n := TaggedSort {
+  untag_sort :> fin n -> Type;
+}.
+
+Definition ts_nil_tag n Ts := @TaggedSort n Ts.
+Canonical ts_cons_tag n Ts := @ts_nil_tag n Ts.
+
+Record lift_class n := LiftClass {
+  lift_class_sort  :> tagged_sort n;
+  _ :  forall i, eq_class (lift_class_sort i);
+}.
+
+Definition lift_class_class n (sTs : lift_class n) :=
+  let: LiftClass _ cTs := sTs return forall i, eq_class (sTs i) in cTs.
+
+Canonical nil_lift_class f :=
+  @LiftClass 0 (ts_nil_tag f) (fun i => match i with end).
+
+Canonical cons_lift_class n
+  (sT : K) (f : lift_class n) (g : fun_split (sort sT) f) :=
+  @LiftClass n.+1 (ts_cons_tag g)
+             (fun i =>
+                match i with
+                | None   => cast eq_class (fsE1 g)   (exist _ sT erefl)
+                | Some i => cast eq_class (fsE2 g i) (lift_class_class f i)
+                end).
+
+Definition lift_class_proj n cK
+           (class : forall sT, cK (sort sT))
+           (sTs : lift_class n) (i : fin n)
+  : cK (sTs i) :=
+  cast cK (svalP (lift_class_class sTs i)) (class _).
+
+End LiftClass.
+
+Hint Unfold
+  eq_class
+  untag_sort
+  ts_nil_tag
+  ts_cons_tag
+  lift_class_sort
+  lift_class_class
+  nil_lift_class
+  cons_lift_class
+  lift_class_proj
+  : deriving.
+
+Arguments lift_class_proj {K sort n cK} class sTs i.
+
 Notation "T -F> S" :=
   (forall i, T i -> S i)
   (at level 30, no associativity)

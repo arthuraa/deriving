@@ -17,7 +17,7 @@ Arguments Leaf {_} _.
 Definition tree_indMixin T :=
   [indMixin for @tree_rect T].
 Canonical tree_indType T :=
-  Eval hnf in IndType _ _ (tree_indMixin T).
+  Eval hnf in IndType _ (tree T) (tree_indMixin T).
 
 Definition tree_eqMixin (T : eqType) :=
   [derive eqMixin for tree T].
@@ -41,7 +41,7 @@ Inductive three := A of bool & bool | B | C.
 Definition three_indMixin :=
   [indMixin for three_rect].
 Canonical three_indType :=
-  Eval hnf in IndType _ _ three_indMixin.
+  Eval hnf in IndType _ three three_indMixin.
 
 Definition three_eqMixin :=
   [derive eqMixin for three].
