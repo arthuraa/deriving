@@ -223,11 +223,11 @@ Definition pack_tree_of_indK :=
   @tree_of_coq_indK _ D sT_ind (type_idx sT_ind).
 
 Notation "[ 'derive' 'choiceMixin' 'for' T ]" :=
-  (PcanChoiceMixin (@pack_tree_of_indK T _ _ id))
+  (PcanChoiceMixin (@pack_tree_of_indK T _ _ _ id))
   (at level 0, format "[ 'derive'  'choiceMixin'  'for'  T ]") : form_scope.
 
 Notation "[ 'derive' 'countMixin' 'for' T ]" :=
-  (PcanCountMixin (@pack_tree_of_indK T _ _ id))
+  (PcanCountMixin (@pack_tree_of_indK T _ _ _ id))
   (at level 0, format "[ 'derive' 'countMixin'  'for'  T ]") : form_scope.
 
 Module DerFinType.
@@ -275,7 +275,7 @@ Fixpoint all_finbP n : forall (f : fin n -> bool),
 but you never know...*)
 Variable (n : nat) (D : decl_inst n Finite.sort n).
 Let F := MutIndF.functor D.
-Variable (T : initAlgEqType F).
+Variable (T : initAlgCountType F).
 
 Hypothesis not_rec :
   all_finb (fun i => all (all (negb \o @is_rec n)) (D i)).
@@ -338,36 +338,38 @@ Qed.
 
 End FinType.
 
-(*
 Definition pack :=
   fun (T : Type) =>
-  fun (b : Countable.class_of T) bT & phant_id (Countable.class bT) b =>
-  fun n D (sT : @indType n D) & phant_id (Ind.sort sT) T =>
-  fun (sD : decl_inst n Finite.sort n) & phant_id D (decl_inst_sort sD) =>
-  fun (sTs : lift_class n Equality.sort)
-      & phant_id (Ind.mutInd sT) (untag_sort sTs) =>
-  fun (cTs :
-  fun (not_rec : all_finb (fun i => all (all (negb \o @is_rec n)) (sD i))) =>
-    ltac:(
-      let sT_eq := constr:(@InitAlgEqType (fin n) _ _
-      let ax := constr:(@enum_indP n sD
-      match type of ax with
-      | Finite.axiom ?e =>
-        let e' := (eval compute -[Finite.sort Equality.sort allpairs cat map] in e) in
-        exact (@FinMixin (Countable.Pack b) e' ax)
-      end).
-
-Module Import Exports.
-Notation "[ 'derive' 'finMixin' 'for' T ]" :=
-  (let m := @pack T _ _ id _ _ id _ id _ id erefl in
-   ltac:(
-     let x := eval hnf in m in
-     exact x))
-  (at level 0, format "[ 'derive'  'finMixin'  'for'  T ]") : form_scope.
-End Exports.*)
+  fun n D (T_ind : @indType n D) & phant_id T (Ind.sort T_ind) =>
+  fun (D_fin : decl_inst n Finite.sort n) & phant_id D (untag_decl D_fin) =>
+  fun (Ts : lift_class Countable.sort n) cTs idx =>
+  let T_ind' := @Ind.Pack n D_fin (@MutInd.Pack _ _ (untag_sort Ts) cTs) T idx in
+  fun & phant_id T_ind T_ind' =>
+  fun (not_rec : all_finb (fun i => all (all (negb \o @is_rec n)) (D_fin i))) =>
+  let T_init := MutIndF.initAlgType T_ind' in
+  let T_count := lift_class_proj Countable.class Ts in
+  let T_ind_count := @InitAlgCountType n _ Ts T_count (InitAlg.class T_init) in
+  FinMixin (@enum_indP n D_fin T_ind_count not_rec (type_idx T_ind')).
 
 End DerFinType.
-(*Export DerFinType.Exports.*)
+
+Ltac derive_finMixin T :=
+  match eval hnf in (@DerFinType.pack T _ _ _ id _ id _ _ _ id erefl) with
+  | @Finite.Mixin _ ?T' ?enum ?enumP=>
+    let enum := eval unfold DerFinType.enum_ind,
+                            DerFinType.enum_branch,
+                            DerFinType.enum_branch_aux,
+                            DerFinType.allP,
+                            DerFinType.all_finbP,
+                            flatten, allpairs, foldr, map, cat
+    in enum in
+    let enum := eval deriving_compute in enum in
+    exact (@Finite.Mixin _ T' enum enumP)
+  end.
+
+Notation "[ 'derive' 'finMixin' 'for' T ]" :=
+  (ltac:(derive_finMixin T))
+  (at level 0, format "[ 'derive'  'finMixin'  'for'  T ]") : form_scope.
 
 Module DerOrderType.
 Section DerOrderType.
@@ -407,21 +409,21 @@ Definition le_branch As (cAs : hlist' arg_class As) :
        if x.(hd).1 == y.(hd) then rec x.(tl) y.(tl) else x.(hd).2 y.(hd)) As cAs.
 
 Definition le : forall i, T i -> T i -> bool :=
-  rec   (fun i args1 =>
-  case1 (fun   args2 =>
-           match leq_fin (MutIndF.constr args2) (MutIndF.constr args1) with
-           | inl e =>
-             le_branch
-               (hnth (decl_inst_class D i) (MutIndF.constr args1))
-               (MutIndF.args args1)
-               (cast (hlist' (type_of_arg T) \o @nth_fin _ _) e (MutIndF.args args2))
-           | inr b => ~~ b
-           end)).
+  rec  (fun i args1 =>
+  case (fun   args2 =>
+          match leq_fin (MutIndF.constr args2) (MutIndF.constr args1) with
+          | inl e =>
+            le_branch
+              (hnth (decl_inst_class D i) (MutIndF.constr args1))
+              (MutIndF.args args1)
+              (cast (hlist' (type_of_arg T) \o @nth_fin _ _) e (MutIndF.args args2))
+          | inr b => ~~ b
+          end)).
 
 Lemma refl i : reflexive (@le i).
 Proof.
 elim/indP: i / => i [j args].
-rewrite /le recE /= -[rec _]/(le) case1E leq_finii /=.
+rewrite /le recE /= -[rec _]/(le) caseE leq_finii /=.
 elim/arity_ind: {j} _ / (hnth _ _) args=> [[]|R As cAs IH|j As cAs IH] //=.
   case=> [x args]; rewrite /= eqxx; exact: IH.
 by case=> [[x xP] args] /=; rewrite eqxx; exact: IH.
@@ -431,7 +433,7 @@ Lemma anti i : antisymmetric (@le i).
 Proof.
 elim/indP: i / => i [xi xargs] y.
 rewrite -(unrollK y); case: {y} (unroll y)=> [yi yargs].
-rewrite /le !recE -[rec _]/(le) /= !case1E /=.
+rewrite /le !recE -[rec _]/(le) /= !caseE /=.
 case ie: (leq_fin yi xi) (leq_nat_of_fin yi xi)=> [e|b].
   case: xi / e {ie} xargs=> xargs _ /=; rewrite leq_finii /= => h.
   congr (Roll (MutIndF.Cons _))=> /=.
@@ -456,7 +458,7 @@ Proof.
 move=> y x z; elim/indP: i / x y z => i [xi xargs] y z.
 rewrite -(unrollK y) -(unrollK z).
 move: (unroll y) (unroll z)=> {y z} [yi yargs] [zi zargs].
-rewrite /le !recE /= -[rec _]/(le) !case1E /=.
+rewrite /le !recE /= -[rec _]/(le) !caseE /=.
 case: (leq_fin yi xi) (leq_nat_of_fin yi xi)=> [e _|b] //.
   case: xi / e xargs=> /= xargs.
   case: (leq_fin zi yi) (leq_nat_of_fin zi yi)=> [e _|b] //.
@@ -491,7 +493,7 @@ Lemma total i : total (@le i).
 Proof.
 elim/indP: i / => i [xi xargs] y.
 rewrite -(unrollK y); case: {y} (unroll y)=> [yi yargs].
-rewrite /le !recE /= -[rec _]/(le) !case1E /= (leq_fin_swap xi yi).
+rewrite /le !recE /= -[rec _]/(le) !caseE /= (leq_fin_swap xi yi).
 case: (leq_fin yi xi)=> [e|[] //].
 case: xi / e xargs=> /= xargs.
 elim/arity_ind: {yi} _ / (hnth _ _) xargs yargs=> [[] []|R|j] //= As cAs IH.
@@ -510,41 +512,43 @@ Definition ind_porderMixin i :=
 End Def.
 
 End DerOrderType.
+
+Definition pack :=
+  fun (T : Type) =>
+  fun n D (T_ind : @indType n D) & phant_id T (Ind.sort T_ind) =>
+  fun (D_ord : decl_inst n sort n) & phant_id D (untag_decl D_ord) =>
+  fun (Ts : lift_class Choice.sort n) cTs idx =>
+  let T_ind' := @Ind.Pack n D_ord (@MutInd.Pack _ _ (untag_sort Ts) cTs) T idx in
+  fun & phant_id T_ind T_ind' =>
+  let T_init := MutIndF.initAlgType T_ind' in
+  let T_choice := lift_class_proj Choice.class Ts in
+  let T_ind_choice := @InitAlgChoiceType n _ Ts T_choice (InitAlg.class T_init) in
+  @ind_porderMixin n D_ord T_ind_choice (type_idx T_ind').
+
 End DerOrderType.
 
 Canonical packOrderType disp (T : orderType disp) :=
   DerOrderType.Pack T.
 
 Ltac derive_orderMixin T :=
-  let sT_ind := eval hnf in [the indType _ of T by @Ind.sort _] in
-  match sT_ind with @Ind.Pack ?Σ _ ?cT_ind =>
-  let cT_ind := eval red in cT_ind in
-  let sT_ind := constr:(@Ind.Pack Σ T cT_ind) in
-  let sT_ind := constr:(MutIndF.initAlgType sT_ind) in
-  let sT_ch  := eval hnf in [choiceType of T] in
-  let bT_ch  := constr:(Choice.class sT_ch) in
-  let sΣ     := eval hnf in [the sig_inst DerOrderType.sort of Σ
-                             by @sig_inst_sort _ _] in
-  let cΣ     := eval hnf in (sig_inst_class sΣ) in
-  let cΣ     := eval deriving_compute in cΣ in
-  let sΣ     := constr:(@SigInst _ DerOrderType.sort Σ cΣ) in
-  let sT_ind_ch := constr:(InitAlgChoiceType bT_ch (InitAlg.class sT_ind)) in
-  let op     := constr:(@DerOrderType.le sΣ sT_ind_ch) in
-  let op     := eval cbv delta [DerOrderType.le DerOrderType.le_branch] in op in
-  let op     := eval deriving_compute in op in
-  let op     := eval simpl in op in
-  exact (@LeOrderMixin _ op _ _ _
-                       (fun _ _ => erefl)
-                       (fun _ _ => erefl)
-                       (fun _ _ => erefl)
-                       (@DerOrderType.anti sΣ sT_ind_ch)
-                       (@DerOrderType.trans sΣ sT_ind_ch)
-                       (@DerOrderType.total sΣ sT_ind_ch))
+  match eval hnf in (@DerOrderType.pack T _ _ _ id _ id _ _ _ id) with
+  | @Order.LeOrderMixin.Build
+    ?T' ?le ?lt ?meet ?join ?H1 ?H2 ?H3 ?anti ?trans ?total =>
+    let le := eval unfold DerOrderType.le, DerOrderType.le_branch in le in
+    let le := eval deriving_compute in le in
+    let lt := eval unfold DerOrderType.le, DerOrderType.le_branch in lt in
+    let lt := eval deriving_compute in lt in
+    let join := eval unfold DerOrderType.le, DerOrderType.le_branch in join in
+    let join := eval deriving_compute in join in
+    let meet := eval unfold DerOrderType.le, DerOrderType.le_branch in meet in
+    let meet := eval deriving_compute in meet in
+    exact (@Order.LeOrderMixin.Build
+             T' le lt meet join H1 H2 H3 anti trans total)
   end.
 
 Notation "[ 'derive' 'orderMixin' 'for' T ]" :=
   (ltac:(derive_orderMixin T))
-  (at level 0) : form_scope.
+  (at level 0, format "[ 'derive'  'orderMixin'  'for'  T ]") : form_scope.
 
 Section Instances.
 

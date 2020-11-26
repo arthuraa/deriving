@@ -193,10 +193,8 @@ Definition add_arity_ind (P : fin n -> signature -> Type) D i As j :
 
 Variables (K : Type) (sort : K -> Type).
 
-Definition eq_class X := {sX : K | sort sX = X}.
-
 Definition arg_class A :=
-  if A is NonRec T then eq_class T else unit.
+  if A is NonRec T then eq_class sort T else unit.
 
 Record arg_inst := ArgInst {
   arg_inst_sort  :> arg;
@@ -968,51 +966,6 @@ Ltac bless_rect :=
 
 Hint Extern 0 (bless_rect _ _ _ _ _ _ _) => bless_rect : typeclass_instances.
 
-Section LiftClass.
-
-Import PolyType.
-
-Record tagged_sort n := TaggedSort {
-  untag_sort :> fin n -> Type;
-}.
-
-Definition ts_nil_tag n Ts := @TaggedSort n Ts.
-Canonical ts_cons_tag n Ts := @ts_nil_tag n Ts.
-
-Record lift_class n K (sort : K -> Type) := LiftClass {
-  lift_class_sort  :> tagged_sort n;
-  lift_class_class :  forall i, eq_class sort (lift_class_sort i);
-}.
-
-Canonical nil_lift_class K (sort : K -> Type) f :=
-  @LiftClass 0 K sort (ts_nil_tag f) (fun i => match i with end).
-
-Canonical cons_lift_class n K (sort : K -> Type)
-  (sT : K) (f : lift_class n sort) (g : fun_split (sort sT) f) :=
-  @LiftClass n.+1 K sort (ts_cons_tag g)
-             (fun i =>
-                match i with
-                | None   => cast (eq_class sort) (fsE1 g)   (exist _ sT erefl)
-                | Some i => cast (eq_class sort) (fsE2 g i) (lift_class_class f i)
-                end).
-
-Definition lift_class_proj n K (sort : K -> Type) cK
-           (class : forall sT, cK (sort sT))
-           (sTs : lift_class n sort) (i : fin n)
-  : cK (sTs i) :=
-  cast cK (svalP (lift_class_class sTs i)) (class _).
-
-End LiftClass.
-
-Hint Unfold
-  untag_sort
-  ts_nil_tag
-  ts_cons_tag
-  nil_lift_class
-  cons_lift_class
-  lift_class_proj
-  : deriving.
-
 Module InitAlgEqType.
 
 Record type n (F : functor (fin n)) := Pack {
@@ -1080,4 +1033,42 @@ Hint Unfold
   InitAlgChoiceType.eqType
   InitAlgChoiceType.choiceType
   InitAlgChoiceType.initAlgType
+  : deriving.
+
+Module InitAlgCountType.
+
+Record type n (F : functor (fin n)) := Pack {
+  sort           : fin n -> Type;
+  count_class   : forall i, Countable.class_of (sort i);
+  init_alg_class : InitAlg.mixin_of sort F;
+}.
+
+Definition eqType n F (T : type F) (i : fin n) := Equality.Pack (count_class T i).
+Definition choiceType n F (T : type F) (i : fin n) := Choice.Pack (count_class T i).
+Definition countType n F (T : type F) (i : fin n) := Countable.Pack (count_class T i).
+Definition initAlgType n (F : functor (fin n)) (T : type F) := InitAlg.Pack (init_alg_class T).
+
+Module Import Exports.
+Notation initAlgCountType := type.
+Notation InitAlgCountType := Pack.
+Coercion sort : type >-> Funclass.
+Canonical eqType.
+Canonical choiceType.
+Canonical countType.
+Coercion initAlgType : type >-> InitAlg.type.
+Canonical initAlgType.
+End Exports.
+
+End InitAlgCountType.
+
+Export InitAlgCountType.Exports.
+
+Hint Unfold
+  InitAlgCountType.sort
+  InitAlgCountType.count_class
+  InitAlgCountType.init_alg_class
+  InitAlgCountType.eqType
+  InitAlgCountType.choiceType
+  InitAlgCountType.countType
+  InitAlgCountType.initAlgType
   : deriving.
