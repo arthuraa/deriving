@@ -341,11 +341,11 @@ Canonical expr_indType :=
 Canonical val_indType :=
   IndType _ val expr_val_indMixin.
 Definition expr_eqMixin :=
-  [derive nored eqMixin for expr].
+  [derive lazy eqMixin for expr].
 Canonical expr_eqType :=
   EqType expr expr_eqMixin.
 Definition val_eqMixin :=
-  [derive nored eqMixin for val].
+  [derive lazy eqMixin for val].
 Canonical val_eqType :=
   EqType val val_eqMixin.
 Definition expr_choiceMixin :=
