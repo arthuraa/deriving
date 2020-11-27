@@ -543,19 +543,14 @@ Canonical packOrderType disp (T : orderType disp) :=
   DerOrderType.Pack T.
 
 Ltac derive_orderMixin T :=
-  match eval hnf in (@DerOrderType.pack T _ _ _ id _ id _ _ _ id) with
-  | @Order.LeOrderMixin.Build
-    ?T' ?le ?lt ?meet ?join ?H1 ?H2 ?H3 ?anti ?trans ?total =>
+  let mixin := constr:(@DerOrderType.pack T _ _ _ id _ id _ _ _ id) in
+  match eval unfold DerOrderType.pack, DerOrderType.ind_porderMixin in mixin with
+  | @LeOrderMixin _ ?le _ _ _ _ _ _ ?anti ?trans ?total =>
     let le := eval unfold DerOrderType.le, DerOrderType.le_branch in le in
     let le := eval deriving_compute in le in
-    let lt := eval unfold DerOrderType.le, DerOrderType.le_branch in lt in
-    let lt := eval deriving_compute in lt in
-    let join := eval unfold DerOrderType.le, DerOrderType.le_branch in join in
-    let join := eval deriving_compute in join in
-    let meet := eval unfold DerOrderType.le, DerOrderType.le_branch in meet in
-    let meet := eval deriving_compute in meet in
-    exact (@Order.LeOrderMixin.Build
-             T' le lt meet join H1 H2 H3 anti trans total)
+    exact (@LeOrderMixin _ le _ _ _
+                         (fun _ _ => erefl) (fun _ _ => erefl) (fun _ _ => erefl)
+                         anti trans total)
   end.
 
 Notation "[ 'derive' 'orderMixin' 'for' T ]" :=
@@ -563,19 +558,14 @@ Notation "[ 'derive' 'orderMixin' 'for' T ]" :=
   (at level 0, format "[ 'derive'  'orderMixin'  'for'  T ]") : form_scope.
 
 Ltac derive_lazy_orderMixin T :=
-  match eval hnf in (@DerOrderType.pack T _ _ _ id _ id _ _ _ id) with
-  | @Order.LeOrderMixin.Build
-    ?T' ?le ?lt ?meet ?join ?H1 ?H2 ?H3 ?anti ?trans ?total =>
+  let mixin := constr:(@DerOrderType.pack T _ _ _ id _ id _ _ _ id) in
+  match eval unfold DerOrderType.pack, DerOrderType.ind_porderMixin in mixin with
+  | @LeOrderMixin _ ?le _ _ _ _ _ _ ?anti ?trans ?total =>
     let le := eval unfold DerOrderType.le, DerOrderType.le_branch in le in
     let le := eval deriving_lazy in le in
-    let lt := eval unfold DerOrderType.le, DerOrderType.le_branch in lt in
-    let lt := eval deriving_lazy in lt in
-    let join := eval unfold DerOrderType.le, DerOrderType.le_branch in join in
-    let join := eval deriving_lazy in join in
-    let meet := eval unfold DerOrderType.le, DerOrderType.le_branch in meet in
-    let meet := eval deriving_lazy in meet in
-    exact (@Order.LeOrderMixin.Build
-             T' le lt meet join H1 H2 H3 anti trans total)
+    exact (@LeOrderMixin _ le _ _ _
+                         (fun _ _ => erefl) (fun _ _ => erefl) (fun _ _ => erefl)
+                         anti trans total)
   end.
 
 Notation "[ 'derive' 'lazy' 'orderMixin' 'for' T ]" :=
@@ -583,7 +573,9 @@ Notation "[ 'derive' 'lazy' 'orderMixin' 'for' T ]" :=
 
 Section Instances.
 
-Variables (T T1 T2 : Type).
+Implicit Types T : Type.
+Implicit Types Teq : eqType.
+Implicit Types Tord : orderType tt.
 
 Definition unit_indMixin :=
   Eval simpl in [indMixin for unit_rect].
@@ -605,25 +597,35 @@ Definition nat_indMixin :=
 Canonical nat_indType :=
   Eval hnf in IndType _ nat nat_indMixin.
 
-Definition option_indMixin :=
+Definition option_indMixin T :=
   Eval simpl in [indMixin for @option_rect T].
-Canonical option_indType :=
-  Eval hnf in IndType _ (option T) option_indMixin.
+Canonical option_indType T :=
+  Eval hnf in IndType _ (option T) (option_indMixin T).
+Definition option_orderMixin Tord :=
+  [derive orderMixin for option Tord].
+Canonical option_porderType Tord :=
+  Eval hnf in POrderType tt (option Tord) (option_orderMixin Tord).
+Canonical option_latticeType Tord :=
+  Eval hnf in LatticeType (option Tord) (option_orderMixin Tord).
+Canonical option_distrLatticeType Tord :=
+  Eval hnf in DistrLatticeType (option Tord) (option_orderMixin Tord).
+Canonical option_orderType Tord :=
+  Eval hnf in OrderType (option Tord) (option_orderMixin Tord).
 
-Definition sum_indMixin :=
+Definition sum_indMixin T1 T2 :=
   Eval simpl in [indMixin for @sum_rect T1 T2].
-Canonical sum_indType :=
-  Eval hnf in IndType _ _ sum_indMixin.
+Canonical sum_indType T1 T2 :=
+  Eval hnf in IndType _ (T1 + T2) (sum_indMixin T1 T2).
 
-Definition prod_indMixin :=
+Definition prod_indMixin T1 T2 :=
   Eval simpl in [indMixin for @prod_rect T1 T2].
-Canonical prod_indType :=
-  Eval hnf in IndType _ _ prod_indMixin.
+Canonical prod_indType T1 T2 :=
+  Eval hnf in IndType _ (T1 * T2) (prod_indMixin T1 T2).
 
-Definition seq_indMixin :=
+Definition seq_indMixin T :=
   Eval simpl in [indMixin for @list_rect T].
-Canonical seq_indType :=
-  Eval hnf in IndType _ _ seq_indMixin.
+Canonical seq_indType T :=
+  Eval hnf in IndType _ (seq T) (seq_indMixin T).
 
 Definition comparison_indMixin :=
   [indMixin for comparison_rect].

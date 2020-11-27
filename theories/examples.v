@@ -60,7 +60,7 @@ Definition three_finMixin :=
 Canonical three_finType :=
   Eval hnf in FinType three three_finMixin.
 Definition three_orderMixin :=
-  [derive orderMixin for three].
+  [derive lazy orderMixin for three].
 Canonical three_porderType :=
   Eval hnf in POrderType tt three three_orderMixin.
 Canonical three_latticeType :=
@@ -110,7 +110,7 @@ Canonical foo_porderType := Eval hnf in POrderType tt foo foo_orderMixin.
 Canonical foo_latticeType := Eval hnf in LatticeType foo foo_orderMixin.
 Canonical foo_distrLatticeType := Eval hnf in DistrLatticeType foo foo_orderMixin.
 Canonical foo_orderType := Eval hnf in OrderType foo foo_orderMixin.
-Definition bar_orderMixin := [derive orderMixin for bar].
+Definition bar_orderMixin := [derive lazy orderMixin for bar].
 Canonical bar_porderType := Eval hnf in POrderType tt bar bar_orderMixin.
 Canonical bar_latticeType := Eval hnf in LatticeType bar bar_orderMixin.
 Canonical bar_distrLatticeType := Eval hnf in DistrLatticeType bar bar_orderMixin.
@@ -132,7 +132,7 @@ Definition base_lit_indMixin :=
 Canonical base_lit_indType :=
   IndType _ base_lit base_lit_indMixin.
 Definition base_lit_eqMixin :=
-  [derive eqMixin for base_lit].
+  [derive lazy eqMixin for base_lit].
 Canonical base_lit_eqType :=
   EqType base_lit base_lit_eqMixin.
 Definition base_lit_choiceMixin :=
@@ -144,7 +144,7 @@ Definition base_lit_countMixin :=
 Canonical base_lit_countType :=
   Eval hnf in CountType base_lit base_lit_countMixin.
 Definition base_lit_orderMixin :=
-  [derive orderMixin for base_lit].
+  [derive lazy orderMixin for base_lit].
 Canonical base_lit_porderType :=
   Eval hnf in POrderType tt base_lit base_lit_orderMixin.
 Canonical base_lit_latticeType :=
@@ -198,7 +198,7 @@ Definition bin_op_indMixin :=
 Canonical bin_op_indType :=
   IndType _ bin_op bin_op_indMixin.
 Definition bin_op_eqMixin :=
-  [derive eqMixin for bin_op].
+  [derive lazy eqMixin for bin_op].
 Canonical bin_op_eqType :=
   EqType bin_op bin_op_eqMixin.
 Definition bin_op_choiceMixin :=
@@ -214,7 +214,7 @@ Definition bin_op_finMixin :=
 Canonical bin_op_finType :=
   Eval hnf in FinType bin_op bin_op_finMixin.
 Definition bin_op_orderMixin :=
-  [derive orderMixin for bin_op].
+  [derive lazy orderMixin for bin_op].
 Canonical bin_op_porderType :=
   Eval hnf in POrderType tt bin_op bin_op_orderMixin.
 Canonical bin_op_latticeType :=
@@ -251,7 +251,7 @@ Definition expr_indMixin :=
 Canonical expr_indType :=
   IndType _ expr expr_indMixin.
 Definition expr_eqMixin :=
-  [derive eqMixin for expr].
+  [derive lazy eqMixin for expr].
 Canonical expr_eqType :=
   EqType expr expr_eqMixin.
 Definition expr_choiceMixin :=
@@ -263,7 +263,7 @@ Definition expr_countMixin :=
 Canonical expr_countType :=
   Eval hnf in CountType expr expr_countMixin.
 Definition expr_orderMixin :=
-  [derive orderMixin for expr].
+  [derive lazy orderMixin for expr].
 Canonical expr_porderType :=
   Eval hnf in POrderType tt expr expr_orderMixin.
 Canonical expr_latticeType :=
