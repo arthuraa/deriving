@@ -138,6 +138,18 @@ Notation "[ 'derive' 'eqMixin' 'for' T ]" :=
   (ltac:(derive_eqMixin T))
   (at level 0) : form_scope.
 
+Ltac derive_lazy_eqMixin T :=
+  match eval hnf in (@DerEqType.pack T _ _ _ id _ id _ _ _ id) with
+  | @EqMixin _ ?op ?opP =>
+    let op := eval unfold DerEqType.eq_op, DerEqType.eq_op_branch in op in
+    let op := eval deriving_lazy in op in
+    exact (@EqMixin T op opP)
+  end.
+
+Notation "[ 'derive' 'lazy' 'eqMixin' 'for' T ]" :=
+  (ltac:(derive_lazy_eqMixin T))
+  (at level 0) : form_scope.
+
 Section TreeOfInd.
 
 Variables (n : nat) (D : declaration n).
@@ -549,6 +561,25 @@ Ltac derive_orderMixin T :=
 Notation "[ 'derive' 'orderMixin' 'for' T ]" :=
   (ltac:(derive_orderMixin T))
   (at level 0, format "[ 'derive'  'orderMixin'  'for'  T ]") : form_scope.
+
+Ltac derive_lazy_orderMixin T :=
+  match eval hnf in (@DerOrderType.pack T _ _ _ id _ id _ _ _ id) with
+  | @Order.LeOrderMixin.Build
+    ?T' ?le ?lt ?meet ?join ?H1 ?H2 ?H3 ?anti ?trans ?total =>
+    let le := eval unfold DerOrderType.le, DerOrderType.le_branch in le in
+    let le := eval deriving_lazy in le in
+    let lt := eval unfold DerOrderType.le, DerOrderType.le_branch in lt in
+    let lt := eval deriving_lazy in lt in
+    let join := eval unfold DerOrderType.le, DerOrderType.le_branch in join in
+    let join := eval deriving_lazy in join in
+    let meet := eval unfold DerOrderType.le, DerOrderType.le_branch in meet in
+    let meet := eval deriving_lazy in meet in
+    exact (@Order.LeOrderMixin.Build
+             T' le lt meet join H1 H2 H3 anti trans total)
+  end.
+
+Notation "[ 'derive' 'lazy' 'orderMixin' 'for' T ]" :=
+  (ltac:(derive_lazy_orderMixin T)) (at level 0) : form_scope.
 
 Section Instances.
 
