@@ -495,7 +495,7 @@ Definition rec_branch D T S i (j : Cidx D i) : Type :=
 
 
 Definition recursor D T :=
-  forall S, hfun2 (@rec_branch D T S) (hlist1V (fun i => T i -> S i)).
+  forall S, hfun2 (@rec_branch D T S) (hlist1 (fun i => T i -> S i)).
 
 Fixpoint rec_branch'_of_hfun' T S i As :
   hfun' (type_of_arg (T *F S)) As (S i) -> rec_branch' T S i As :=
@@ -532,7 +532,7 @@ Definition des_branch D T S i (j : Cidx D i) :=
   hfun' (type_of_arg T) (nth_fin j) (S i).
 
 Definition destructor D T :=
-  forall S, hfun2 (@des_branch D T S) (hlist1V (fun i => T i -> S i)).
+  forall S, hfun2 (@des_branch D T S) (hlist1 (fun i => T i -> S i)).
 
 Definition destructor_eq D T (Cs : constructors D T) (d : destructor D T) :=
   forall S,
@@ -563,7 +563,7 @@ Definition ind_branch D T P (Cs : constructors D T) i (j : Cidx D i) :=
 
 Definition induction D T (Cs : constructors D T) :=
   @hdfun n (fun i => T i -> Type) (fun P : hlist (fun i => T i -> Type) =>
-  hfun2 (@ind_branch D T P Cs) (hlist1V (fun i => forall x, P i x))).
+  hfun2 (@ind_branch D T P Cs) (hlist1 (fun i => forall x, P i x))).
 
 End Basic.
 
@@ -932,7 +932,7 @@ Arguments infer_decl : clear implicits.
 
 Global Instance infer_decl_end n T P :
   infer_decl n T P
-             (hlist1V (fun i => forall (x : T i), P i x))
+             (hlist1 (fun i => forall (x : T i), P i x))
              empty_decl
              (@MutInd.empty_cons _ _).
 Defined.

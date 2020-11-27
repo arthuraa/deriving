@@ -1108,50 +1108,33 @@ Definition hlist_countMixin n (T_ : fin n -> countType) :=
 Canonical hlist_countType n T_ :=
   Eval hnf in CountType (hlist _) (@hlist_countMixin n T_).
 
-(** An alternative version of hlist for expressing the result types of recursors
-of mutually inductive types. *)
-Fixpoint hlist1V' m acc : (fin m -> Type) -> Type :=
+Fixpoint hlist1' m : (fin m.+1 -> Type) -> Type :=
   match m with
-  | 0    => fun _ => acc
-  | m.+1 => fun X => hlist1V' (acc * (X None)) (fun i => X (Some i))
+  | 0    => fun X => X None
+  | m.+1 => fun X => X None * hlist1' (fun i => X (Some i))
   end%type.
-Hint Unfold hlist1V' : deriving.
+Hint Unfold hlist1' : deriving.
 
-Fixpoint hd_hlist1V' m acc :
-  forall (X : fin m -> Type), hlist1V' acc X -> acc :=
+Fixpoint hnth1' m : forall T, @hlist1' m T -> forall i : fin m.+1, T i :=
   match m with
-  | 0    => fun X l => l
-  | m.+1 => fun X l => (@hd_hlist1V' m _ (fun i => X (Some i)) l).1
+  | 0 =>
+    fun T l i => if i isn't Some i then l else match i with end
+  | m.+1 =>
+    fun T l i => if i isn't Some i then l.1 else @hnth1' m _ l.2 i
   end.
-Hint Unfold hd_hlist1V' : deriving.
+Hint Unfold hnth1' : deriving.
 
-Fixpoint tl_hlist1V' m acc :
-  forall (X : fin m -> Type), hlist1V' acc X -> forall i, X i :=
-  match m with
-  | 0    => fun X l i => match i with end
-  | m.+1 => fun X l i =>
-    match i with
-    | None => (@hd_hlist1V' m _ _ l).2
-    | Some i => @tl_hlist1V' m _ _ l i
-    end
-  end.
-Hint Unfold tl_hlist1V' : deriving.
-
-Definition hlist1V m :=
+Definition hlist1 m :=
   match m return (fin m -> Type) -> Type with
-  | 0 => fun _ => unit
-  | n.+1 => fun X => hlist1V' (X None) (fun i => X (Some i))
+  | 0    => fun _ => unit
+  | n.+1 => fun X => hlist1' X
   end.
-Hint Unfold hlist1V : deriving.
+Hint Unfold hlist1 : deriving.
 
-Definition hnth1V m :=
-  match m return forall (T : fin m -> Type) (l : hlist1V T) i, T i with
-  | 0 => fun _ _ i => match i with end
-  | n.+1 => fun X l i =>
-    match i with
-    | None => hd_hlist1V' l
-    | Some i => tl_hlist1V' l i
-    end
+Definition hnth1 m :=
+  match m return forall (T : fin m -> Type) (l : hlist1 T) i, T i with
+  | 0    => fun _ _ i => match i with end
+  | n.+1 => fun X l i => hnth1' l i
   end.
-Coercion hnth1V : hlist1V >-> Funclass.
-Hint Unfold hnth1V : deriving.
+Coercion hnth1 : hlist1 >-> Funclass.
+Hint Unfold hnth1 : deriving.
