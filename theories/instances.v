@@ -126,8 +126,12 @@ Definition pack :=
 
 End DerEqType.
 
+Notation "[ 'derive' 'nored' 'eqMixin' 'for' T ]" :=
+  (@DerEqType.pack T _ _ _ id _ id _ _ _ id)
+  (at level 0) : form_scope.
+
 Ltac derive_eqMixin T :=
-  match eval hnf in (@DerEqType.pack T _ _ _ id _ id _ _ _ id) with
+  match eval hnf in [derive nored eqMixin for T] with
   | @EqMixin _ ?op ?opP =>
     let op := eval unfold DerEqType.eq_op, DerEqType.eq_op_branch in op in
     let op := eval deriving_compute in op in
@@ -139,7 +143,7 @@ Notation "[ 'derive' 'eqMixin' 'for' T ]" :=
   (at level 0) : form_scope.
 
 Ltac derive_lazy_eqMixin T :=
-  match eval hnf in (@DerEqType.pack T _ _ _ id _ id _ _ _ id) with
+  match eval hnf in [derive nored eqMixin for T] with
   | @EqMixin _ ?op ?opP =>
     let op := eval unfold DerEqType.eq_op, DerEqType.eq_op_branch in op in
     let op := eval deriving_lazy in op in
@@ -542,8 +546,12 @@ End DerOrderType.
 Canonical packOrderType disp (T : orderType disp) :=
   DerOrderType.Pack T.
 
+Notation "[ 'derive' 'nored' 'orderMixin' 'for' T ]" :=
+  (@DerOrderType.pack T _ _ _ id _ id _ _ _ id)
+  (at level 0) : form_scope.
+
 Ltac derive_orderMixin T :=
-  let mixin := constr:(@DerOrderType.pack T _ _ _ id _ id _ _ _ id) in
+  let mixin := constr:([derive nored orderMixin for T]) in
   match eval unfold DerOrderType.pack, DerOrderType.ind_porderMixin in mixin with
   | @LeOrderMixin _ ?le _ _ _ _ _ _ ?anti ?trans ?total =>
     let le := eval unfold DerOrderType.le, DerOrderType.le_branch in le in
@@ -558,7 +566,7 @@ Notation "[ 'derive' 'orderMixin' 'for' T ]" :=
   (at level 0, format "[ 'derive'  'orderMixin'  'for'  T ]") : form_scope.
 
 Ltac derive_lazy_orderMixin T :=
-  let mixin := constr:(@DerOrderType.pack T _ _ _ id _ id _ _ _ id) in
+  let mixin := constr:([derive nored orderMixin for T]) in
   match eval unfold DerOrderType.pack, DerOrderType.ind_porderMixin in mixin with
   | @LeOrderMixin _ ?le _ _ _ _ _ _ ?anti ?trans ?total =>
     let le := eval unfold DerOrderType.le, DerOrderType.le_branch in le in
@@ -715,6 +723,16 @@ Definition ascii_finMixin :=
   Eval simpl in [derive finMixin for ascii].
 Canonical ascii_finType :=
   Eval hnf in FinType ascii ascii_finMixin.
+Definition ascii_orderMixin :=
+  [derive orderMixin for ascii].
+Canonical ascii_porderType :=
+  Eval hnf in POrderType tt ascii ascii_orderMixin.
+Canonical ascii_latticeType :=
+  Eval hnf in LatticeType ascii ascii_orderMixin.
+Canonical ascii_distrLatticeType :=
+  Eval hnf in DistrLatticeType ascii ascii_orderMixin.
+Canonical ascii_orderType :=
+  Eval hnf in OrderType ascii ascii_orderMixin.
 
 Definition string_indMixin :=
   Eval simpl in [indMixin for string_rect].
@@ -732,5 +750,15 @@ Definition string_countMixin :=
   Eval simpl in [derive countMixin for string].
 Canonical string_countType :=
   Eval hnf in CountType string string_countMixin.
+Definition string_orderMixin :=
+  [derive orderMixin for string].
+Canonical string_porderType :=
+  Eval hnf in POrderType tt string string_orderMixin.
+Canonical string_latticeType :=
+  Eval hnf in LatticeType string string_orderMixin.
+Canonical string_distrLatticeType :=
+  Eval hnf in DistrLatticeType string string_orderMixin.
+Canonical string_orderType :=
+  Eval hnf in OrderType string string_orderMixin.
 
 End Instances.

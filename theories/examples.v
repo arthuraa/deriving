@@ -3,6 +3,8 @@ From mathcomp Require Import
 
 From deriving Require Import deriving.
 
+Require Import Coq.Strings.String.
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -224,46 +226,83 @@ Canonical bin_op_distrLatticeType :=
 Canonical bin_op_orderType :=
   Eval hnf in OrderType bin_op bin_op_orderMixin.
 
+Unset Elimination Schemes.
 Inductive expr :=
-  | Var (x : nat)
-  | Rec (f x : nat) (e : expr)
+  (* Values *)
+  | Val (v : val)
+  (* Base lambda calculus *)
+  | Var (x : string)
+  | Rec (f x : string) (e : expr)
   | App (e1 e2 : expr)
+  (* Base types and their operations *)
   | UnOp (op : un_op) (e : expr)
   | BinOp (op : bin_op) (e1 e2 : expr)
   | If (e0 e1 e2 : expr)
+  (* Products *)
   | Pair (e1 e2 : expr)
   | Fst (e : expr)
   | Snd (e : expr)
+  (* Sums *)
   | InjL (e : expr)
   | InjR (e : expr)
   | Case (e0 : expr) (e1 : expr) (e2 : expr)
+  (* Concurrency *)
   | Fork (e : expr)
-  | AllocN (e1 e2 : expr)
+  (* Heap *)
+  | AllocN (e1 e2 : expr) (* array length (positive number), initial value *)
+  | Free (e : expr)
   | Load (e : expr)
   | Store (e1 : expr) (e2 : expr)
-  | CmpXchg (e0 : expr) (e1 : expr) (e2 : expr)
-  | FAA (e1 : expr) (e2 : expr)
+  | CmpXchg (e0 : expr) (e1 : expr) (e2 : expr) (* Compare-exchange *)
+  | FAA (e1 : expr) (e2 : expr) (* Fetch-and-add *)
+  (* Prophecy *)
   | NewProph
-  | Resolve (e0 : expr) (e1 : expr) (e2 : expr)
-  | Lit (l : base_lit).
-Definition expr_indMixin :=
-  [indMixin for expr_rect].
+  | Resolve (e0 : expr) (e1 : expr) (e2 : expr) (* wrapped expr, proph, val *)
+with val :=
+  | LitV (l : base_lit)
+  | RecV (f x : string) (e : expr)
+  | PairV (v1 v2 : val)
+  | InjLV (v : val)
+  | InjRV (v : val).
+Set Elimination Schemes.
+
+Scheme expr_rect := Induction for expr Sort Type
+with   val_rect  := Induction for val  Sort Type.
+
+Combined Scheme expr_val_rect from expr_rect, val_rect.
+
+Definition expr_val_indMixin :=
+  [indMixin for expr_val_rect].
 Canonical expr_indType :=
-  IndType _ expr expr_indMixin.
+  IndType _ expr expr_val_indMixin.
+Canonical val_indType :=
+  IndType _ val expr_val_indMixin.
 Definition expr_eqMixin :=
-  [derive lazy eqMixin for expr].
+  [derive nored eqMixin for expr].
 Canonical expr_eqType :=
   EqType expr expr_eqMixin.
+Definition val_eqMixin :=
+  [derive nored eqMixin for val].
+Canonical val_eqType :=
+  EqType val val_eqMixin.
 Definition expr_choiceMixin :=
   [derive choiceMixin for expr].
 Canonical expr_choiceType :=
   Eval hnf in ChoiceType expr expr_choiceMixin.
+Definition val_choiceMixin :=
+  [derive choiceMixin for val].
+Canonical val_choiceType :=
+  Eval hnf in ChoiceType val val_choiceMixin.
 Definition expr_countMixin :=
   [derive countMixin for expr].
 Canonical expr_countType :=
   Eval hnf in CountType expr expr_countMixin.
-Definition expr_orderMixin :=
-  [derive lazy orderMixin for expr].
+Definition val_countMixin :=
+  [derive countMixin for val].
+Canonical val_countType :=
+  Eval hnf in CountType val val_countMixin.
+Definition expr_orderMixin : leOrderMixin expr_choiceType.
+Proof. exact [derive nored orderMixin for expr]. Qed.
 Canonical expr_porderType :=
   Eval hnf in POrderType tt expr expr_orderMixin.
 Canonical expr_latticeType :=
@@ -272,5 +311,15 @@ Canonical expr_distrLatticeType :=
   Eval hnf in DistrLatticeType expr expr_orderMixin.
 Canonical expr_orderType :=
   Eval hnf in OrderType expr expr_orderMixin.
+Definition val_orderMixin : leOrderMixin val_choiceType.
+Proof. exact [derive nored orderMixin for val]. Qed.
+Canonical val_porderType :=
+  Eval hnf in POrderType tt val val_orderMixin.
+Canonical val_latticeType :=
+  Eval hnf in LatticeType val val_orderMixin.
+Canonical val_distrLatticeType :=
+  Eval hnf in DistrLatticeType val val_orderMixin.
+Canonical val_orderType :=
+  Eval hnf in OrderType val val_orderMixin.
 
 End SyntaxExample.
