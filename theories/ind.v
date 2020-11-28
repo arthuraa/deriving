@@ -587,13 +587,24 @@ Record def := Def {
 
 Import PolyType.
 
-Record type := Pack {
-  class : def;
-  sort  : Type;
-  _     : {i : fin n | sort = sorts class i}
+Record mixin_of T := Mixin {
+  mixin_def : def;
+  mixin_idx : {i : fin n | T = sorts mixin_def i}
 }.
 
+Record type := Pack {sort : Type; _ : mixin_of sort}.
+Local Coercion sort : type >-> Sortclass.
+Local Notation class_of := mixin_of.
+
+Variables (T : Type) (cT : type).
+Definition class := let: Pack _ c as cT' := cT return class_of cT' in c.
+Definition clone c of phant_id class c := @Pack T c.
+Let xT := let: Pack T _ := cT in T.
+Notation xclass := (class : class_of xT).
+
 End ClassDef.
+
+Notation class_of := mixin_of.
 
 Module Exports.
 Identity Coercion hdfun_of_induction : induction >-> hdfun.
@@ -601,8 +612,9 @@ Coercion sorts : def >-> Funclass.
 Coercion def_class : def >-> def_class_of.
 Notation indDef := def.
 Notation IndDef := Def.
-Coercion class : type >-> indDef.
 Coercion sort : type >-> Sortclass.
+Coercion class : type >-> class_of.
+Coercion mixin_def : class_of >-> def.
 Notation indType := type.
 End Exports.
 
@@ -616,19 +628,12 @@ Variables (n : nat) (D : declaration n).
 Import PolyType.
 
 Definition type_idx (T : indType D) : fin n :=
-  let: Ind.Pack _ _ i := T in sval i.
+  sval (Ind.mixin_idx T).
 
 Definition type_idxP (T : indType D) : T = T (type_idx T) :> Type :=
-  let: Ind.Pack _ _ i := T in svalP i.
+  svalP (Ind.mixin_idx T).
 
 End IndTheory.
-
-Hint Unfold
-  Ind.class
-  Ind.sort
-  type_idx
-  type_idxP
-  : deriving.
 
 Class find_idx n (Ts : fin n -> Type) (T : Type) i (e : T = Ts i) :=
   make_find_idx { }.
@@ -649,17 +654,12 @@ Hint Extern 1 (find_idx ?n.+1 ?Ts ?T _ _) =>
 Hint Extern 2 (find_idx ?n.+1 ?Ts ?T _ _) =>
   eapply (@find_idx_there n Ts) : typeclass_instances.
 
-Definition pack_indIdx
+Definition pack_indType
   n (D : declaration n) T (Ts : indDef D) i e
   of find_idx n Ts T i e :=
-  @Ind.Pack n D Ts T (PolyType.exist _ i e).
+  Ind.Pack (@Ind.Mixin n D T Ts (PolyType.exist _ i e)).
 
-Hint Unfold
-  find_idx_here
-  find_idx_there
-  pack_indIdx : deriving.
-
-Notation IndType D T Ts := (@pack_indIdx _ _ T Ts _ _ _).
+Notation IndType D T Ts := (@pack_indType _ _ T Ts _ _ _).
 
 Hint Unfold
   Ind.Cidx
@@ -687,6 +687,15 @@ Hint Unfold
   Ind.case
   Ind.sorts
   Ind.def_class
+  Ind.class
+  Ind.mixin_def
+  Ind.mixin_idx
+  Ind.sort
+  type_idx
+  type_idxP
+  find_idx_here
+  find_idx_there
+  pack_indType
   : deriving.
 
 Module IndF.

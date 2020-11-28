@@ -119,7 +119,8 @@ Definition pack :=
   fun (T : Type) =>
   fun n D (T_ind : @indType n D) & phant_id T (Ind.sort T_ind) =>
   fun (D_eq : decl_inst n Equality.sort n) & phant_id D (untag_decl D_eq) =>
-  fun Ts cTs idx (T_ind' := @Ind.Pack n D_eq (@Ind.Def _ _ Ts cTs) T idx) =>
+  fun Ts cTs idx =>
+  fun (T_ind' := Ind.Pack (@Ind.Mixin n D_eq T (@Ind.Def _ _ Ts cTs) idx)) =>
   fun & phant_id T_ind T_ind' =>
   cast Equality.mixin_of (type_idxP T_ind')^-1
     (@EqMixin _ _ (@eq_opP n D_eq (IndF.initAlgType T_ind') (type_idx T_ind'))).
@@ -359,7 +360,7 @@ Definition pack :=
   fun n D (T_ind : @indType n D) & phant_id T (Ind.sort T_ind) =>
   fun (D_fin : decl_inst n Finite.sort n) & phant_id D (untag_decl D_fin) =>
   fun (Ts : lift_class Countable.sort n) cTs idx =>
-  let T_ind' := @Ind.Pack n D_fin (@Ind.Def _ _ (untag_sort Ts) cTs) T idx in
+  let T_ind' := Ind.Pack (@Ind.Mixin n D_fin T (@Ind.Def _ _ (untag_sort Ts) cTs) idx) in
   fun & phant_id T_ind T_ind' =>
   fun (not_rec : all_finb (fun i => all (all (negb \o @is_rec n)) (D_fin i))) =>
   let T_init := IndF.initAlgType T_ind' in
@@ -534,7 +535,7 @@ Definition pack :=
   fun n D (T_ind : @indType n D) & phant_id T (Ind.sort T_ind) =>
   fun (D_ord : decl_inst n sort n) & phant_id D (untag_decl D_ord) =>
   fun (Ts : lift_class Choice.sort n) cTs idx =>
-  let T_ind' := @Ind.Pack n D_ord (@Ind.Def _ _ (untag_sort Ts) cTs) T idx in
+  let T_ind' := Ind.Pack (@Ind.Mixin n D_ord T (@Ind.Def _ _ (untag_sort Ts) cTs) idx) in
   fun & phant_id T_ind T_ind' =>
   let T_init := IndF.initAlgType T_ind' in
   let T_choice := lift_class_proj Choice.class Ts in
