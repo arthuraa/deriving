@@ -571,7 +571,7 @@ Section ClassDef.
 
 Variables (n : nat) (D : declaration n).
 
-Record class_of sorts := Class {
+Record def_class_of sorts := DefClass {
   Cons      : constructors D sorts;
   rec       : recursor D sorts;
   case      : destructor D sorts;
@@ -580,19 +580,19 @@ Record class_of sorts := Class {
   indP      : induction Cons;
 }.
 
-Record type := Pack {
+Record def := Def {
   sorts     : fin n -> Type;
-  class     : class_of sorts;
+  def_class : def_class_of sorts;
 }.
 
 End ClassDef.
 
 Module Exports.
 Identity Coercion hdfun_of_induction : induction >-> hdfun.
-Coercion sorts : type >-> Funclass.
-Coercion class : type >-> class_of.
-Notation mutIndType := type.
-Notation MutIndType := Pack.
+Coercion sorts : def >-> Funclass.
+Coercion def_class : def >-> def_class_of.
+Notation indDef := def.
+Notation IndDef := Def.
 End Exports.
 
 End MutInd.
@@ -623,7 +623,7 @@ Hint Unfold
   MutInd.rec
   MutInd.case
   MutInd.sorts
-  MutInd.class
+  MutInd.def_class
   : deriving.
 
 Module MutIndF.
@@ -684,7 +684,7 @@ pose get x :=
 by move=> /(congr1 get); rewrite /get /= leq_finii /=.
 Qed.
 
-Variable T : mutIndType D.
+Variable T : indDef D.
 
 Definition Roll i (x : F T i) : T i :=
   @MutInd.Cons _ _ _ T i (constr x) (args x).
@@ -821,20 +821,20 @@ Hint Unfold
 
 Canonical MutIndF.functor.
 Canonical MutIndF.initAlgType.
-Coercion MutIndF.initAlgType : mutIndType >-> initAlgType.
+Coercion MutIndF.initAlgType : indDef >-> initAlgType.
 
 Module Ind.
 
 Import PolyType.
 
 Record type n (D : declaration n) := Pack {
-  mutInd : mutIndType D;
-  sort   : Type;
-  _      : {i : fin n | sort = mutInd i}
+  class : indDef D;
+  sort  : Type;
+  _     : {i : fin n | sort = class i}
 }.
 
 Module Exports.
-Coercion mutInd : type >-> mutIndType.
+Coercion class : type >-> indDef.
 Coercion sort : type >-> Sortclass.
 Notation indType := type.
 End Exports.
@@ -857,7 +857,7 @@ Definition type_idxP (T : indType D) : T = T (type_idx T) :> Type :=
 End IndTheory.
 
 Hint Unfold
-  Ind.mutInd
+  Ind.class
   Ind.sort
   type_idx
   type_idxP
@@ -883,7 +883,7 @@ Hint Extern 2 (find_idx ?n.+1 ?Ts ?T _ _) =>
   eapply (@find_idx_there n Ts) : typeclass_instances.
 
 Definition pack_indIdx
-  n (D : declaration n) T (Ts : mutIndType D) i e
+  n (D : declaration n) T (Ts : indDef D) i e
   of find_idx n Ts T i e :=
   @Ind.Pack n D Ts T (PolyType.exist _ i e).
 

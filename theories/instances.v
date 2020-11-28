@@ -26,7 +26,7 @@ Ltac unwind_recursor rec :=
     intros x; destruct x; apply rec'
   end.
 
-Ltac mut_ind_type rec :=
+Ltac ind_def rec :=
   let Rec := eval red in rec in
   let H   := constr:((fun n Ts D Cs RecT' Rec' Rec'' =>
                       fun (H : infer_ind _ Rec n Ts D Cs RecT' Rec' Rec'') => H)
@@ -38,17 +38,17 @@ Ltac mut_ind_type rec :=
     let case := constr:(fun S : fin n -> Type => case (fun i _ => S i)) in
     let case := constr:(@MutInd.destructor_of_recursor n D Ts case) in
     let case := eval deriving_compute in case in
-    refine (MutIndType (@MutInd.Class n D Ts Cs (fun S => Rec' (fun i _ => S i)) case _ _ rec));
+    refine (IndDef (@MutInd.DefClass n D Ts Cs (fun S => Rec' (fun i _ => S i)) case _ _ rec));
     abstract (deriving_compute; intuition)
   end.
 
-Notation "[ 'mutIndType' 'for' rect ]" :=
-  (ltac:(mut_ind_type rect))
+Notation "[ 'indDef' 'for' rect ]" :=
+  (ltac:(ind_def rect))
   (at level 0) : form_scope.
 
 (** Compatibility *)
 Notation "[ 'indMixin' 'for' rect ]" :=
-  [mutIndType for rect] (at level 0) : form_scope.
+  [indDef for rect] (at level 0) : form_scope.
 
 Module DerEqType.
 
@@ -119,7 +119,7 @@ Definition pack :=
   fun (T : Type) =>
   fun n D (T_ind : @indType n D) & phant_id T (Ind.sort T_ind) =>
   fun (D_eq : decl_inst n Equality.sort n) & phant_id D (untag_decl D_eq) =>
-  fun Ts cTs idx (T_ind' := @Ind.Pack n D_eq (@MutInd.Pack _ _ Ts cTs) T idx) =>
+  fun Ts cTs idx (T_ind' := @Ind.Pack n D_eq (@MutInd.Def _ _ Ts cTs) T idx) =>
   fun & phant_id T_ind T_ind' =>
   cast Equality.mixin_of (type_idxP T_ind')^-1
     (@EqMixin _ _ (@eq_opP n D_eq (MutIndF.initAlgType T_ind') (type_idx T_ind'))).
@@ -359,7 +359,7 @@ Definition pack :=
   fun n D (T_ind : @indType n D) & phant_id T (Ind.sort T_ind) =>
   fun (D_fin : decl_inst n Finite.sort n) & phant_id D (untag_decl D_fin) =>
   fun (Ts : lift_class Countable.sort n) cTs idx =>
-  let T_ind' := @Ind.Pack n D_fin (@MutInd.Pack _ _ (untag_sort Ts) cTs) T idx in
+  let T_ind' := @Ind.Pack n D_fin (@MutInd.Def _ _ (untag_sort Ts) cTs) T idx in
   fun & phant_id T_ind T_ind' =>
   fun (not_rec : all_finb (fun i => all (all (negb \o @is_rec n)) (D_fin i))) =>
   let T_init := MutIndF.initAlgType T_ind' in
@@ -534,7 +534,7 @@ Definition pack :=
   fun n D (T_ind : @indType n D) & phant_id T (Ind.sort T_ind) =>
   fun (D_ord : decl_inst n sort n) & phant_id D (untag_decl D_ord) =>
   fun (Ts : lift_class Choice.sort n) cTs idx =>
-  let T_ind' := @Ind.Pack n D_ord (@MutInd.Pack _ _ (untag_sort Ts) cTs) T idx in
+  let T_ind' := @Ind.Pack n D_ord (@MutInd.Def _ _ (untag_sort Ts) cTs) T idx in
   fun & phant_id T_ind T_ind' =>
   let T_init := MutIndF.initAlgType T_ind' in
   let T_choice := lift_class_proj Choice.class Ts in
