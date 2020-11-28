@@ -443,7 +443,7 @@ Arguments add_arity_ind {n} P D i As j H1 H2.
 Arguments empty_decl {n}.
 Arguments arity_rec {n K} _ _ _ _ _.
 
-Module MutInd.
+Module Ind.
 
 Section Basic.
 
@@ -585,6 +585,14 @@ Record def := Def {
   def_class : def_class_of sorts;
 }.
 
+Import PolyType.
+
+Record type := Pack {
+  class : def;
+  sort  : Type;
+  _     : {i : fin n | sort = sorts class i}
+}.
+
 End ClassDef.
 
 Module Exports.
@@ -593,253 +601,12 @@ Coercion sorts : def >-> Funclass.
 Coercion def_class : def >-> def_class_of.
 Notation indDef := def.
 Notation IndDef := Def.
-End Exports.
-
-End MutInd.
-Export MutInd.Exports.
-
-Hint Unfold
-  MutInd.Cidx
-  MutInd.args
-  MutInd.args_map
-  MutInd.constructors
-  MutInd.empty_cons
-  MutInd.add_cons
-  MutInd.rec_branch'
-  MutInd.rec_branch
-  MutInd.recursor
-  MutInd.rec_branch'_of_hfun'
-  MutInd.hfun'_of_rec_branch'
-  MutInd.recursor_eq
-  MutInd.des_branch
-  MutInd.destructor
-  MutInd.destructor_eq
-  MutInd.rec_of_des_branch
-  MutInd.destructor_of_recursor
-  MutInd.ind_branch'
-  MutInd.ind_branch
-  MutInd.induction
-  MutInd.Cons
-  MutInd.rec
-  MutInd.case
-  MutInd.sorts
-  MutInd.def_class
-  : deriving.
-
-Module MutIndF.
-
-Section TypeDef.
-
-Variables (n : nat) (D : declaration n).
-
-Implicit Types (T S : fin n -> Type).
-
-Notation size := PolyType.size.
-
-Record fobj T (i : fin n) := Cons {
-  constr : MutInd.Cidx D i;
-  args : hlist' (type_of_arg T) (nth_fin constr)
-}.
-
-Arguments Cons {_ i} _ _.
-
-Local Notation F := fobj.
-
-Definition fmap T S (f : T -F> S) i (x : F T i) : F S i :=
-  Cons (constr x) (hmap' (type_of_arg_map f) (args x)).
-
-Lemma fmap_eq T S (f g : T -F> S) :
-  (forall i x, f i x = g i x) ->
-  (forall i (x : F T i), fmap f x = fmap g x).
-Proof.
-move=> e i [j args]; congr Cons; apply: hmap_eq => /= k.
-by case: (nth_fin k).
-Qed.
-
-Lemma fmap1 T i : @fmap T T (fun _ => id) i =1 id.
-Proof.
-move=> [j args] /=; congr Cons; rewrite -[RHS]hmap1.
-by apply: hmap_eq=> /= k; case: (nth_fin k).
-Qed.
-
-Lemma fmap_comp T S R (f : T -F> S) (g : S -F> R) i :
-  @fmap _ _ (fun j x => g j (f j x)) i =1
-  @fmap _ _ g i \o @fmap _ _ f i.
-Proof.
-move=> [j args] /=; congr Cons; rewrite /= /hmap' hmap_comp.
-by apply: hmap_eq=> /= k; case: (nth_fin k).
-Qed.
-
-Canonical functor := Functor fmap_eq fmap1 fmap_comp.
-
-Lemma inj T (i : fin n) (j : MutInd.Cidx D i)
-  (a b : hlist' (type_of_arg T) (nth_fin j)) :
-  Cons j a = Cons j b -> a = b.
-Proof.
-pose get x :=
-  if leq_fin (constr x) j is inl e then
-    cast (fun j : MutInd.Cidx D i =>
-            hlist' (type_of_arg T) (nth_fin j)) e (args x)
-  else a.
-by move=> /(congr1 get); rewrite /get /= leq_finii /=.
-Qed.
-
-Variable T : indDef D.
-
-Definition Roll i (x : F T i) : T i :=
-  @MutInd.Cons _ _ _ T i (constr x) (args x).
-
-Definition rec_branches_of_fun S (body : F (T *F S) -F> S) :
-  hlist2 (@MutInd.rec_branch _ D T S) :=
-  hlist_of_fun (fun i =>
-  hlist_of_fun (fun j : MutInd.Cidx D i =>
-    MutInd.rec_branch'_of_hfun'
-      (hcurry
-         (fun l => body i (Cons j l))))).
-
-Definition rec S (body : F (T *F S) -F> S) :=
-  @MutInd.rec _ _ _ T S (rec_branches_of_fun body).
-
-Definition lift_type R i : fin n -> Type :=
-  fun j => if leq_fin i j is inl e then R else unit.
-
-Definition lift_typeE R i : lift_type R i i = R :=
-  congr1 (fun r => if r is inl e then R else unit) (leq_finii i).
-
-Definition lift_type_of R i j (f : i = j -> R) : lift_type R i j :=
-  match leq_fin i j
-  as r
-  return if r is inl e then R else unit
-  with
-  | inl e => f e
-  | inr _ => tt
-  end.
-
-Definition des_branches_of_fun i R (body : F T i -> R) :
-  hlist2 (@MutInd.des_branch _ D T (lift_type R i)) :=
-  hlist_of_fun (fun i' =>
-  hlist_of_fun (fun j : MutInd.Cidx D i' =>
-    hcurry (fun l => @lift_type_of R i i' (fun e => body (cast (F T) e^-1 (Cons j l)))))).
-
-Definition case i R (body : F T i -> R) x :=
-  cast id (lift_typeE R i)
-    (@MutInd.case _ _ _ T _ (des_branches_of_fun body) i x).
-
-Lemma recE S f i (a : F T i) :
-  @rec S f i (Roll a) =
-  f i (fmap (fun j (x : T j) => (x, rec f j x)) a).
-Proof.
-case: a=> [j args]; have := MutInd.recE T S.
-move/all_hlist2P/(_ (rec_branches_of_fun f)).
-move/all_finP/(_ i).
-move/all_finP/(_ j).
-move/all_hlistP/(_ args).
-rewrite /rec_branches_of_fun hnth_of_fun.
-rewrite /rec /Roll => -> /=.
-by rewrite /= hnth_of_fun MutInd.rec_branch_of_hfunK hcurryK.
-Qed.
-
-Lemma caseE i R f (a : F T i) : case f (Roll a) = f a :> R.
-Proof.
-case: a => [j args]; have := MutInd.caseE T (lift_type R i).
-move/all_hlist2P/(_ (des_branches_of_fun f)).
-move/all_finP/(_ i).
-move/all_finP/(_ j).
-move/all_hlistP/(_ args).
-rewrite /des_branches_of_fun hnth_of_fun.
-rewrite /case /Roll => -> /=.
-rewrite /lift_type /lift_typeE /lift_type_of hnth_of_fun hcurryK /=.
-case: (leq_fin i i) (leq_finii i)=> // e.
-rewrite (eq_axiomK e) => {}e.
-by rewrite (eq_axiomK e) /=.
-Qed.
-
-Lemma indP P :
-  (forall i (a : F (fun j => {x & P j x}) i),
-    P i (Roll (fmap (fun _ => tag) a))) ->
-  forall i x, P i x.
-Proof.
-move=> IH.
-pose Q := hlist_of_fun P.
-pose Q_of_P i a : P i a -> Q i a :=
-  cast id (congr1 (fun F => F a) (hnth_of_fun P i))^-1.
-pose P_of_Q i a : Q i a -> P i a :=
-  cast id (congr1 (fun F => F a) (hnth_of_fun P i)).
-pose TP_of_TQ i x := Tagged (P i) (P_of_Q i (tag x) (tagged x)).
-have Q_of_PK i a : cancel (Q_of_P i a) (P_of_Q i a) := castKV _.
-have P_of_QK i a : cancel (P_of_Q i a) (Q_of_P i a) := castK  _.
-have {}IH i (a : F (fun j => {x & Q j x}) i) :
-    Q i (Roll (fmap (fun _ => tag) a)).
-  rewrite (_ : fmap _ a = fmap (fun _ => tag) (fmap TP_of_TQ a)); last first.
-    by rewrite -[RHS]fmap_comp; apply: fmap_eq=> ? [].
-  by apply: (Q_of_P); apply: IH.
-move=> i x {P_of_QK Q_of_PK Q_of_P TP_of_TQ}; apply: P_of_Q.
-move: {P} Q IH i x.
-rewrite /Roll; case: (T) => S [/= Cs _ _ _ _ indP] P.
-have {}indP :
-    (forall i j, MutInd.ind_branch' P (Cs i j)) ->
-    (forall i x, P i x).
-  move=> hyps i x.
-  pose bs : hlist2 (MutInd.ind_branch P Cs) :=
-    hlist_of_fun (fun i => hlist_of_fun (fun j => hyps i j)).
-  exact: (hdapp indP P bs i x).
-move=> hyps; apply: indP=> i j.
-have {}hyps:
-  forall args : hlist' (type_of_arg (fun k => {x & P k x})) (nth_fin j),
-    P i (Cs i j (hmap' (type_of_arg_map (fun _ => tag)) args)).
-  by move=> args; move: (hyps i (Cons j args)).
-move: (Cs i j) hyps; rewrite /fnth.
-elim: (nth_fin j)=> [|[R|k] As IH] /=.
-- by move=> C /(_ tt).
-- move=> C hyps x; apply: IH=> args; exact: (hyps (x ::: args)).
-- move=> constr hyps x H; apply: IH=> args.
-  exact: (hyps (existT _ x H ::: args)).
-Qed.
-
-Canonical initAlgType :=
-  Eval hnf in InitAlgType functor T (@InitAlgMixin _ _ _ _ (@case) _ recE caseE indP).
-
-End TypeDef.
-
-End MutIndF.
-
-Hint Unfold
-  MutIndF.constr
-  MutIndF.args
-  MutIndF.fmap
-  MutIndF.functor
-  MutIndF.Roll
-  MutIndF.rec_branches_of_fun
-  MutIndF.rec
-  MutIndF.lift_type
-  MutIndF.lift_typeE
-  MutIndF.lift_type_of
-  MutIndF.des_branches_of_fun
-  MutIndF.case
-  MutIndF.initAlgType
-  : deriving.
-
-Canonical MutIndF.functor.
-Canonical MutIndF.initAlgType.
-Coercion MutIndF.initAlgType : indDef >-> initAlgType.
-
-Module Ind.
-
-Import PolyType.
-
-Record type n (D : declaration n) := Pack {
-  class : indDef D;
-  sort  : Type;
-  _     : {i : fin n | sort = class i}
-}.
-
-Module Exports.
 Coercion class : type >-> indDef.
 Coercion sort : type >-> Sortclass.
 Notation indType := type.
 End Exports.
-End Ind.
 
+End Ind.
 Export Ind.Exports.
 
 Section IndTheory.
@@ -894,6 +661,231 @@ Hint Unfold
 
 Notation IndType D T Ts := (@pack_indIdx _ _ T Ts _ _ _).
 
+Hint Unfold
+  Ind.Cidx
+  Ind.args
+  Ind.args_map
+  Ind.constructors
+  Ind.empty_cons
+  Ind.add_cons
+  Ind.rec_branch'
+  Ind.rec_branch
+  Ind.recursor
+  Ind.rec_branch'_of_hfun'
+  Ind.hfun'_of_rec_branch'
+  Ind.recursor_eq
+  Ind.des_branch
+  Ind.destructor
+  Ind.destructor_eq
+  Ind.rec_of_des_branch
+  Ind.destructor_of_recursor
+  Ind.ind_branch'
+  Ind.ind_branch
+  Ind.induction
+  Ind.Cons
+  Ind.rec
+  Ind.case
+  Ind.sorts
+  Ind.def_class
+  : deriving.
+
+Module IndF.
+
+Section TypeDef.
+
+Variables (n : nat) (D : declaration n).
+
+Implicit Types (T S : fin n -> Type).
+
+Notation size := PolyType.size.
+
+Record fobj T (i : fin n) := Cons {
+  constr : Ind.Cidx D i;
+  args : hlist' (type_of_arg T) (nth_fin constr)
+}.
+
+Arguments Cons {_ i} _ _.
+
+Local Notation F := fobj.
+
+Definition fmap T S (f : T -F> S) i (x : F T i) : F S i :=
+  Cons (constr x) (hmap' (type_of_arg_map f) (args x)).
+
+Lemma fmap_eq T S (f g : T -F> S) :
+  (forall i x, f i x = g i x) ->
+  (forall i (x : F T i), fmap f x = fmap g x).
+Proof.
+move=> e i [j args]; congr Cons; apply: hmap_eq => /= k.
+by case: (nth_fin k).
+Qed.
+
+Lemma fmap1 T i : @fmap T T (fun _ => id) i =1 id.
+Proof.
+move=> [j args] /=; congr Cons; rewrite -[RHS]hmap1.
+by apply: hmap_eq=> /= k; case: (nth_fin k).
+Qed.
+
+Lemma fmap_comp T S R (f : T -F> S) (g : S -F> R) i :
+  @fmap _ _ (fun j x => g j (f j x)) i =1
+  @fmap _ _ g i \o @fmap _ _ f i.
+Proof.
+move=> [j args] /=; congr Cons; rewrite /= /hmap' hmap_comp.
+by apply: hmap_eq=> /= k; case: (nth_fin k).
+Qed.
+
+Canonical functor := Functor fmap_eq fmap1 fmap_comp.
+
+Lemma inj T (i : fin n) (j : Ind.Cidx D i)
+  (a b : hlist' (type_of_arg T) (nth_fin j)) :
+  Cons j a = Cons j b -> a = b.
+Proof.
+pose get x :=
+  if leq_fin (constr x) j is inl e then
+    cast (fun j : Ind.Cidx D i =>
+            hlist' (type_of_arg T) (nth_fin j)) e (args x)
+  else a.
+by move=> /(congr1 get); rewrite /get /= leq_finii /=.
+Qed.
+
+Variable T : indDef D.
+
+Definition Roll i (x : F T i) : T i :=
+  @Ind.Cons _ _ _ T i (constr x) (args x).
+
+Definition rec_branches_of_fun S (body : F (T *F S) -F> S) :
+  hlist2 (@Ind.rec_branch _ D T S) :=
+  hlist_of_fun (fun i =>
+  hlist_of_fun (fun j : Ind.Cidx D i =>
+    Ind.rec_branch'_of_hfun'
+      (hcurry
+         (fun l => body i (Cons j l))))).
+
+Definition rec S (body : F (T *F S) -F> S) :=
+  @Ind.rec _ _ _ T S (rec_branches_of_fun body).
+
+Definition lift_type R i : fin n -> Type :=
+  fun j => if leq_fin i j is inl e then R else unit.
+
+Definition lift_typeE R i : lift_type R i i = R :=
+  congr1 (fun r => if r is inl e then R else unit) (leq_finii i).
+
+Definition lift_type_of R i j (f : i = j -> R) : lift_type R i j :=
+  match leq_fin i j
+  as r
+  return if r is inl e then R else unit
+  with
+  | inl e => f e
+  | inr _ => tt
+  end.
+
+Definition des_branches_of_fun i R (body : F T i -> R) :
+  hlist2 (@Ind.des_branch _ D T (lift_type R i)) :=
+  hlist_of_fun (fun i' =>
+  hlist_of_fun (fun j : Ind.Cidx D i' =>
+    hcurry (fun l => @lift_type_of R i i' (fun e => body (cast (F T) e^-1 (Cons j l)))))).
+
+Definition case i R (body : F T i -> R) x :=
+  cast id (lift_typeE R i)
+    (@Ind.case _ _ _ T _ (des_branches_of_fun body) i x).
+
+Lemma recE S f i (a : F T i) :
+  @rec S f i (Roll a) =
+  f i (fmap (fun j (x : T j) => (x, rec f j x)) a).
+Proof.
+case: a=> [j args]; have := Ind.recE T S.
+move/all_hlist2P/(_ (rec_branches_of_fun f)).
+move/all_finP/(_ i).
+move/all_finP/(_ j).
+move/all_hlistP/(_ args).
+rewrite /rec_branches_of_fun hnth_of_fun.
+rewrite /rec /Roll => -> /=.
+by rewrite /= hnth_of_fun Ind.rec_branch_of_hfunK hcurryK.
+Qed.
+
+Lemma caseE i R f (a : F T i) : case f (Roll a) = f a :> R.
+Proof.
+case: a => [j args]; have := Ind.caseE T (lift_type R i).
+move/all_hlist2P/(_ (des_branches_of_fun f)).
+move/all_finP/(_ i).
+move/all_finP/(_ j).
+move/all_hlistP/(_ args).
+rewrite /des_branches_of_fun hnth_of_fun.
+rewrite /case /Roll => -> /=.
+rewrite /lift_type /lift_typeE /lift_type_of hnth_of_fun hcurryK /=.
+case: (leq_fin i i) (leq_finii i)=> // e.
+rewrite (eq_axiomK e) => {}e.
+by rewrite (eq_axiomK e) /=.
+Qed.
+
+Lemma indP P :
+  (forall i (a : F (fun j => {x & P j x}) i),
+    P i (Roll (fmap (fun _ => tag) a))) ->
+  forall i x, P i x.
+Proof.
+move=> IH.
+pose Q := hlist_of_fun P.
+pose Q_of_P i a : P i a -> Q i a :=
+  cast id (congr1 (fun F => F a) (hnth_of_fun P i))^-1.
+pose P_of_Q i a : Q i a -> P i a :=
+  cast id (congr1 (fun F => F a) (hnth_of_fun P i)).
+pose TP_of_TQ i x := Tagged (P i) (P_of_Q i (tag x) (tagged x)).
+have Q_of_PK i a : cancel (Q_of_P i a) (P_of_Q i a) := castKV _.
+have P_of_QK i a : cancel (P_of_Q i a) (Q_of_P i a) := castK  _.
+have {}IH i (a : F (fun j => {x & Q j x}) i) :
+    Q i (Roll (fmap (fun _ => tag) a)).
+  rewrite (_ : fmap _ a = fmap (fun _ => tag) (fmap TP_of_TQ a)); last first.
+    by rewrite -[RHS]fmap_comp; apply: fmap_eq=> ? [].
+  by apply: (Q_of_P); apply: IH.
+move=> i x {P_of_QK Q_of_PK Q_of_P TP_of_TQ}; apply: P_of_Q.
+move: {P} Q IH i x.
+rewrite /Roll; case: (T) => S [/= Cs _ _ _ _ indP] P.
+have {}indP :
+    (forall i j, Ind.ind_branch' P (Cs i j)) ->
+    (forall i x, P i x).
+  move=> hyps i x.
+  pose bs : hlist2 (Ind.ind_branch P Cs) :=
+    hlist_of_fun (fun i => hlist_of_fun (fun j => hyps i j)).
+  exact: (hdapp indP P bs i x).
+move=> hyps; apply: indP=> i j.
+have {}hyps:
+  forall args : hlist' (type_of_arg (fun k => {x & P k x})) (nth_fin j),
+    P i (Cs i j (hmap' (type_of_arg_map (fun _ => tag)) args)).
+  by move=> args; move: (hyps i (Cons j args)).
+move: (Cs i j) hyps; rewrite /fnth.
+elim: (nth_fin j)=> [|[R|k] As IH] /=.
+- by move=> C /(_ tt).
+- move=> C hyps x; apply: IH=> args; exact: (hyps (x ::: args)).
+- move=> constr hyps x H; apply: IH=> args.
+  exact: (hyps (existT _ x H ::: args)).
+Qed.
+
+Canonical initAlgType :=
+  Eval hnf in InitAlgType functor T (@InitAlgMixin _ _ _ _ (@case) _ recE caseE indP).
+
+End TypeDef.
+
+End IndF.
+
+Hint Unfold
+  IndF.constr
+  IndF.args
+  IndF.fmap
+  IndF.functor
+  IndF.Roll
+  IndF.rec_branches_of_fun
+  IndF.rec
+  IndF.lift_type
+  IndF.lift_typeE
+  IndF.lift_type_of
+  IndF.des_branches_of_fun
+  IndF.case
+  IndF.initAlgType
+  : deriving.
+
+Canonical IndF.functor.
+Canonical IndF.initAlgType.
+Coercion IndF.initAlgType : indDef >-> initAlgType.
+
 Section InferInstances.
 
 Import PolyType.
@@ -927,14 +919,14 @@ Defined.
 
 Class infer_decl
   n T (P : forall i, T i -> Type)
-  (elimT : Type) (D : declaration n) (Cs : MutInd.constructors D T) : Type.
+  (elimT : Type) (D : declaration n) (Cs : Ind.constructors D T) : Type.
 Arguments infer_decl : clear implicits.
 
 Global Instance infer_decl_end n T P :
   infer_decl n T P
              (hlist1 (fun i => forall (x : T i), P i x))
              empty_decl
-             (@MutInd.empty_cons _ _).
+             (@Ind.empty_cons _ _).
 Defined.
 
 Global Instance infer_decl_cons n T P
@@ -942,7 +934,7 @@ Global Instance infer_decl_cons n T P
   (_ : infer_arity n T P branchT As Ti C)
   (elimT : Type) D Cs
   (_ : infer_decl n T P elimT D Cs)
-  : infer_decl n T P (branchT -> elimT) (add_arity D Ti As) (MutInd.add_cons Cs C).
+  : infer_decl n T P (branchT -> elimT) (add_arity D Ti As) (Ind.add_cons Cs C).
 Defined.
 
 Class read_rect (rectT : Type) (rect : rectT)
@@ -966,16 +958,16 @@ Global Instance read_rect_done rectT rect :
 Defined.
 
 Class bless_rect
-  n Ts (D : declaration n) (Cs : MutInd.constructors D Ts)
+  n Ts (D : declaration n) (Cs : Ind.constructors D Ts)
   (rectT : (forall i, Ts i -> Type) -> Type)
   (rect  : forall P, rectT P)
-  (rect' : MutInd.recursor D Ts).
+  (rect' : Ind.recursor D Ts).
 Arguments bless_rect : clear implicits.
 
 Class infer_ind rectT (rect : rectT)
-  n Ts (D : declaration n) (Cs : MutInd.constructors D Ts)
+  n Ts (D : declaration n) (Cs : Ind.constructors D Ts)
   (rectT' : (forall i, Ts i -> Type) -> Type) (rect' : forall P, rectT' P)
-  (rect'' : MutInd.recursor D Ts).
+  (rect'' : Ind.recursor D Ts).
 Arguments infer_ind : clear implicits.
 
 Global Instance do_infer_ind rectT rect

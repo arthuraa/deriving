@@ -36,9 +36,9 @@ Ltac ind_def rec :=
     let case := constr:(ltac:(intros P; deriving_compute; unwind_recursor (Rec' P))
                         : forall P, RecT' P) in
     let case := constr:(fun S : fin n -> Type => case (fun i _ => S i)) in
-    let case := constr:(@MutInd.destructor_of_recursor n D Ts case) in
+    let case := constr:(@Ind.destructor_of_recursor n D Ts case) in
     let case := eval deriving_compute in case in
-    refine (IndDef (@MutInd.DefClass n D Ts Cs (fun S => Rec' (fun i _ => S i)) case _ _ rec));
+    refine (IndDef (@Ind.DefClass n D Ts Cs (fun S => Rec' (fun i _ => S i)) case _ _ rec));
     abstract (deriving_compute; intuition)
   end.
 
@@ -61,7 +61,7 @@ Local Notation arity_inst := (arity_inst n Equality.sort).
 Local Notation sig_inst := (sig_inst n Equality.sort).
 Local Notation decl_inst := (decl_inst n Equality.sort n).
 Variable (D : decl_inst).
-Let F := MutIndF.functor D.
+Let F := IndF.functor D.
 Variable (T : initAlgType F).
 
 Definition eq_op_branch As (cAs : hlist' arg_class As) :
@@ -78,12 +78,12 @@ Definition eq_op_branch As (cAs : hlist' arg_class As) :
 Definition eq_op : forall i, T i -> T i -> bool :=
   rec  (fun i args1 =>
   case (fun   args2 =>
-        match leq_fin (MutIndF.constr args2) (MutIndF.constr args1) with
+        match leq_fin (IndF.constr args2) (IndF.constr args1) with
          | inl e =>
            eq_op_branch
-             (hnth (decl_inst_class D i) (MutIndF.constr args1))
-             (MutIndF.args args1)
-             (cast (hlist' (type_of_arg T) \o @nth_fin _ _) e (MutIndF.args args2))
+             (hnth (decl_inst_class D i) (IndF.constr args1))
+             (IndF.args args1)
+             (cast (hlist' (type_of_arg T) \o @nth_fin _ _) e (IndF.args args2))
              true
          | inr _ => false
          end)).
@@ -98,7 +98,7 @@ case le: (leq_fin yC xC)=> [e|b]; last first.
   by move: le; rewrite e leq_finii.
 case: xC / e xargs {le} => /= xargs.
 apply/(@iffP (hmap' (type_of_arg_map (fun=> tag)) xargs = yargs)); first last.
-- by move=> /(@Roll_inj _ _ _ i) /MutIndF.inj.
+- by move=> /(@Roll_inj _ _ _ i) /IndF.inj.
 - by move=> <-.
 apply/(iffP idP)=> [H|<-]; last first.
   elim/arity_ind: {yC} _ / (hnth _ _) xargs {yargs}=> //= [|j] S As cAs.
@@ -119,10 +119,10 @@ Definition pack :=
   fun (T : Type) =>
   fun n D (T_ind : @indType n D) & phant_id T (Ind.sort T_ind) =>
   fun (D_eq : decl_inst n Equality.sort n) & phant_id D (untag_decl D_eq) =>
-  fun Ts cTs idx (T_ind' := @Ind.Pack n D_eq (@MutInd.Def _ _ Ts cTs) T idx) =>
+  fun Ts cTs idx (T_ind' := @Ind.Pack n D_eq (@Ind.Def _ _ Ts cTs) T idx) =>
   fun & phant_id T_ind T_ind' =>
   cast Equality.mixin_of (type_idxP T_ind')^-1
-    (@EqMixin _ _ (@eq_opP n D_eq (MutIndF.initAlgType T_ind') (type_idx T_ind'))).
+    (@EqMixin _ _ (@eq_opP n D_eq (IndF.initAlgType T_ind') (type_idx T_ind'))).
 
 End DerEqType.
 
@@ -157,7 +157,7 @@ Notation "[ 'derive' 'lazy' 'eqMixin' 'for' T ]" :=
 Section TreeOfInd.
 
 Variables (n : nat) (D : declaration n).
-Let F := MutIndF.functor D.
+Let F := IndF.functor D.
 Variables (T : initAlgType F).
 
 Import GenTree.
@@ -166,12 +166,12 @@ Import PolyType.
 Definition ind_arg :=
   hsum (fun i => hsum' (hsum' (type_of_arg (fun=> void))) (D i)).
 
-Definition mk_ind_arg i (j : MutInd.Cidx D i) (k : fin (size (nth_fin j))) :
+Definition mk_ind_arg i (j : Ind.Cidx D i) (k : fin (size (nth_fin j))) :
   type_of_arg (fun=> void) (nth_fin k) -> ind_arg :=
   fun x => hin (hin (hin x)).
 
 Definition proj_ind_arg
-  i (j : MutInd.Cidx D i) (k : fin (size (nth_fin j))) (x : ind_arg) :
+  i (j : Ind.Cidx D i) (k : fin (size (nth_fin j))) (x : ind_arg) :
   option (type_of_arg (fun=> void) (nth_fin k)) :=
   if hproj i x is Some x then
     if hproj j x is Some x then hproj k x
@@ -181,7 +181,7 @@ Definition proj_ind_arg
 Lemma mk_ind_argK i j k : pcancel (@mk_ind_arg i j k) (@proj_ind_arg i j k).
 Proof. by move=> x; rewrite /proj_ind_arg !hinK. Qed.
 
-Let wrap i (j : MutInd.Cidx D i) (k : fin (size (nth_fin j))) :
+Let wrap i (j : Ind.Cidx D i) (k : fin (size (nth_fin j))) :
   type_of_arg (fun=> tree ind_arg) (nth_fin k) -> tree ind_arg :=
   match nth_fin k as A
   return (type_of_arg (fun=> void) A -> ind_arg) ->
@@ -193,10 +193,10 @@ Let wrap i (j : MutInd.Cidx D i) (k : fin (size (nth_fin j))) :
 
 Definition tree_of_coq_ind i (x : T i) : tree ind_arg :=
   rec (fun i x =>
-         let j := MutIndF.constr x in
+         let j := IndF.constr x in
          Node (nat_of_fin j)
            (list_of_seq (seq_of_hlist (@wrap i j)
-              (hmap' (type_of_arg_map (fun=> snd)) (MutIndF.args x)))))
+              (hmap' (type_of_arg_map (fun=> snd)) (IndF.args x)))))
       x.
 
 Fixpoint coq_ind_of_tree i (x : tree ind_arg) : option (T i) :=
@@ -212,7 +212,7 @@ Fixpoint coq_ind_of_tree i (x : tree ind_arg) : option (T i) :=
                        | NonRec R => fun f => if ts.1 is Leaf x then f x else None
                        | Rec i'   => fun _ => ts.2 i'
                        end (@proj_ind_arg i j k)) xs
-    is Some args then Some (Roll (MutIndF.Cons args))
+    is Some args then Some (Roll (IndF.Cons args))
     else None
   end.
 
@@ -290,7 +290,7 @@ Fixpoint all_finbP n : forall (f : fin n -> bool),
 (** It is strange to derive a finType instance for a mutually inductive type,
 but you never know...*)
 Variable (n : nat) (D : decl_inst n Finite.sort n).
-Let F := MutIndF.functor D.
+Let F := IndF.functor D.
 Variable (T : initAlgCountType F).
 
 Hypothesis not_rec :
@@ -303,12 +303,12 @@ Definition enum_branch_aux :=
     (fun S As rec P => allpairs Cell (Finite.enum S) (rec P))
     (fun i As rec P => ltac:(done)).
 
-Definition enum_branch i (j : MutInd.Cidx D i) :=
+Definition enum_branch i (j : Ind.Cidx D i) :=
   enum_branch_aux (hnth (decl_inst_class D i) j)
                   (allP (all_finbP not_rec i) j).
 
 Definition enum_ind i :=
-  seq.flatten [seq [seq Roll (MutIndF.Cons args) | args <- enum_branch j]
+  seq.flatten [seq [seq Roll (IndF.Cons args) | args <- enum_branch j]
               | j <- list_of_seq (enum_fin (size (D i)))].
 
 Lemma enum_indP i : Finite.axiom (enum_ind i).
@@ -316,7 +316,7 @@ Proof.
 move=> x; rewrite -[x]unrollK; case: {x} (unroll x)=> j xs.
 rewrite /enum_ind count_flatten -!map_comp /comp /=.
 have <- : seq.sumn [seq j == j' : nat | j' <- list_of_seq (enum_fin (size (D i)))] = 1.
-  rewrite /MutInd.Cidx in j {xs} *.
+  rewrite /Ind.Cidx in j {xs} *.
   elim: (size (D i)) j => [|m IH] //= [j|] /=.
     by rewrite list_of_seq_map -map_comp /comp /= -(IH j) add0n.
   rewrite list_of_seq_map -map_comp /comp /=; congr addn; apply/eqP/natnseq0P.
@@ -326,7 +326,7 @@ have [<- {j'}|ne] /= := altP (j =P j').
   set P := preim _ _.
   have PP : forall ys, reflect (xs = ys) (P ys).
     move=> ys; rewrite /P /=; apply/(iffP idP); last by move=> ->.
-    by move=> /eqP/(@Roll_inj _ _ _ i)/(@MutIndF.inj n D _ i) ->.
+    by move=> /eqP/(@Roll_inj _ _ _ i)/(@IndF.inj n D _ i) ->.
   move: P PP.
   rewrite /enum_branch.
   elim/arity_ind: {j} _ / (hnth _ j) xs (allP _ _)=> //=.
@@ -349,7 +349,7 @@ have [<- {j'}|ne] /= := altP (j =P j').
 set P := preim _ _.
 rewrite (@eq_count _ _ pred0) ?count_pred0 //.
 move=> ys /=; apply/negbTE; apply: contra ne.
-by move=> /eqP/(@Roll_inj _ _ _ i)/(congr1 (@MutIndF.constr _ _ _ i)) /= ->.
+by move=> /eqP/(@Roll_inj _ _ _ i)/(congr1 (@IndF.constr _ _ _ i)) /= ->.
 Qed.
 
 End FinType.
@@ -359,10 +359,10 @@ Definition pack :=
   fun n D (T_ind : @indType n D) & phant_id T (Ind.sort T_ind) =>
   fun (D_fin : decl_inst n Finite.sort n) & phant_id D (untag_decl D_fin) =>
   fun (Ts : lift_class Countable.sort n) cTs idx =>
-  let T_ind' := @Ind.Pack n D_fin (@MutInd.Def _ _ (untag_sort Ts) cTs) T idx in
+  let T_ind' := @Ind.Pack n D_fin (@Ind.Def _ _ (untag_sort Ts) cTs) T idx in
   fun & phant_id T_ind T_ind' =>
   fun (not_rec : all_finb (fun i => all (all (negb \o @is_rec n)) (D_fin i))) =>
-  let T_init := MutIndF.initAlgType T_ind' in
+  let T_init := IndF.initAlgType T_ind' in
   let T_count := lift_class_proj Countable.class Ts in
   let T_ind_count := @InitAlgCountType n _ Ts T_count (InitAlg.class T_init) in
   FinMixin (@enum_indP n D_fin T_ind_count not_rec (type_idx T_ind')).
@@ -406,7 +406,7 @@ Notation arity_inst := (arity_inst n sort).
 Notation sig_inst   := (sig_inst   n sort).
 Notation decl_inst  := (decl_inst  n sort).
 Variable (D : decl_inst n).
-Let F := MutIndF.functor D.
+Let F := IndF.functor D.
 Variable (T : initAlgChoiceType F).
 
 Definition le_branch As (cAs : hlist' arg_class As) :
@@ -427,12 +427,12 @@ Definition le_branch As (cAs : hlist' arg_class As) :
 Definition le : forall i, T i -> T i -> bool :=
   rec  (fun i args1 =>
   case (fun   args2 =>
-          match leq_fin (MutIndF.constr args2) (MutIndF.constr args1) with
+          match leq_fin (IndF.constr args2) (IndF.constr args1) with
           | inl e =>
             le_branch
-              (hnth (decl_inst_class D i) (MutIndF.constr args1))
-              (MutIndF.args args1)
-              (cast (hlist' (type_of_arg T) \o @nth_fin _ _) e (MutIndF.args args2))
+              (hnth (decl_inst_class D i) (IndF.constr args1))
+              (IndF.args args1)
+              (cast (hlist' (type_of_arg T) \o @nth_fin _ _) e (IndF.args args2))
           | inr b => ~~ b
           end)).
 
@@ -452,7 +452,7 @@ rewrite -(unrollK y); case: {y} (unroll y)=> [yi yargs].
 rewrite /le !recE -[rec _]/(le) /= !caseE /=.
 case ie: (leq_fin yi xi) (leq_nat_of_fin yi xi)=> [e|b].
   case: xi / e {ie} xargs=> xargs _ /=; rewrite leq_finii /= => h.
-  congr (Roll (MutIndF.Cons _))=> /=.
+  congr (Roll (IndF.Cons _))=> /=.
   elim/arity_ind: {yi} (nth_fin yi) / (hnth _ _) xargs yargs h
       => [[] []|R As cAs IH|j As cAs IH] //=.
     case=> [x xargs] [y yargs] /=.
@@ -534,9 +534,9 @@ Definition pack :=
   fun n D (T_ind : @indType n D) & phant_id T (Ind.sort T_ind) =>
   fun (D_ord : decl_inst n sort n) & phant_id D (untag_decl D_ord) =>
   fun (Ts : lift_class Choice.sort n) cTs idx =>
-  let T_ind' := @Ind.Pack n D_ord (@MutInd.Def _ _ (untag_sort Ts) cTs) T idx in
+  let T_ind' := @Ind.Pack n D_ord (@Ind.Def _ _ (untag_sort Ts) cTs) T idx in
   fun & phant_id T_ind T_ind' =>
-  let T_init := MutIndF.initAlgType T_ind' in
+  let T_init := IndF.initAlgType T_ind' in
   let T_choice := lift_class_proj Choice.class Ts in
   let T_ind_choice := @InitAlgChoiceType n _ Ts T_choice (InitAlg.class T_init) in
   @ind_porderMixin n D_ord T_ind_choice (type_idx T_ind').
