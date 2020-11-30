@@ -84,8 +84,10 @@ Hint Unfold Logic.eq_sym : deriving.
 Hint Unfold Logic.eq_trans : deriving.
 Hint Unfold etrans : deriving.
 Hint Unfold esym : deriving.
-Hint Unfold congr1 f_equal : deriving.
-Hint Unfold fst snd : deriving.
+Hint Unfold congr1 : deriving.
+Hint Unfold f_equal : deriving.
+Hint Unfold fst : deriving.
+Hint Unfold snd : deriving.
 
 (** An alternative to the standard prod type, to avoid name clashes and universe
     issues. *)
