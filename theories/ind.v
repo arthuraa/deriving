@@ -27,7 +27,10 @@ Definition fsE2 n R T Ts (TTs : @fun_split n R T Ts) :
 Canonical fun_split1 n R (TTs : fin n.+1 -> R) :=
   @FunSplit n R (TTs None) (fun i => TTs (Some i)) TTs erefl (fun=> erefl).
 
-Hint Unfold fs_fun fsE1 fsE2 fun_split1 : deriving.
+Hint Unfold fs_fun : deriving.
+Hint Unfold fsE1 : deriving.
+Hint Unfold fsE2 : deriving.
+Hint Unfold fun_split1 : deriving.
 
 Section LiftClass.
 
@@ -72,17 +75,15 @@ Definition lift_class_proj n cK
 
 End LiftClass.
 
-Hint Unfold
-  eq_class
-  untag_sort
-  ts_nil_tag
-  ts_cons_tag
-  lift_class_sort
-  lift_class_class
-  nil_lift_class
-  cons_lift_class
-  lift_class_proj
-  : deriving.
+Hint Unfold eq_class : deriving.
+Hint Unfold untag_sort : deriving.
+Hint Unfold ts_nil_tag : deriving.
+Hint Unfold ts_cons_tag : deriving.
+Hint Unfold lift_class_sort : deriving.
+Hint Unfold lift_class_class : deriving.
+Hint Unfold nil_lift_class : deriving.
+Hint Unfold cons_lift_class : deriving.
+Hint Unfold lift_class_proj : deriving.
 
 Arguments lift_class_proj {K sort n cK} class sTs i.
 
@@ -108,7 +109,8 @@ Record functor I := Functor {
                  fmap (fun i => g i \o f i) x = fmap g (fmap f x);
 }.
 
-Hint Unfold fobj fmap : deriving.
+Hint Unfold fobj : deriving.
+Hint Unfold fmap : deriving.
 
 Lemma fmapK I (F : functor I) (T S : I -> Type) (f : T -F> S) (g : S -F> T) :
   (forall i, cancel (f i) (g i)) ->
@@ -204,17 +206,15 @@ Proof. exact: can_inj (@unrollK i). Qed.
 
 End InitAlgTheory.
 
-Hint Unfold
-  InitAlg.Roll
-  InitAlg.case
-  InitAlg.rec
-  InitAlg.class
-  InitAlg.sort
-  Roll
-  case
-  rec
-  unroll
-  : deriving.
+Hint Unfold InitAlg.Roll : deriving.
+Hint Unfold InitAlg.case : deriving.
+Hint Unfold InitAlg.rec : deriving.
+Hint Unfold InitAlg.class : deriving.
+Hint Unfold InitAlg.sort : deriving.
+Hint Unfold Roll : deriving.
+Hint Unfold case : deriving.
+Hint Unfold rec : deriving.
+Hint Unfold unroll : deriving.
 
 Set Universe Polymorphism.
 
@@ -384,41 +384,39 @@ Qed.
 
 End Signature.
 
-Hint Unfold
-  type_of_arg
-  type_of_arg_map
-  is_rec
-  arity
-  signature
-  declaration
-  empty_decl
-  add_arity
-  add_arity_ind
-  arg_class
-  arg_inst_sort
-  arg_inst_class
-  arity_class
-  arity_inst_sort
-  arity_inst_class
-  sig_class
-  sig_inst_sort
-  sig_inst_class
-  untag_decl
-  decl_inst_sort
-  decl_inst_class
-  NonRec_arg_inst
-  Rec_arg_inst
-  nth_fin_arg_inst
-  nil_arity_inst
-  cons_arity_inst
-  nil_sig_inst
-  cons_sig_inst
-  nil_decl_tag
-  cons_decl_tag
-  nil_decl_inst
-  cons_decl_inst
-  arity_rec
-  : deriving.
+Hint Unfold type_of_arg : deriving.
+Hint Unfold type_of_arg_map : deriving.
+Hint Unfold is_rec : deriving.
+Hint Unfold arity : deriving.
+Hint Unfold signature : deriving.
+Hint Unfold declaration : deriving.
+Hint Unfold empty_decl : deriving.
+Hint Unfold add_arity : deriving.
+Hint Unfold add_arity_ind : deriving.
+Hint Unfold arg_class : deriving.
+Hint Unfold arg_inst_sort : deriving.
+Hint Unfold arg_inst_class : deriving.
+Hint Unfold arity_class : deriving.
+Hint Unfold arity_inst_sort : deriving.
+Hint Unfold arity_inst_class : deriving.
+Hint Unfold sig_class : deriving.
+Hint Unfold sig_inst_sort : deriving.
+Hint Unfold sig_inst_class : deriving.
+Hint Unfold untag_decl : deriving.
+Hint Unfold decl_inst_sort : deriving.
+Hint Unfold decl_inst_class : deriving.
+Hint Unfold NonRec_arg_inst : deriving.
+Hint Unfold Rec_arg_inst : deriving.
+Hint Unfold nth_fin_arg_inst : deriving.
+Hint Unfold nil_arity_inst : deriving.
+Hint Unfold cons_arity_inst : deriving.
+Hint Unfold nil_sig_inst : deriving.
+Hint Unfold cons_sig_inst : deriving.
+Hint Unfold nil_decl_tag : deriving.
+Hint Unfold cons_decl_tag : deriving.
+Hint Unfold nil_decl_inst : deriving.
+Hint Unfold cons_decl_inst : deriving.
+Hint Unfold arity_rec : deriving.
 
 Definition arg_class_map
   n K1 K2 (sort1 : K1 -> Type) (sort2 : K2 -> Type)
@@ -661,42 +659,40 @@ Definition pack_indType
 
 Notation IndType D T Ts := (@pack_indType _ _ T Ts _ _ _).
 
-Hint Unfold
-  Ind.Cidx
-  Ind.args
-  Ind.args_map
-  Ind.constructors
-  Ind.empty_cons
-  Ind.add_cons
-  Ind.rec_branch'
-  Ind.rec_branch
-  Ind.recursor
-  Ind.rec_branch'_of_hfun'
-  Ind.hfun'_of_rec_branch'
-  Ind.recursor_eq
-  Ind.des_branch
-  Ind.destructor
-  Ind.destructor_eq
-  Ind.rec_of_des_branch
-  Ind.destructor_of_recursor
-  Ind.ind_branch'
-  Ind.ind_branch
-  Ind.induction
-  Ind.Cons
-  Ind.rec
-  Ind.case
-  Ind.sorts
-  Ind.def_class
-  Ind.class
-  Ind.mixin_def
-  Ind.mixin_idx
-  Ind.sort
-  type_idx
-  type_idxP
-  find_idx_here
-  find_idx_there
-  pack_indType
-  : deriving.
+Hint Unfold Ind.Cidx : deriving.
+Hint Unfold Ind.args : deriving.
+Hint Unfold Ind.args_map : deriving.
+Hint Unfold Ind.constructors : deriving.
+Hint Unfold Ind.empty_cons : deriving.
+Hint Unfold Ind.add_cons : deriving.
+Hint Unfold Ind.rec_branch' : deriving.
+Hint Unfold Ind.rec_branch : deriving.
+Hint Unfold Ind.recursor : deriving.
+Hint Unfold Ind.rec_branch'_of_hfun' : deriving.
+Hint Unfold Ind.hfun'_of_rec_branch' : deriving.
+Hint Unfold Ind.recursor_eq : deriving.
+Hint Unfold Ind.des_branch : deriving.
+Hint Unfold Ind.destructor : deriving.
+Hint Unfold Ind.destructor_eq : deriving.
+Hint Unfold Ind.rec_of_des_branch : deriving.
+Hint Unfold Ind.destructor_of_recursor : deriving.
+Hint Unfold Ind.ind_branch' : deriving.
+Hint Unfold Ind.ind_branch : deriving.
+Hint Unfold Ind.induction : deriving.
+Hint Unfold Ind.Cons : deriving.
+Hint Unfold Ind.rec : deriving.
+Hint Unfold Ind.case : deriving.
+Hint Unfold Ind.sorts : deriving.
+Hint Unfold Ind.def_class : deriving.
+Hint Unfold Ind.class : deriving.
+Hint Unfold Ind.mixin_def : deriving.
+Hint Unfold Ind.mixin_idx : deriving.
+Hint Unfold Ind.sort : deriving.
+Hint Unfold type_idx : deriving.
+Hint Unfold type_idxP : deriving.
+Hint Unfold find_idx_here : deriving.
+Hint Unfold find_idx_there : deriving.
+Hint Unfold pack_indType : deriving.
 
 Module IndF.
 
@@ -875,21 +871,19 @@ End TypeDef.
 
 End IndF.
 
-Hint Unfold
-  IndF.constr
-  IndF.args
-  IndF.fmap
-  IndF.functor
-  IndF.Roll
-  IndF.rec_branches_of_fun
-  IndF.rec
-  IndF.lift_type
-  IndF.lift_typeE
-  IndF.lift_type_of
-  IndF.des_branches_of_fun
-  IndF.case
-  IndF.initAlgType
-  : deriving.
+Hint Unfold IndF.constr : deriving.
+Hint Unfold IndF.args : deriving.
+Hint Unfold IndF.fmap : deriving.
+Hint Unfold IndF.functor : deriving.
+Hint Unfold IndF.Roll : deriving.
+Hint Unfold IndF.rec_branches_of_fun : deriving.
+Hint Unfold IndF.rec : deriving.
+Hint Unfold IndF.lift_type : deriving.
+Hint Unfold IndF.lift_typeE : deriving.
+Hint Unfold IndF.lift_type_of : deriving.
+Hint Unfold IndF.des_branches_of_fun : deriving.
+Hint Unfold IndF.case : deriving.
+Hint Unfold IndF.initAlgType : deriving.
 
 Canonical IndF.functor.
 Canonical IndF.initAlgType.
@@ -997,16 +991,14 @@ Arguments read_rect : clear implicits.
 Arguments bless_rect : clear implicits.
 Arguments infer_ind : clear implicits.
 
-Hint Unfold
-  infer_arity_end
-  infer_arity_rec
-  infer_arity_nonrec
-  infer_decl_end
-  infer_decl_cons
-  read_rect_type
-  read_rect_done
-  do_infer_ind
-  : deriving.
+Hint Unfold infer_arity_end : deriving.
+Hint Unfold infer_arity_rec : deriving.
+Hint Unfold infer_arity_nonrec : deriving.
+Hint Unfold infer_decl_end : deriving.
+Hint Unfold infer_decl_cons : deriving.
+Hint Unfold read_rect_type : deriving.
+Hint Unfold read_rect_done : deriving.
+Hint Unfold do_infer_ind : deriving.
 
 Ltac infer_arity :=
   cbv beta;
@@ -1068,13 +1060,11 @@ End InitAlgEqType.
 
 Export InitAlgEqType.Exports.
 
-Hint Unfold
-  InitAlgEqType.sort
-  InitAlgEqType.eq_class
-  InitAlgEqType.init_alg_class
-  InitAlgEqType.eqType
-  InitAlgEqType.initAlgType
-  : deriving.
+Hint Unfold InitAlgEqType.sort : deriving.
+Hint Unfold InitAlgEqType.eq_class : deriving.
+Hint Unfold InitAlgEqType.init_alg_class : deriving.
+Hint Unfold InitAlgEqType.eqType : deriving.
+Hint Unfold InitAlgEqType.initAlgType : deriving.
 
 Module InitAlgChoiceType.
 
@@ -1102,14 +1092,12 @@ End InitAlgChoiceType.
 
 Export InitAlgChoiceType.Exports.
 
-Hint Unfold
-  InitAlgChoiceType.sort
-  InitAlgChoiceType.choice_class
-  InitAlgChoiceType.init_alg_class
-  InitAlgChoiceType.eqType
-  InitAlgChoiceType.choiceType
-  InitAlgChoiceType.initAlgType
-  : deriving.
+Hint Unfold InitAlgChoiceType.sort : deriving.
+Hint Unfold InitAlgChoiceType.choice_class : deriving.
+Hint Unfold InitAlgChoiceType.init_alg_class : deriving.
+Hint Unfold InitAlgChoiceType.eqType : deriving.
+Hint Unfold InitAlgChoiceType.choiceType : deriving.
+Hint Unfold InitAlgChoiceType.initAlgType : deriving.
 
 Module InitAlgCountType.
 
@@ -1139,12 +1127,10 @@ End InitAlgCountType.
 
 Export InitAlgCountType.Exports.
 
-Hint Unfold
-  InitAlgCountType.sort
-  InitAlgCountType.count_class
-  InitAlgCountType.init_alg_class
-  InitAlgCountType.eqType
-  InitAlgCountType.choiceType
-  InitAlgCountType.countType
-  InitAlgCountType.initAlgType
-  : deriving.
+Hint Unfold InitAlgCountType.sort : deriving.
+Hint Unfold InitAlgCountType.count_class : deriving.
+Hint Unfold InitAlgCountType.init_alg_class : deriving.
+Hint Unfold InitAlgCountType.eqType : deriving.
+Hint Unfold InitAlgCountType.choiceType : deriving.
+Hint Unfold InitAlgCountType.countType : deriving.
+Hint Unfold InitAlgCountType.initAlgType : deriving.

@@ -1,9 +1,9 @@
 TESTVFILES=$(wildcard tests/*.v)
 TESTVOFILES=$(TESTVFILES:.v=.vo)
+UNFOLDFILES = theories/ind.v theories/base.v
 
-theories/tactics.v: theories/make_tactics.v make_tactics.ml theories/ind.vo theories/base.vo
-	$(COQC) $(COQLIBS) theories/make_tactics.v \
-	| ocaml str.cma make_tactics.ml > theories/tactics.v
+theories/tactics.v: make_tactics.ml $(UNFOLDFILES)
+	ocaml str.cma make_tactics.ml $(UNFOLDFILES) > theories/tactics.v
 
 test: $(TESTVOFILES)
 .PHONY: test

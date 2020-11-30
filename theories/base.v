@@ -31,8 +31,6 @@ Hint Unfold cast : deriving.
 Notation "e1 * e2" := (etrans e1 e2) : deriving_scope.
 Notation "e ^-1" := (esym e) : deriving_scope.
 
-Hint Unfold etrans esym Logic.eq_sym Logic.eq_trans : deriving.
-
 (* We redefine some constants of the standard library here to avoid problems
    with universe inconsistency and opacity. *)
 
@@ -82,6 +80,8 @@ Definition castD T (P : T -> Type) x y z (p : x = y) (q : y = z) :
   forall a, cast P (p * q) a = cast P q (cast P p a) :=
   match q with erefl => fun a => erefl end.
 
+Hint Unfold Logic.eq_sym : deriving.
+Hint Unfold Logic.eq_trans : deriving.
 Hint Unfold etrans : deriving.
 Hint Unfold esym : deriving.
 Hint Unfold congr1 f_equal : deriving.
@@ -166,17 +166,17 @@ End PolyType.
 
 Import PolyType.
 
-Hint Unfold sval : deriving.
-Hint Unfold svalP : deriving.
-Hint Unfold list_of_seq : deriving.
-Hint Unfold seq_of_list : deriving.
-Hint Unfold size : deriving.
-Hint Unfold map : deriving.
-Hint Unfold foldr : deriving.
-Hint Unfold sumn : deriving.
-Hint Unfold cat : deriving.
-Hint Unfold flatten : deriving.
-Hint Unfold all : deriving.
+Hint Unfold PolyType.sval : deriving.
+Hint Unfold PolyType.svalP : deriving.
+Hint Unfold PolyType.list_of_seq : deriving.
+Hint Unfold PolyType.seq_of_list : deriving.
+Hint Unfold PolyType.size : deriving.
+Hint Unfold PolyType.map : deriving.
+Hint Unfold PolyType.foldr : deriving.
+Hint Unfold PolyType.sumn : deriving.
+Hint Unfold PolyType.cat : deriving.
+Hint Unfold PolyType.flatten : deriving.
+Hint Unfold PolyType.all : deriving.
 
 Fixpoint fin n :=
   if n is n.+1 then option (fin n) else void.
