@@ -1,6 +1,19 @@
+TESTVFILES=$(wildcard tests/*.v)
+TESTVOFILES=$(TESTVFILES:.v=.vo)
+
 theories/tactics.v: theories/make_tactics.v make_tactics.ml theories/ind.vo theories/base.vo
 	$(COQC) $(COQLIBS) theories/make_tactics.v \
 	| ocaml str.cma make_tactics.ml > theories/tactics.v
+
+test: $(TESTVOFILES)
+.PHONY: test
+
+$(TESTVOFILES): %.vo: %.v $(VOFILES)
+	$(SHOW)TEST $<
+	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(TIMING_ARG) $(COQFLAGS) $(COQLIBS) $< $(TIMING_EXTRA)
+
+clean::
+	$(HIDE)rm -f $(TESTVOFILES)
 
 # Local Variables:
 # mode: Makefile

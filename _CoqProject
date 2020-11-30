@@ -1,4 +1,4 @@
--R theories deriving
+-Q theories deriving
 
 -arg -w -arg -notation-overridden
 -arg -w -arg -non-reversible-notation
