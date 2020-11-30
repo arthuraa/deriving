@@ -2,6 +2,7 @@
 
 -arg -w -arg -notation-overridden
 -arg -w -arg -non-reversible-notation
+-arg -w -arg -ssr-search-moved
 
 theories/base.v
 theories/ind.v

@@ -11,8 +11,8 @@ let read_db () =
     with End_of_file -> List.rev acc in
   loop []
 
-let print_db db =
-  print_endline "  cbv [";
+let print_db prefix db =
+  Printf.printf "  %s [" prefix;
   List.iter (Printf.printf "    %s\n") db;
   print_endline "]."
 
@@ -20,6 +20,8 @@ let _ =
   print_endline "From deriving Require Import base ind.";
   print_endline "Declare Reduction deriving_compute :=";
   let db = read_db () in
-  print_db db;
+  print_db "cbv" db;
+  print_endline "Declare Reduction deriving_lazy :=";
+  print_db "lazy" db;
   print_endline "Ltac deriving_compute :=";
-  print_db db
+  print_db "cbv" db
