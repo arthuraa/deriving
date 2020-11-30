@@ -30,13 +30,6 @@ commands:
         command:
           opam install .
 
-  test:
-    steps:
-    - run:
-        name: Testing deriving
-        command:
-          make -k -j test
-
 jobs:
   coq-8-10:
     <<: *defaults
@@ -44,7 +37,6 @@ jobs:
     - startup
     - prepare
     - build
-    - test
     docker:
     - image: coqorg/coq:8.10.2
 
@@ -54,7 +46,6 @@ jobs:
     - startup
     - prepare
     - build
-    - test
     docker:
     - image: coqorg/coq:8.11.0
 
@@ -64,7 +55,6 @@ jobs:
     - startup
     - prepare
     - build
-    - test
     docker:
     - image: coqorg/coq:8.12.0
 
