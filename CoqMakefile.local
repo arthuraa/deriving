@@ -1,6 +1,26 @@
-theories/tactics.v: theories/make_tactics.v make_tactics.ml theories/ind.vo theories/base.vo
-	$(COQC) $(COQLIBS) theories/make_tactics.v \
-	| ocaml str.cma make_tactics.ml > theories/tactics.v
+TESTVFILES=$(wildcard tests/*.v)
+TESTVOFILES=$(TESTVFILES:.v=.vo)
+UNFOLDFILES = theories/ind.v theories/base.v
+
+theories/tactics.v: make_tactics.ml $(UNFOLDFILES)
+	ocaml str.cma make_tactics.ml $(UNFOLDFILES) > theories/tactics.v
+
+test: $(TESTVOFILES)
+.PHONY: test
+
+.CoqMakefile.test.d: $(TESTVFILES)
+	$(SHOW)'COQDEP TESTVFILES'
+	$(HIDE)$(COQDEP) -vos -dyndep var $(COQMF_COQLIBS_NOML) $^ $(redir_if_ok)
+-include .CoqMakefile.test.d
+
+$(TESTVOFILES): %.vo: %.v
+	$(SHOW)TEST $<
+	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(TIMING_ARG) $(COQFLAGS) $(COQLIBS) $< $(TIMING_EXTRA)
+
+clean::
+	$(HIDE)rm -f $(TESTVOFILES)
+	$(HIDE)rm -f .CoqMakefile.test.d
+	$(HIDE)rm -f theories/tactics.v
 
 # Local Variables:
 # mode: Makefile

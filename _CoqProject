@@ -1,4 +1,4 @@
--R theories deriving
+-Q theories deriving
 
 -arg -w -arg -notation-overridden
 -arg -w -arg -non-reversible-notation
@@ -9,5 +9,3 @@ theories/ind.v
 theories/tactics.v
 theories/instances.v
 theories/deriving.v
-theories/examples.v
-

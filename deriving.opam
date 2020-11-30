@@ -8,7 +8,7 @@ bug-reports: "https://github.com/arthuraa/deriving/issues"
 dev-repo: "git+https://github.com/arthuraa/deriving.git"
 license: "MIT"
 
-build: [ make "-j" "%{jobs}%" ]
+build: [ make "-j" "%{jobs}%" "test" {with-test} ]
 install: [ make "install" ]
 depends: [
   "coq" { (>= "8.10" & < "8.13~") | (= "dev") }

@@ -28,7 +28,7 @@ commands:
     - run:
         name: Building deriving
         command:
-          opam install .
+          opam install --with-test .
 
 jobs:
   coq-8-10:
