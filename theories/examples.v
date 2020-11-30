@@ -74,7 +74,7 @@ Canonical three_orderType :=
 
 End FiniteExample.
 
-Section MutualExample.
+Module MutualExample.
 
 Unset Elimination Schemes.
 Inductive foo :=
