@@ -370,8 +370,17 @@ Definition pack :=
 
 End DerFinType.
 
-Ltac derive_finMixin T :=
-  match eval hnf in (@DerFinType.pack T _ _ _ id _ id _ _ _ id erefl) with
+(** By default, the derived enumeration of a finite type is kept unnormalized,
+since it is not used much -- indeed, [Finite.enum] is even kept opaque. You can
+override this behavior by using the [[derive red finMixin for T]] variant
+below. *)
+
+Notation "[ 'derive' 'finMixin' 'for' T ]" :=
+  (@DerFinType.pack T _ _ _ id _ id _ _ _ id erefl)
+  (at level 0) : form_scope.
+
+Ltac derive_red_finMixin T :=
+  match eval hnf in [derive finMixin for T] with
   | @Finite.Mixin _ ?T' ?enum ?enumP=>
     let enum := eval unfold DerFinType.enum_ind,
                             DerFinType.enum_branch,
@@ -384,9 +393,10 @@ Ltac derive_finMixin T :=
     exact (@Finite.Mixin _ T' enum enumP)
   end.
 
-Notation "[ 'derive' 'finMixin' 'for' T ]" :=
-  (ltac:(derive_finMixin T))
-  (at level 0, format "[ 'derive'  'finMixin'  'for'  T ]") : form_scope.
+Notation "[ 'derive' 'red' 'finMixin' 'for' T ]" :=
+  (ltac:(derive_red_finMixin T))
+  (at level 0, format "[ 'derive' 'red' 'finMixin'  'for'  T ]") : form_scope.
+
 
 Module DerOrderType.
 Section DerOrderType.
