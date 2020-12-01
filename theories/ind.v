@@ -124,7 +124,8 @@ Module InitAlg.
 
 Section ClassDef.
 
-Record mixin_of n T (F : functor (fin n)) := Mixin {
+Record mixin_of n T := Mixin {
+  F        :  functor (fin n);
   Roll     :  F T -F> T;
   case     :  forall i S, (F T i -> S) -> T i -> S;
   rec      :  forall S, (F (T *F S) -F> S) -> T -F> S;
@@ -139,15 +140,15 @@ Record mixin_of n T (F : functor (fin n)) := Mixin {
 }.
 Notation class_of := mixin_of (only parsing).
 
-Record type n F := Pack {sort : fin n -> Type; _ : class_of sort F}.
+Record type n := Pack {sort : fin n -> Type; _ : class_of sort}.
 Local Coercion sort : type >-> Funclass.
-Variables (n : nat) (F : functor (fin n)) (T : fin n -> Type) (cT : type F).
-Definition class := let: Pack _ c as cT' := cT return class_of cT' F in c.
-Definition clone c of phant_id class c := @Pack n F T c.
+Variables (n : nat) (T : fin n -> Type) (cT : type n).
+Definition class := let: Pack _ c as cT' := cT return class_of cT' in c.
+Definition clone c of phant_id class c := @Pack n T c.
 Let xT := let: Pack T _ := cT in T.
 Notation xclass := (class : class_of xT).
 
-Definition pack c := @Pack n F T c.
+Definition pack c := @Pack n T c.
 
 End ClassDef.
 
@@ -155,12 +156,12 @@ Module Exports.
 Coercion sort : type >-> Funclass.
 Notation initAlgType := type.
 Notation InitAlgMixin := Mixin.
-Notation InitAlgType F T m := (@pack _ F T m).
+Notation InitAlgType n T m := (@pack n T m).
 Notation "[ 'initAlgMixin' 'of' T ]" := (class _ : mixin_of T)
   (at level 0, format "[ 'initAlgMixin'  'of'  T ]") : form_scope.
-Notation "[ 'initAlgType' 'of' T 'for' C ]" := (@clone T C _ idfun id)
+Notation "[ 'initAlgType' 'of' T 'for' C ]" := (@clone _ T C _ idfun)
   (at level 0, format "[ 'initAlgType'  'of'  T  'for'  C ]") : form_scope.
-Notation "[ 'initAlgType' 'of' T ]" := (@clone T _ _ id id)
+Notation "[ 'initAlgType' 'of' T ]" := (@clone _ T _ _ id)
   (at level 0, format "[ 'initAlgType'  'of'  T ]") : form_scope.
 End Exports.
 
@@ -170,12 +171,13 @@ Export InitAlg.Exports.
 Section InitAlgTheory.
 
 Variable n : nat.
-Variable F : functor (fin n).
-Variable T : initAlgType F.
+Variable T : initAlgType n.
 
-Definition Roll := (InitAlg.Roll (InitAlg.class T)).
-Definition case := (InitAlg.case (InitAlg.class T)).
-Definition rec  := (InitAlg.rec  (InitAlg.class T)).
+Notation F := (@InitAlg.F n _ (InitAlg.class T)).
+
+Definition Roll := (@InitAlg.Roll _ _ (InitAlg.class T)).
+Definition case := (@InitAlg.case _ _ (InitAlg.class T)).
+Definition rec  := (@InitAlg.rec  _ _ (InitAlg.class T)).
 
 Lemma recE S f i a : rec f (Roll a) =
                      f i (fmap (fun i x => (x, rec f x)) a) :> S i.
@@ -206,6 +208,7 @@ Proof. exact: can_inj (@unrollK i). Qed.
 
 End InitAlgTheory.
 
+Hint Unfold InitAlg.F : deriving.
 Hint Unfold InitAlg.Roll : deriving.
 Hint Unfold InitAlg.case : deriving.
 Hint Unfold InitAlg.rec : deriving.
@@ -567,12 +570,13 @@ End Basic.
 
 Section ClassDef.
 
-Variables (n : nat) (D : declaration n).
+Variables (n : nat).
 
 Record def_class_of sorts := DefClass {
-  Cons      : constructors D sorts;
-  rec       : recursor D sorts;
-  case      : destructor D sorts;
+  decl      : declaration n;
+  Cons      : constructors decl sorts;
+  rec       : recursor decl sorts;
+  case      : destructor decl sorts;
   recE      : recursor_eq Cons rec;
   caseE     : destructor_eq Cons case;
   indP      : induction Cons;
@@ -621,14 +625,14 @@ Export Ind.Exports.
 
 Section IndTheory.
 
-Variables (n : nat) (D : declaration n).
+Variables (n : nat).
 
 Import PolyType.
 
-Definition type_idx (T : indType D) : fin n :=
+Definition type_idx (T : indType n) : fin n :=
   sval (Ind.mixin_idx T).
 
-Definition type_idxP (T : indType D) : T = T (type_idx T) :> Type :=
+Definition type_idxP (T : indType n) : T = T (type_idx T) :> Type :=
   svalP (Ind.mixin_idx T).
 
 End IndTheory.
@@ -653,11 +657,11 @@ Hint Extern 2 (find_idx ?n.+1 ?Ts ?T _ _) =>
   eapply (@find_idx_there n Ts) : typeclass_instances.
 
 Definition pack_indType
-  n (D : declaration n) T (Ts : indDef D) i e
+  n T (Ts : indDef n) i e
   of find_idx n Ts T i e :=
-  Ind.Pack (@Ind.Mixin n D T Ts (PolyType.exist _ i e)).
+  Ind.Pack (@Ind.Mixin n T Ts (PolyType.exist _ i e)).
 
-Notation IndType D T Ts := (@pack_indType _ _ T Ts _ _ _).
+Notation IndType T Ts := (@pack_indType _ T Ts _ _ _).
 
 Hint Unfold Ind.Cidx : deriving.
 Hint Unfold Ind.args : deriving.
@@ -679,6 +683,7 @@ Hint Unfold Ind.destructor_of_recursor : deriving.
 Hint Unfold Ind.ind_branch' : deriving.
 Hint Unfold Ind.ind_branch : deriving.
 Hint Unfold Ind.induction : deriving.
+Hint Unfold Ind.decl : deriving.
 Hint Unfold Ind.Cons : deriving.
 Hint Unfold Ind.rec : deriving.
 Hint Unfold Ind.case : deriving.
@@ -696,7 +701,7 @@ Hint Unfold pack_indType : deriving.
 
 Module IndF.
 
-Section TypeDef.
+Section FunctorDef.
 
 Variables (n : nat) (D : declaration n).
 
@@ -752,10 +757,19 @@ pose get x :=
 by move=> /(congr1 get); rewrite /get /= leq_finii /=.
 Qed.
 
-Variable T : indDef D.
+End FunctorDef.
+
+Section TypeDef.
+
+Variables (n : nat) (T : indDef n).
+
+Notation D := (Ind.decl T).
+Notation F := (@fobj n D).
+
+Arguments Cons {n D T i} _ _.
 
 Definition Roll i (x : F T i) : T i :=
-  @Ind.Cons _ _ _ T i (constr x) (args x).
+  @Ind.Cons _ _ T i (constr x) (args x).
 
 Definition rec_branches_of_fun S (body : F (T *F S) -F> S) :
   hlist2 (@Ind.rec_branch _ D T S) :=
@@ -766,7 +780,7 @@ Definition rec_branches_of_fun S (body : F (T *F S) -F> S) :
          (fun l => body i (Cons j l))))).
 
 Definition rec S (body : F (T *F S) -F> S) :=
-  @Ind.rec _ _ _ T S (rec_branches_of_fun body).
+  @Ind.rec _ _ T S (rec_branches_of_fun body).
 
 Definition lift_type R i : fin n -> Type :=
   fun j => if leq_fin i j is inl e then R else unit.
@@ -791,7 +805,7 @@ Definition des_branches_of_fun i R (body : F T i -> R) :
 
 Definition case i R (body : F T i -> R) x :=
   cast id (lift_typeE R i)
-    (@Ind.case _ _ _ T _ (des_branches_of_fun body) i x).
+    (@Ind.case _ _ T _ (des_branches_of_fun body) i x).
 
 Lemma recE S f i (a : F T i) :
   @rec S f i (Roll a) =
@@ -843,7 +857,7 @@ have {}IH i (a : F (fun j => {x & Q j x}) i) :
   by apply: (Q_of_P); apply: IH.
 move=> i x {P_of_QK Q_of_PK Q_of_P TP_of_TQ}; apply: P_of_Q.
 move: {P} Q IH i x.
-rewrite /Roll; case: (T) => S [/= Cs _ _ _ _ indP] P.
+rewrite /Roll; case: (T) => S [/= D Cs _ _ _ _ indP] P.
 have {}indP :
     (forall i j, Ind.ind_branch' P (Cs i j)) ->
     (forall i x, P i x).
@@ -865,7 +879,7 @@ elim: (nth_fin j)=> [|[R|k] As IH] /=.
 Qed.
 
 Canonical initAlgType :=
-  Eval hnf in InitAlgType functor T (@InitAlgMixin _ _ _ _ (@case) _ recE caseE indP).
+  Eval hnf in InitAlgType n T (@InitAlgMixin _ _ _ _ (@case) _ recE caseE indP).
 
 End TypeDef.
 
@@ -888,6 +902,53 @@ Hint Unfold IndF.initAlgType : deriving.
 Canonical IndF.functor.
 Canonical IndF.initAlgType.
 Coercion IndF.initAlgType : indDef >-> initAlgType.
+
+Module IndClass.
+
+Section ClassDef.
+
+Variables (n : nat) (K : Type) (KS : K -> Type).
+
+Record class_of T := Class {
+  base  : @Ind.def_class_of n T;
+  mixin : forall i, @sig_class n K KS (Ind.decl base i);
+}.
+
+Record def := Def {sorts : fin n -> Type; _ : class_of sorts}.
+Local Coercion sorts : def >-> Funclass.
+
+Variables (T : fin n -> Type) (cT : def).
+Definition class := let: Def _ c as cT' := cT return class_of cT' in c.
+Definition clone c of phant_id class c := @Def T c.
+Let xT := let: Def T _ := cT in T.
+Notation xclass := (class : class_of xT).
+
+Definition indDef := Ind.Def (base class).
+Definition initAlgType := IndF.initAlgType indDef.
+
+End ClassDef.
+
+Module Exports.
+Coercion sorts : def >-> Funclass.
+Coercion class : def >-> class_of.
+Coercion base  : class_of >-> Ind.def_class_of.
+Coercion indDef : def >-> Ind.def.
+Canonical indDef.
+Coercion initAlgType : def >-> InitAlg.type.
+Canonical initAlgType.
+Notation indClassDef := def.
+Notation IndClassDef := Def.
+End Exports.
+End IndClass.
+
+Export IndClass.Exports.
+
+Hint Unfold IndClass.base : deriving.
+Hint Unfold IndClass.mixin : deriving.
+Hint Unfold IndClass.sorts : deriving.
+Hint Unfold IndClass.class : deriving.
+Hint Unfold IndClass.indDef : deriving.
+Hint Unfold IndClass.initAlgType : deriving.
 
 Section InferInstances.
 
@@ -1034,103 +1095,103 @@ Ltac bless_rect :=
 
 Hint Extern 0 (bless_rect _ _ _ _ _ _ _) => bless_rect : typeclass_instances.
 
-Module InitAlgEqType.
+Module IndEqType.
 
-Record type n (F : functor (fin n)) := Pack {
-  sort           : fin n -> Type;
-  eq_class       : forall i, Equality.class_of (sort i);
-  init_alg_class : InitAlg.mixin_of sort F;
+Record type n := Pack {
+  sort      : fin n -> Type;
+  eq_class  : forall i, Equality.class_of (sort i);
+  ind_class : Ind.def_class_of sort;
 }.
 
-Definition eqType n F (T : type F) (i : fin n) :=
+Definition eqType n (T : type n) (i : fin n) :=
   Equality.Pack (eq_class T i).
-Definition initAlgType n (F : functor (fin n)) (T : type F) :=
-  InitAlg.Pack (init_alg_class T).
+Definition indDef n (T : type n) :=
+  Ind.Def (ind_class T).
 
 Module Import Exports.
-Notation initAlgEqType := type.
-Notation InitAlgEqType := Pack.
+Notation indEqType := type.
+Notation IndEqType := Pack.
 Coercion sort : type >-> Funclass.
 Canonical eqType.
-Coercion initAlgType : type >-> InitAlg.type.
-Canonical initAlgType.
+Coercion indDef : type >-> Ind.def.
+Canonical indDef.
 End Exports.
 
-End InitAlgEqType.
+End IndEqType.
 
-Export InitAlgEqType.Exports.
+Export IndEqType.Exports.
 
-Hint Unfold InitAlgEqType.sort : deriving.
-Hint Unfold InitAlgEqType.eq_class : deriving.
-Hint Unfold InitAlgEqType.init_alg_class : deriving.
-Hint Unfold InitAlgEqType.eqType : deriving.
-Hint Unfold InitAlgEqType.initAlgType : deriving.
+Hint Unfold IndEqType.sort : deriving.
+Hint Unfold IndEqType.eq_class : deriving.
+Hint Unfold IndEqType.ind_class : deriving.
+Hint Unfold IndEqType.eqType : deriving.
+Hint Unfold IndEqType.indDef : deriving.
 
-Module InitAlgChoiceType.
+Module IndChoiceType.
 
-Record type n (F : functor (fin n)) := Pack {
-  sort           : fin n -> Type;
-  choice_class   : forall i, Choice.class_of (sort i);
-  init_alg_class : InitAlg.mixin_of sort F;
+Record type n := Pack {
+  sort         : fin n -> Type;
+  choice_class : forall i, Choice.class_of (sort i);
+  ind_class    : Ind.def_class_of sort;
 }.
 
-Definition eqType n F (T : type F) (i : fin n) := Equality.Pack (choice_class T i).
-Definition choiceType n F (T : type F) (i : fin n) := Choice.Pack (choice_class T i).
-Definition initAlgType n (F : functor (fin n)) (T : type F) := InitAlg.Pack (init_alg_class T).
+Definition eqType n (T : type n) (i : fin n) := Equality.Pack (choice_class T i).
+Definition choiceType n (T : type n) (i : fin n) := Choice.Pack (choice_class T i).
+Definition indDef n (T : type n) := Ind.Def (ind_class T).
 
 Module Import Exports.
-Notation initAlgChoiceType := type.
-Notation InitAlgChoiceType := Pack.
+Notation indChoiceType := type.
+Notation IndChoiceType := Pack.
 Coercion sort : type >-> Funclass.
 Canonical eqType.
 Canonical choiceType.
-Coercion initAlgType : type >-> InitAlg.type.
-Canonical initAlgType.
+Coercion indDef : type >-> Ind.def.
+Canonical indDef.
 End Exports.
 
-End InitAlgChoiceType.
+End IndChoiceType.
 
-Export InitAlgChoiceType.Exports.
+Export IndChoiceType.Exports.
 
-Hint Unfold InitAlgChoiceType.sort : deriving.
-Hint Unfold InitAlgChoiceType.choice_class : deriving.
-Hint Unfold InitAlgChoiceType.init_alg_class : deriving.
-Hint Unfold InitAlgChoiceType.eqType : deriving.
-Hint Unfold InitAlgChoiceType.choiceType : deriving.
-Hint Unfold InitAlgChoiceType.initAlgType : deriving.
+Hint Unfold IndChoiceType.sort : deriving.
+Hint Unfold IndChoiceType.choice_class : deriving.
+Hint Unfold IndChoiceType.ind_class : deriving.
+Hint Unfold IndChoiceType.eqType : deriving.
+Hint Unfold IndChoiceType.choiceType : deriving.
+Hint Unfold IndChoiceType.indDef : deriving.
 
-Module InitAlgCountType.
+Module IndCountType.
 
-Record type n (F : functor (fin n)) := Pack {
-  sort           : fin n -> Type;
-  count_class   : forall i, Countable.class_of (sort i);
-  init_alg_class : InitAlg.mixin_of sort F;
+Record type n := Pack {
+  sort        : fin n -> Type;
+  count_class : forall i, Countable.class_of (sort i);
+  ind_class   : Ind.def_class_of sort;
 }.
 
-Definition eqType n F (T : type F) (i : fin n) := Equality.Pack (count_class T i).
-Definition choiceType n F (T : type F) (i : fin n) := Choice.Pack (count_class T i).
-Definition countType n F (T : type F) (i : fin n) := Countable.Pack (count_class T i).
-Definition initAlgType n (F : functor (fin n)) (T : type F) := InitAlg.Pack (init_alg_class T).
+Definition eqType n (T : type n) (i : fin n) := Equality.Pack (count_class T i).
+Definition choiceType n (T : type n) (i : fin n) := Choice.Pack (count_class T i).
+Definition countType n (T : type n) (i : fin n) := Countable.Pack (count_class T i).
+Definition indDef n (T : type n) := Ind.Def (ind_class T).
 
 Module Import Exports.
-Notation initAlgCountType := type.
-Notation InitAlgCountType := Pack.
+Notation indCountType := type.
+Notation IndCountType := Pack.
 Coercion sort : type >-> Funclass.
 Canonical eqType.
 Canonical choiceType.
 Canonical countType.
-Coercion initAlgType : type >-> InitAlg.type.
-Canonical initAlgType.
+Coercion indDef : type >-> Ind.def.
+Canonical indDef.
 End Exports.
 
-End InitAlgCountType.
+End IndCountType.
 
-Export InitAlgCountType.Exports.
+Export IndCountType.Exports.
 
-Hint Unfold InitAlgCountType.sort : deriving.
-Hint Unfold InitAlgCountType.count_class : deriving.
-Hint Unfold InitAlgCountType.init_alg_class : deriving.
-Hint Unfold InitAlgCountType.eqType : deriving.
-Hint Unfold InitAlgCountType.choiceType : deriving.
-Hint Unfold InitAlgCountType.countType : deriving.
-Hint Unfold InitAlgCountType.initAlgType : deriving.
+Hint Unfold IndCountType.sort : deriving.
+Hint Unfold IndCountType.count_class : deriving.
+Hint Unfold IndCountType.ind_class : deriving.
+Hint Unfold IndCountType.eqType : deriving.
+Hint Unfold IndCountType.choiceType : deriving.
+Hint Unfold IndCountType.countType : deriving.
+Hint Unfold IndCountType.indDef : deriving.

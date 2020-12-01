@@ -38,7 +38,7 @@ Ltac ind_def rec :=
     let case := constr:(fun S : fin n -> Type => case (fun i _ => S i)) in
     let case := constr:(@Ind.destructor_of_recursor n D Ts case) in
     let case := eval deriving_compute in case in
-    refine (IndDef (@Ind.DefClass n D Ts Cs (fun S => Rec' (fun i _ => S i)) case _ _ rec));
+    refine (IndDef (@Ind.DefClass n Ts D Cs (fun S => Rec' (fun i _ => S i)) case _ _ rec));
     abstract (deriving_compute; intuition)
   end.
 
@@ -60,9 +60,7 @@ Local Notation arg_inst := (arg_inst n Equality.sort).
 Local Notation arity_inst := (arity_inst n Equality.sort).
 Local Notation sig_inst := (sig_inst n Equality.sort).
 Local Notation decl_inst := (decl_inst n Equality.sort n).
-Variable (D : decl_inst).
-Let F := IndF.functor D.
-Variable (T : initAlgType F).
+Variable (T : indDef n) (sT : forall i, sig_class Equality.sort (Ind.decl T i)).
 
 Definition eq_op_branch As (cAs : hlist' arg_class As) :
   hlist' (type_of_arg (T *F (fun i => T i -> bool))) As ->
@@ -75,18 +73,19 @@ Definition eq_op_branch As (cAs : hlist' arg_class As) :
     (fun j As rec x y b => rec x.(tl) y.(tl) (b &&  x.(hd).2 y.(hd)))
     As cAs.
 
+(* FIXME: Do we really need these annotations? *)
 Definition eq_op : forall i, T i -> T i -> bool :=
-  rec  (fun i args1 =>
-  case (fun   args2 =>
-        match leq_fin (IndF.constr args2) (IndF.constr args1) with
-         | inl e =>
-           eq_op_branch
-             (hnth (decl_inst_class D i) (IndF.constr args1))
-             (IndF.args args1)
-             (cast (hlist' (type_of_arg T) \o @nth_fin _ _) e (IndF.args args2))
-             true
-         | inr _ => false
-         end)).
+  @rec  n T   _ (fun i args1 =>
+  @case n T i _ (fun   args2 =>
+     match leq_fin (IndF.constr args2) (IndF.constr args1) with
+      | inl e =>
+        eq_op_branch
+          (hnth (sT i) (IndF.constr args1))
+          (IndF.args args1)
+          (cast (hlist' (type_of_arg T) \o @nth_fin _ _) e (IndF.args args2))
+          true
+      | inr _ => false
+      end)).
 
 Lemma eq_opP i : Equality.axiom (@eq_op i).
 Proof.
@@ -94,11 +93,11 @@ elim/indP: i / => i [xC xargs] y.
 rewrite /eq_op recE /= -[rec _]/(eq_op) /=.
 rewrite -[y]unrollK caseE; move: {y} (unroll y)=> [yC yargs] /=.
 case le: (leq_fin yC xC)=> [e|b]; last first.
-  constructor=> /(@Roll_inj _ _ _ i) /= [] e _.
+  constructor=> /(@Roll_inj _ _ i) /= [] e _.
   by move: le; rewrite e leq_finii.
 case: xC / e xargs {le} => /= xargs.
 apply/(@iffP (hmap' (type_of_arg_map (fun=> tag)) xargs = yargs)); first last.
-- by move=> /(@Roll_inj _ _ _ i) /IndF.inj.
+- by move=> /(@Roll_inj _ _ i) /IndF.inj.
 - by move=> <-.
 apply/(iffP idP)=> [H|<-]; last first.
   elim/arity_ind: {yC} _ / (hnth _ _) xargs {yargs}=> //= [|j] S As cAs.
@@ -117,18 +116,20 @@ End EqType.
 
 Definition pack :=
   fun (T : Type) =>
-  fun n D (T_ind : @indType n D) & phant_id T (Ind.sort T_ind) =>
-  fun (D_eq : decl_inst n Equality.sort n) & phant_id D (untag_decl D_eq) =>
+  fun n (T_ind : indType n) & phant_id T (Ind.sort T_ind) =>
+  fun (D_eq : decl_inst n Equality.sort n) =>
+  fun & phant_id (Ind.decl T_ind) (untag_decl D_eq) =>
   fun Ts cTs idx =>
-  fun (T_ind' := Ind.Pack (@Ind.Mixin n D_eq T (@Ind.Def _ _ Ts cTs) idx)) =>
+  fun (T_ind' := Ind.Pack (@Ind.Mixin n T (@Ind.Def _ Ts cTs) idx)) =>
   fun & phant_id T_ind T_ind' =>
+  fun sT & phant_id (decl_inst_class D_eq) sT =>
   cast Equality.mixin_of (type_idxP T_ind')^-1
-    (@EqMixin _ _ (@eq_opP n D_eq (IndF.initAlgType T_ind') (type_idx T_ind'))).
+    (@EqMixin _ _ (@eq_opP n T_ind' sT (type_idx T_ind'))).
 
 End DerEqType.
 
 Notation "[ 'derive' 'nored' 'eqMixin' 'for' T ]" :=
-  (@DerEqType.pack T _ _ _ id _ id _ _ _ id)
+  (@DerEqType.pack T _ _ id _ id _ _ _ id _ id)
   (at level 0) : form_scope.
 
 Ltac derive_eqMixin T :=
@@ -157,9 +158,9 @@ Notation "[ 'derive' 'lazy' 'eqMixin' 'for' T ]" :=
 
 Section TreeOfInd.
 
-Variables (n : nat) (D : declaration n).
+Variables (n : nat) (T : indDef n).
+Let D := Ind.decl T.
 Let F := IndF.functor D.
-Variables (T : initAlgType F).
 
 Import GenTree.
 Import PolyType.
@@ -193,12 +194,12 @@ Let wrap i (j : Ind.Cidx D i) (k : fin (size (nth_fin j))) :
   end (@mk_ind_arg i j k).
 
 Definition tree_of_coq_ind i (x : T i) : tree ind_arg :=
-  rec (fun i x =>
+  @rec _ T _ (fun i x =>
          let j := IndF.constr x in
          Node (nat_of_fin j)
            (list_of_seq (seq_of_hlist (@wrap i j)
               (hmap' (type_of_arg_map (fun=> snd)) (IndF.args x)))))
-      x.
+      i x.
 
 Fixpoint coq_ind_of_tree i (x : tree ind_arg) : option (T i) :=
   match x with
@@ -213,7 +214,7 @@ Fixpoint coq_ind_of_tree i (x : tree ind_arg) : option (T i) :=
                        | NonRec R => fun f => if ts.1 is Leaf x then f x else None
                        | Rec i'   => fun _ => ts.2 i'
                        end (@proj_ind_arg i j k)) xs
-    is Some args then Some (Roll (IndF.Cons args))
+    is Some args then Some (@Roll _ T _ (IndF.Cons args))
     else None
   end.
 
@@ -236,15 +237,15 @@ End TreeOfInd.
 
 Definition pack_tree_of_indK :=
   fun (T : Type) =>
-  fun n D (sT_ind : @indType n D) & phant_id (Ind.sort sT_ind) T =>
-  @tree_of_coq_indK _ D sT_ind (type_idx sT_ind).
+  fun n (sT_ind : indType n) & phant_id (Ind.sort sT_ind) T =>
+  @tree_of_coq_indK _ sT_ind (type_idx sT_ind).
 
 Notation "[ 'derive' 'choiceMixin' 'for' T ]" :=
-  (PcanChoiceMixin (@pack_tree_of_indK T _ _ _ id))
+  (PcanChoiceMixin (@pack_tree_of_indK T _ _ id))
   (at level 0, format "[ 'derive'  'choiceMixin'  'for'  T ]") : form_scope.
 
 Notation "[ 'derive' 'countMixin' 'for' T ]" :=
-  (PcanCountMixin (@pack_tree_of_indK T _ _ _ id))
+  (PcanCountMixin (@pack_tree_of_indK T _ _ id))
   (at level 0, format "[ 'derive' 'countMixin'  'for'  T ]") : form_scope.
 
 Module DerFinType.
@@ -290,9 +291,10 @@ Fixpoint all_finbP n : forall (f : fin n -> bool),
 
 (** It is strange to derive a finType instance for a mutually inductive type,
 but you never know...*)
-Variable (n : nat) (D : decl_inst n Finite.sort n).
-Let F := IndF.functor D.
-Variable (T : initAlgCountType F).
+Variable (n : nat) (T : indCountType n).
+Notation D := (Ind.decl T).
+
+Hypothesis sT : forall i, sig_class Finite.sort (D i).
 
 Hypothesis not_rec :
   all_finb (fun i => all (all (negb \o @is_rec n)) (D i)).
@@ -305,16 +307,16 @@ Definition enum_branch_aux :=
     (fun i As rec P => ltac:(done)).
 
 Definition enum_branch i (j : Ind.Cidx D i) :=
-  enum_branch_aux (hnth (decl_inst_class D i) j)
+  enum_branch_aux (hnth (sT i) j)
                   (allP (all_finbP not_rec i) j).
 
 Definition enum_ind i :=
-  seq.flatten [seq [seq Roll (IndF.Cons args) | args <- enum_branch j]
+  seq.flatten [seq [seq @Roll _ T _ (IndF.Cons args) | args <- enum_branch j]
               | j <- list_of_seq (enum_fin (size (D i)))].
 
 Lemma enum_indP i : Finite.axiom (enum_ind i).
 Proof.
-move=> x; rewrite -[x]unrollK; case: {x} (unroll x)=> j xs.
+move=> /= x; rewrite -(@unrollK _ T _ x); case: {x} (unroll _)=> j xs.
 rewrite /enum_ind count_flatten -!map_comp /comp /=.
 have <- : seq.sumn [seq j == j' : nat | j' <- list_of_seq (enum_fin (size (D i)))] = 1.
   rewrite /Ind.Cidx in j {xs} *.
@@ -327,7 +329,7 @@ have [<- {j'}|ne] /= := altP (j =P j').
   set P := preim _ _.
   have PP : forall ys, reflect (xs = ys) (P ys).
     move=> ys; rewrite /P /=; apply/(iffP idP); last by move=> ->.
-    by move=> /eqP/(@Roll_inj _ _ _ i)/(@IndF.inj n D _ i) ->.
+    by move=> /eqP/(@Roll_inj _ T i)/(@IndF.inj n D _ i) ->.
   move: P PP.
   rewrite /enum_branch.
   elim/arity_ind: {j} _ / (hnth _ j) xs (allP _ _)=> //=.
@@ -350,23 +352,24 @@ have [<- {j'}|ne] /= := altP (j =P j').
 set P := preim _ _.
 rewrite (@eq_count _ _ pred0) ?count_pred0 //.
 move=> ys /=; apply/negbTE; apply: contra ne.
-by move=> /eqP/(@Roll_inj _ _ _ i)/(congr1 (@IndF.constr _ _ _ i)) /= ->.
+by move=> /eqP/(@Roll_inj _ T i)/(congr1 (@IndF.constr _ _ _ i)) /= ->.
 Qed.
 
 End FinType.
 
 Definition pack :=
   fun (T : Type) =>
-  fun n D (T_ind : @indType n D) & phant_id T (Ind.sort T_ind) =>
-  fun (D_fin : decl_inst n Finite.sort n) & phant_id D (untag_decl D_fin) =>
+  fun n (T_ind : indType n) & phant_id T (Ind.sort T_ind) =>
+  fun (D_fin : decl_inst n Finite.sort n) =>
+  fun & phant_id (Ind.decl T_ind) (untag_decl D_fin) =>
   fun (Ts : lift_class Countable.sort n) cTs idx =>
-  let T_ind' := Ind.Pack (@Ind.Mixin n D_fin T (@Ind.Def _ _ (untag_sort Ts) cTs) idx) in
+  let T_ind' := Ind.Pack (@Ind.Mixin n T (@Ind.Def _ (untag_sort Ts) cTs) idx) in
   fun & phant_id T_ind T_ind' =>
-  fun (not_rec : all_finb (fun i => all (all (negb \o @is_rec n)) (D_fin i))) =>
-  let T_init := IndF.initAlgType T_ind' in
   let T_count := lift_class_proj Countable.class Ts in
-  let T_ind_count := @InitAlgCountType n _ Ts T_count (InitAlg.class T_init) in
-  FinMixin (@enum_indP n D_fin T_ind_count not_rec (type_idx T_ind')).
+  let T_ind_count := @IndCountType n Ts T_count T_ind' in
+  fun sT & phant_id (decl_inst_class D_fin) sT =>
+  fun (not_rec : all_finb (fun i => all (all (negb \o @is_rec n)) (Ind.decl T_ind' i))) =>
+  FinMixin (@enum_indP n T_ind_count sT not_rec (type_idx T_ind')).
 
 End DerFinType.
 
@@ -376,7 +379,7 @@ override this behavior by using the [[derive red finMixin for T]] variant
 below. *)
 
 Notation "[ 'derive' 'finMixin' 'for' T ]" :=
-  (@DerFinType.pack T _ _ _ id _ id _ _ _ id erefl)
+  (@DerFinType.pack T _ _ id _ id _ _ _ id _ id erefl)
   (at level 0) : form_scope.
 
 Ltac derive_red_finMixin T :=
@@ -416,9 +419,9 @@ Notation arg_inst   := (arg_inst   n sort).
 Notation arity_inst := (arity_inst n sort).
 Notation sig_inst   := (sig_inst   n sort).
 Notation decl_inst  := (decl_inst  n sort).
-Variable (D : decl_inst n).
-Let F := IndF.functor D.
-Variable (T : initAlgChoiceType F).
+Variable (T : indChoiceType n).
+Notation D := (Ind.decl T).
+Variable (sT : forall i, sig_class sort (D i)).
 
 Definition le_branch As (cAs : hlist' arg_class As) :
   hlist' (type_of_arg (T *F (fun i => T i -> bool))) As ->
@@ -436,12 +439,12 @@ Definition le_branch As (cAs : hlist' arg_class As) :
        if x.(hd).1 == y.(hd) then rec x.(tl) y.(tl) else x.(hd).2 y.(hd)) As cAs.
 
 Definition le : forall i, T i -> T i -> bool :=
-  rec  (fun i args1 =>
-  case (fun   args2 =>
+  @rec  n T _ (fun i args1 =>
+  @case n T _ _ (fun   args2 =>
           match leq_fin (IndF.constr args2) (IndF.constr args1) with
           | inl e =>
             le_branch
-              (hnth (decl_inst_class D i) (IndF.constr args1))
+              (hnth (sT i) (IndF.constr args1))
               (IndF.args args1)
               (cast (hlist' (type_of_arg T) \o @nth_fin _ _) e (IndF.args args2))
           | inr b => ~~ b
@@ -449,7 +452,7 @@ Definition le : forall i, T i -> T i -> bool :=
 
 Lemma refl i : reflexive (@le i).
 Proof.
-elim/indP: i / => i [j args].
+elim/(@indP _ T): i / => i [j args].
 rewrite /le recE /= -[rec _]/(le) caseE leq_finii /=.
 elim/arity_ind: {j} _ / (hnth _ _) args=> [[]|R As cAs IH|j As cAs IH] //=.
   case=> [x args]; rewrite /= eqxx; exact: IH.
@@ -458,12 +461,12 @@ Qed.
 
 Lemma anti i : antisymmetric (@le i).
 Proof.
-elim/indP: i / => i [xi xargs] y.
-rewrite -(unrollK y); case: {y} (unroll y)=> [yi yargs].
+elim/(@indP _ T): i / => i [xi xargs] y.
+rewrite -(@unrollK _ T _ y); case: {y} (unroll _)=> [yi yargs].
 rewrite /le !recE -[rec _]/(le) /= !caseE /=.
 case ie: (leq_fin yi xi) (leq_nat_of_fin yi xi)=> [e|b].
   case: xi / e {ie} xargs=> xargs _ /=; rewrite leq_finii /= => h.
-  congr (Roll (IndF.Cons _))=> /=.
+  congr (@Roll _ T _ (IndF.Cons _))=> /=.
   elim/arity_ind: {yi} (nth_fin yi) / (hnth _ _) xargs yargs h
       => [[] []|R As cAs IH|j As cAs IH] //=.
     case=> [x xargs] [y yargs] /=.
@@ -482,9 +485,9 @@ Qed.
 
 Lemma trans i : transitive (@le i).
 Proof.
-move=> y x z; elim/indP: i / x y z => i [xi xargs] y z.
-rewrite -(unrollK y) -(unrollK z).
-move: (unroll y) (unroll z)=> {y z} [yi yargs] [zi zargs].
+move=> y x z; elim/(@indP _ T): i / x y z => i [xi xargs] y z.
+rewrite -(@unrollK _ T _ y) -(@unrollK _ T _ z).
+move: (@unroll _ T _ y) (@unroll _ T _ z)=> {y z} [yi yargs] [zi zargs].
 rewrite /le !recE /= -[rec _]/(le) !caseE /=.
 case: (leq_fin yi xi) (leq_nat_of_fin yi xi)=> [e _|b] //.
   case: xi / e xargs=> /= xargs.
@@ -518,8 +521,8 @@ Qed.
 
 Lemma total i : total (@le i).
 Proof.
-elim/indP: i / => i [xi xargs] y.
-rewrite -(unrollK y); case: {y} (unroll y)=> [yi yargs].
+elim/(@indP _ T): i / => i [xi xargs] y.
+rewrite -(@unrollK _ T _ y); case: {y} (unroll _)=> [yi yargs].
 rewrite /le !recE /= -[rec _]/(le) !caseE /= (leq_fin_swap xi yi).
 case: (leq_fin yi xi)=> [e|[] //].
 case: xi / e xargs=> /= xargs.
@@ -542,15 +545,15 @@ End DerOrderType.
 
 Definition pack :=
   fun (T : Type) =>
-  fun n D (T_ind : @indType n D) & phant_id T (Ind.sort T_ind) =>
-  fun (D_ord : decl_inst n sort n) & phant_id D (untag_decl D_ord) =>
+  fun n (T_ind : indType n) & phant_id T (Ind.sort T_ind) =>
+  fun (D_ord : decl_inst n sort n) & phant_id (Ind.decl T_ind) (untag_decl D_ord) =>
   fun (Ts : lift_class Choice.sort n) cTs idx =>
-  let T_ind' := Ind.Pack (@Ind.Mixin n D_ord T (@Ind.Def _ _ (untag_sort Ts) cTs) idx) in
+  let T_ind' := Ind.Pack (@Ind.Mixin n T (@Ind.Def _ (untag_sort Ts) cTs) idx) in
   fun & phant_id T_ind T_ind' =>
-  let T_init := IndF.initAlgType T_ind' in
   let T_choice := lift_class_proj Choice.class Ts in
-  let T_ind_choice := @InitAlgChoiceType n _ Ts T_choice (InitAlg.class T_init) in
-  @ind_porderMixin n D_ord T_ind_choice (type_idx T_ind').
+  let T_ind_choice := @IndChoiceType n Ts T_choice T_ind' in
+  fun sT & phant_id (decl_inst_class D_ord) sT =>
+  @ind_porderMixin n T_ind_choice sT (type_idx T_ind').
 
 End DerOrderType.
 
@@ -558,7 +561,7 @@ Canonical packOrderType disp (T : orderType disp) :=
   DerOrderType.Pack T.
 
 Notation "[ 'derive' 'nored' 'orderMixin' 'for' T ]" :=
-  (@DerOrderType.pack T _ _ _ id _ id _ _ _ id)
+  (@DerOrderType.pack T _ _ id _ id _ _ _ id _ id)
   (at level 0) : form_scope.
 
 Ltac derive_orderMixin T :=
@@ -599,27 +602,27 @@ Implicit Types Tord : orderType tt.
 Definition unit_indMixin :=
   Eval simpl in [indMixin for unit_rect].
 Canonical unit_indType :=
-  Eval hnf in IndType _ unit unit_indMixin.
+  Eval hnf in IndType unit unit_indMixin.
 
 Definition void_indMixin :=
   Eval simpl in [indMixin for Empty_set_rect].
 Canonical void_indType :=
-  Eval hnf in IndType _ void void_indMixin.
+  Eval hnf in IndType void void_indMixin.
 
 Definition bool_indMixin :=
   Eval simpl in [indMixin for bool_rect].
 Canonical bool_indType :=
-  Eval hnf in IndType _ bool bool_indMixin.
+  Eval hnf in IndType bool bool_indMixin.
 
 Definition nat_indMixin :=
   Eval simpl in [indMixin for nat_rect].
 Canonical nat_indType :=
-  Eval hnf in IndType _ nat nat_indMixin.
+  Eval hnf in IndType nat nat_indMixin.
 
 Definition option_indMixin T :=
   Eval simpl in [indMixin for @option_rect T].
 Canonical option_indType T :=
-  Eval hnf in IndType _ (option T) (option_indMixin T).
+  Eval hnf in IndType (option T) (option_indMixin T).
 Definition option_orderMixin Tord :=
   [derive orderMixin for option Tord].
 Canonical option_porderType Tord :=
@@ -634,22 +637,22 @@ Canonical option_orderType Tord :=
 Definition sum_indMixin T1 T2 :=
   Eval simpl in [indMixin for @sum_rect T1 T2].
 Canonical sum_indType T1 T2 :=
-  Eval hnf in IndType _ (T1 + T2) (sum_indMixin T1 T2).
+  Eval hnf in IndType (T1 + T2) (sum_indMixin T1 T2).
 
 Definition prod_indMixin T1 T2 :=
   Eval simpl in [indMixin for @prod_rect T1 T2].
 Canonical prod_indType T1 T2 :=
-  Eval hnf in IndType _ (T1 * T2) (prod_indMixin T1 T2).
+  Eval hnf in IndType (T1 * T2) (prod_indMixin T1 T2).
 
 Definition seq_indMixin T :=
   Eval simpl in [indMixin for @list_rect T].
 Canonical seq_indType T :=
-  Eval hnf in IndType _ (seq T) (seq_indMixin T).
+  Eval hnf in IndType (seq T) (seq_indMixin T).
 
 Definition comparison_indMixin :=
   [indMixin for comparison_rect].
 Canonical comparison_indType :=
-  Eval hnf in IndType _ comparison comparison_indMixin.
+  Eval hnf in IndType comparison comparison_indMixin.
 Definition comparison_eqMixin :=
   [derive eqMixin for comparison].
 Canonical comparison_eqType :=
@@ -670,7 +673,7 @@ Canonical comparison_finType :=
 Definition positive_indMixin :=
   Eval simpl in [indMixin for positive_rect].
 Canonical positive_indType :=
-  Eval hnf in IndType _ positive positive_indMixin.
+  Eval hnf in IndType positive positive_indMixin.
 Definition positive_eqMixin :=
   Eval simpl in [derive eqMixin for positive].
 Canonical positive_eqType :=
@@ -687,7 +690,7 @@ Canonical positive_countType :=
 Definition bin_nat_indMixin :=
   Eval simpl in [indMixin for N_rect].
 Canonical bin_nat_indType :=
-  Eval hnf in IndType _ N bin_nat_indMixin.
+  Eval hnf in IndType N bin_nat_indMixin.
 Definition bin_nat_choiceMixin :=
   Eval simpl in [derive choiceMixin for N].
 Canonical bin_nat_choiceType :=
@@ -700,7 +703,7 @@ Canonical bin_nat_countType :=
 Definition Z_indMixin :=
   Eval simpl in [indMixin for Z_rect].
 Canonical Z_indType :=
-  Eval hnf in IndType _ Z Z_indMixin.
+  Eval hnf in IndType Z Z_indMixin.
 Definition Z_eqMixin :=
   Eval simpl in [derive eqMixin for Z].
 Canonical Z_eqType :=
@@ -717,7 +720,7 @@ Canonical Z_countType :=
 Definition ascii_indMixin :=
   Eval simpl in [indMixin for ascii_rect].
 Canonical ascii_indType :=
-  Eval hnf in IndType _ ascii ascii_indMixin.
+  Eval hnf in IndType ascii ascii_indMixin.
 Definition ascii_eqMixin :=
   Eval simpl in [derive eqMixin for ascii].
 Canonical ascii_eqType :=
@@ -748,7 +751,7 @@ Canonical ascii_orderType :=
 Definition string_indMixin :=
   Eval simpl in [indMixin for string_rect].
 Canonical string_indType :=
-  Eval hnf in IndType _ string string_indMixin.
+  Eval hnf in IndType string string_indMixin.
 Definition string_eqMixin :=
   Eval simpl in [derive eqMixin for string].
 Canonical string_eqType :=

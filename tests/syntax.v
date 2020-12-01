@@ -19,7 +19,7 @@ Inductive base_lit : Set :=
 Definition base_lit_indMixin :=
   [indMixin for base_lit_rect].
 Canonical base_lit_indType :=
-  IndType _ base_lit base_lit_indMixin.
+  IndType base_lit base_lit_indMixin.
 Definition base_lit_eqMixin :=
   [derive lazy eqMixin for base_lit].
 Canonical base_lit_eqType :=
@@ -48,7 +48,7 @@ Inductive un_op : Set :=
 Definition un_op_indMixin :=
   [indMixin for un_op_rect].
 Canonical un_op_indType :=
-  IndType _ un_op un_op_indMixin.
+  IndType un_op un_op_indMixin.
 Definition un_op_eqMixin :=
   [derive eqMixin for un_op].
 Canonical un_op_eqType :=
@@ -85,7 +85,7 @@ Inductive bin_op : Set :=
 Definition bin_op_indMixin :=
   [indMixin for bin_op_rect].
 Canonical bin_op_indType :=
-  IndType _ bin_op bin_op_indMixin.
+  IndType bin_op bin_op_indMixin.
 Definition bin_op_eqMixin :=
   [derive lazy eqMixin for bin_op].
 Canonical bin_op_eqType :=
@@ -161,9 +161,9 @@ Combined Scheme expr_val_rect from expr_rect, val_rect.
 Definition expr_val_indMixin :=
   [indMixin for expr_val_rect].
 Canonical expr_indType :=
-  IndType _ expr expr_val_indMixin.
+  IndType expr expr_val_indMixin.
 Canonical val_indType :=
-  IndType _ val expr_val_indMixin.
+  IndType val expr_val_indMixin.
 Definition expr_eqMixin :=
   [derive lazy eqMixin for expr].
 Canonical expr_eqType :=

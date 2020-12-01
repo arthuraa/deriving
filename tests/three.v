@@ -12,7 +12,7 @@ Inductive three := A of bool & bool | B | C.
 Definition three_indMixin :=
   [indMixin for three_rect].
 Canonical three_indType :=
-  Eval hnf in IndType _ three three_indMixin.
+  Eval hnf in IndType three three_indMixin.
 
 Definition three_eqMixin :=
   [derive eqMixin for three].
