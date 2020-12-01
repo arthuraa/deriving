@@ -785,49 +785,6 @@ Hint Unfold IndF.des_branches_of_fun : deriving.
 Hint Unfold IndF.case : deriving.
 Hint Unfold IndF.unroll : deriving.
 
-Module IndClass.
-
-Section ClassDef.
-
-Variables (n : nat) (K : Type) (KS : K -> Type).
-
-Record class_of T := Class {
-  base  : @Ind.def_class_of n T;
-  mixin : forall i, @sig_class n K KS (Ind.decl base i);
-}.
-
-Record def := Def {sorts : fin n -> Type; _ : class_of sorts}.
-Local Coercion sorts : def >-> Funclass.
-
-Variables (T : fin n -> Type) (cT : def).
-Definition class := let: Def _ c as cT' := cT return class_of cT' in c.
-Definition clone c of phant_id class c := @Def T c.
-Let xT := let: Def T _ := cT in T.
-Notation xclass := (class : class_of xT).
-
-Definition indDef := Ind.Def (base class).
-
-End ClassDef.
-
-Module Exports.
-Coercion sorts : def >-> Funclass.
-Coercion class : def >-> class_of.
-Coercion base  : class_of >-> Ind.def_class_of.
-Coercion indDef : def >-> Ind.def.
-Canonical indDef.
-Notation indClassDef := def.
-Notation IndClassDef := Def.
-End Exports.
-End IndClass.
-
-Export IndClass.Exports.
-
-Hint Unfold IndClass.base : deriving.
-Hint Unfold IndClass.mixin : deriving.
-Hint Unfold IndClass.sorts : deriving.
-Hint Unfold IndClass.class : deriving.
-Hint Unfold IndClass.indDef : deriving.
-
 Section InferInstances.
 
 Import PolyType.
