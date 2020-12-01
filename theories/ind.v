@@ -89,12 +89,12 @@ Arguments lift_class_proj {K sort n cK} class sTs i.
 
 Notation "T -F> S" :=
   (forall i, T i -> S i)
-  (at level 30, no associativity)
+  (at level 30, only parsing, no associativity)
   : deriving_scope.
 
 Notation "T *F S"  :=
   (fun i => T i * S i)%type
-  (at level 20, no associativity)
+  (at level 20, only parsing, no associativity)
   : deriving_scope.
 
 Record functor I := Functor {
