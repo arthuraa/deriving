@@ -62,6 +62,8 @@ Local Notation sig_inst := (sig_inst n Equality.sort).
 Local Notation decl_inst := (decl_inst n Equality.sort n).
 Variable (T : indDef n) (sT : forall i, sig_class Equality.sort (Ind.decl T i)).
 
+Import IndF.
+
 Definition eq_op_branch As (cAs : hlist' arg_class As) :
   hlist' (type_of_arg (T *F (fun i => T i -> bool))) As ->
   hlist' (type_of_arg T)                             As ->
@@ -75,14 +77,14 @@ Definition eq_op_branch As (cAs : hlist' arg_class As) :
 
 (* FIXME: Do we really need these annotations? *)
 Definition eq_op : forall i, T i -> T i -> bool :=
-  @rec  n T   _ (fun i args1 =>
-  @case n T i _ (fun   args2 =>
-     match leq_fin (IndF.constr args2) (IndF.constr args1) with
+  rec  (fun i args1 =>
+  case (fun   args2 =>
+     match leq_fin (constr args2) (constr args1) with
       | inl e =>
         eq_op_branch
-          (hnth (sT i) (IndF.constr args1))
-          (IndF.args args1)
-          (cast (hlist' (type_of_arg T) \o @nth_fin _ _) e (IndF.args args2))
+          (hnth (sT i) (constr args1))
+          (args args1)
+          (cast (hlist' (type_of_arg T) \o @nth_fin _ _) e (args args2))
           true
       | inr _ => false
       end)).
@@ -90,14 +92,14 @@ Definition eq_op : forall i, T i -> T i -> bool :=
 Lemma eq_opP i : Equality.axiom (@eq_op i).
 Proof.
 elim/indP: i / => i [xC xargs] y.
-rewrite /eq_op recE /= -[rec _]/(eq_op) /=.
+rewrite /eq_op recE /= -/eq_op /=.
 rewrite -[y]unrollK caseE; move: {y} (unroll y)=> [yC yargs] /=.
 case le: (leq_fin yC xC)=> [e|b]; last first.
-  constructor=> /(@Roll_inj _ _ i) /= [] e _.
+  constructor=> /Roll_inj /= [] e _.
   by move: le; rewrite e leq_finii.
 case: xC / e xargs {le} => /= xargs.
 apply/(@iffP (hmap' (type_of_arg_map (fun=> tag)) xargs = yargs)); first last.
-- by move=> /(@Roll_inj _ _ i) /IndF.inj.
+- by move=> /Roll_inj /IndF.inj.
 - by move=> <-.
 apply/(iffP idP)=> [H|<-]; last first.
   elim/arity_ind: {yC} _ / (hnth _ _) xargs {yargs}=> //= [|j] S As cAs.
@@ -160,10 +162,10 @@ Section TreeOfInd.
 
 Variables (n : nat) (T : indDef n).
 Let D := Ind.decl T.
-Let F := IndF.functor D.
 
 Import GenTree.
 Import PolyType.
+Import IndF.
 
 Definition ind_arg :=
   hsum (fun i => hsum' (hsum' (type_of_arg (fun=> void))) (D i)).
@@ -193,13 +195,12 @@ Let wrap i (j : Ind.Cidx D i) (k : fin (size (nth_fin j))) :
   | Rec    i' => fun c x => x
   end (@mk_ind_arg i j k).
 
-Definition tree_of_coq_ind i (x : T i) : tree ind_arg :=
-  @rec _ T _ (fun i x =>
-         let j := IndF.constr x in
+Definition tree_of_coq_ind : forall i, T i -> tree ind_arg :=
+  rec (fun i x =>
+         let j := constr x in
          Node (nat_of_fin j)
            (list_of_seq (seq_of_hlist (@wrap i j)
-              (hmap' (type_of_arg_map (fun=> snd)) (IndF.args x)))))
-      i x.
+              (hmap' (type_of_arg_map (fun=> snd)) (args x))))).
 
 Fixpoint coq_ind_of_tree i (x : tree ind_arg) : option (T i) :=
   match x with
@@ -214,14 +215,14 @@ Fixpoint coq_ind_of_tree i (x : tree ind_arg) : option (T i) :=
                        | NonRec R => fun f => if ts.1 is Leaf x then f x else None
                        | Rec i'   => fun _ => ts.2 i'
                        end (@proj_ind_arg i j k)) xs
-    is Some args then Some (@Roll _ T _ (IndF.Cons args))
+    is Some args then Some (Roll (Cons args))
     else None
   end.
 
 Lemma tree_of_coq_indK i : pcancel (@tree_of_coq_ind i) (@coq_ind_of_tree i).
 Proof.
 elim/indP: i / => i [j xs].
-rewrite /tree_of_coq_ind recE /= -[rec _]/(tree_of_coq_ind).
+rewrite /tree_of_coq_ind recE /= -/tree_of_coq_ind.
 rewrite nat_of_finK /hmap' !hmap_comp /=.
 set xs' := hlist_of_seq _ _.
 suffices -> : xs' = Some (hmap' (type_of_arg_map (fun=> tag)) xs) by [].
@@ -299,6 +300,8 @@ Hypothesis sT : forall i, sig_class Finite.sort (D i).
 Hypothesis not_rec :
   all_finb (fun i => all (all (negb \o @is_rec n)) (D i)).
 
+Import IndF.
+
 Definition enum_branch_aux :=
   arity_rec
     _ (fun As => all (negb \o @is_rec n) As -> seq.seq (hlist' (type_of_arg T) As))
@@ -311,12 +314,12 @@ Definition enum_branch i (j : Ind.Cidx D i) :=
                   (allP (all_finbP not_rec i) j).
 
 Definition enum_ind i :=
-  seq.flatten [seq [seq @Roll _ T _ (IndF.Cons args) | args <- enum_branch j]
+  seq.flatten [seq [seq Roll (Cons args) | args <- enum_branch j]
               | j <- list_of_seq (enum_fin (size (D i)))].
 
 Lemma enum_indP i : Finite.axiom (enum_ind i).
 Proof.
-move=> /= x; rewrite -(@unrollK _ T _ x); case: {x} (unroll _)=> j xs.
+move=> /= x; rewrite -(unrollK x); case: {x} (unroll x)=> j xs.
 rewrite /enum_ind count_flatten -!map_comp /comp /=.
 have <- : seq.sumn [seq j == j' : nat | j' <- list_of_seq (enum_fin (size (D i)))] = 1.
   rewrite /Ind.Cidx in j {xs} *.
@@ -329,7 +332,7 @@ have [<- {j'}|ne] /= := altP (j =P j').
   set P := preim _ _.
   have PP : forall ys, reflect (xs = ys) (P ys).
     move=> ys; rewrite /P /=; apply/(iffP idP); last by move=> ->.
-    by move=> /eqP/(@Roll_inj _ T i)/(@IndF.inj n D _ i) ->.
+    by move=> /eqP/Roll_inj/IndF.inj ->.
   move: P PP.
   rewrite /enum_branch.
   elim/arity_ind: {j} _ / (hnth _ j) xs (allP _ _)=> //=.
@@ -352,7 +355,7 @@ have [<- {j'}|ne] /= := altP (j =P j').
 set P := preim _ _.
 rewrite (@eq_count _ _ pred0) ?count_pred0 //.
 move=> ys /=; apply/negbTE; apply: contra ne.
-by move=> /eqP/(@Roll_inj _ T i)/(congr1 (@IndF.constr _ _ _ i)) /= ->.
+by move=> /eqP/Roll_inj/(congr1 (@constr _ _ _ i)) /= ->.
 Qed.
 
 End FinType.
@@ -423,6 +426,8 @@ Variable (T : indChoiceType n).
 Notation D := (Ind.decl T).
 Variable (sT : forall i, sig_class sort (D i)).
 
+Import IndF.
+
 Definition le_branch As (cAs : hlist' arg_class As) :
   hlist' (type_of_arg (T *F (fun i => T i -> bool))) As ->
   hlist' (type_of_arg T)                             As ->
@@ -439,21 +444,21 @@ Definition le_branch As (cAs : hlist' arg_class As) :
        if x.(hd).1 == y.(hd) then rec x.(tl) y.(tl) else x.(hd).2 y.(hd)) As cAs.
 
 Definition le : forall i, T i -> T i -> bool :=
-  @rec  n T _ (fun i args1 =>
-  @case n T _ _ (fun   args2 =>
-          match leq_fin (IndF.constr args2) (IndF.constr args1) with
+  rec  (fun i args1 =>
+  case (fun   args2 =>
+          match leq_fin (constr args2) (constr args1) with
           | inl e =>
             le_branch
-              (hnth (sT i) (IndF.constr args1))
-              (IndF.args args1)
-              (cast (hlist' (type_of_arg T) \o @nth_fin _ _) e (IndF.args args2))
+              (hnth (sT i) (constr args1))
+              (args args1)
+              (cast (hlist' (type_of_arg T) \o @nth_fin _ _) e (args args2))
           | inr b => ~~ b
           end)).
 
 Lemma refl i : reflexive (@le i).
 Proof.
-elim/(@indP _ T): i / => i [j args].
-rewrite /le recE /= -[rec _]/(le) caseE leq_finii /=.
+elim/indP: i / => i [j args].
+rewrite /le recE /= -/le caseE leq_finii /=.
 elim/arity_ind: {j} _ / (hnth _ _) args=> [[]|R As cAs IH|j As cAs IH] //=.
   case=> [x args]; rewrite /= eqxx; exact: IH.
 by case=> [[x xP] args] /=; rewrite eqxx; exact: IH.
@@ -461,12 +466,12 @@ Qed.
 
 Lemma anti i : antisymmetric (@le i).
 Proof.
-elim/(@indP _ T): i / => i [xi xargs] y.
-rewrite -(@unrollK _ T _ y); case: {y} (unroll _)=> [yi yargs].
-rewrite /le !recE -[rec _]/(le) /= !caseE /=.
+elim/indP: i / => i [xi xargs] y.
+rewrite -[y]unrollK; case: {y} (unroll _)=> [yi yargs].
+rewrite /le !recE -/le /= !caseE /=.
 case ie: (leq_fin yi xi) (leq_nat_of_fin yi xi)=> [e|b].
   case: xi / e {ie} xargs=> xargs _ /=; rewrite leq_finii /= => h.
-  congr (@Roll _ T _ (IndF.Cons _))=> /=.
+  congr (Roll (Cons _))=> /=.
   elim/arity_ind: {yi} (nth_fin yi) / (hnth _ _) xargs yargs h
       => [[] []|R As cAs IH|j As cAs IH] //=.
     case=> [x xargs] [y yargs] /=.
@@ -485,10 +490,10 @@ Qed.
 
 Lemma trans i : transitive (@le i).
 Proof.
-move=> y x z; elim/(@indP _ T): i / x y z => i [xi xargs] y z.
-rewrite -(@unrollK _ T _ y) -(@unrollK _ T _ z).
-move: (@unroll _ T _ y) (@unroll _ T _ z)=> {y z} [yi yargs] [zi zargs].
-rewrite /le !recE /= -[rec _]/(le) !caseE /=.
+move=> y x z; elim/indP: i / x y z => i [xi xargs] y z.
+rewrite -[y]unrollK -[z]unrollK.
+move: (unroll y) (unroll z)=> {y z} [yi yargs] [zi zargs].
+rewrite /le !recE /= -/le !caseE /=.
 case: (leq_fin yi xi) (leq_nat_of_fin yi xi)=> [e _|b] //.
   case: xi / e xargs=> /= xargs.
   case: (leq_fin zi yi) (leq_nat_of_fin zi yi)=> [e _|b] //.
@@ -521,9 +526,9 @@ Qed.
 
 Lemma total i : total (@le i).
 Proof.
-elim/(@indP _ T): i / => i [xi xargs] y.
-rewrite -(@unrollK _ T _ y); case: {y} (unroll _)=> [yi yargs].
-rewrite /le !recE /= -[rec _]/(le) !caseE /= (leq_fin_swap xi yi).
+elim/indP: i / => i [xi xargs] y.
+rewrite -[y]unrollK; case: {y} (unroll _)=> [yi yargs].
+rewrite /le !recE /= -/le !caseE /= (leq_fin_swap xi yi).
 case: (leq_fin yi xi)=> [e|[] //].
 case: xi / e xargs=> /= xargs.
 elim/arity_ind: {yi} _ / (hnth _ _) xargs yargs=> [[] []|R|j] //= As cAs IH.
