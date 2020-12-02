@@ -38,7 +38,7 @@ Ltac ind_def rec :=
     let case := constr:(fun S : fin n -> Type => case (fun i _ => S i)) in
     let case := constr:(@Ind.destructor_of_recursor n D Ts case) in
     let case := eval deriving_compute in case in
-    refine (IndDef (@Ind.DefClass n Ts D Cs (fun S => Rec' (fun i _ => S i)) case _ _ rec));
+    refine (IndDef (@Ind.Def.Class n Ts D Cs (fun S => Rec' (fun i _ => S i)) case _ _ rec));
     abstract (deriving_compute; intuition)
   end.
 
@@ -54,13 +54,14 @@ Module DerEqType.
 
 Section EqType.
 
-Variable (n : nat).
+Variable T : indDef.
+Notation n := (Ind.Def.n T).
 Local Notation arg_class := (@arg_class n _ Equality.sort).
 Local Notation arg_inst := (arg_inst n Equality.sort).
 Local Notation arity_inst := (arity_inst n Equality.sort).
 Local Notation sig_inst := (sig_inst n Equality.sort).
 Local Notation decl_inst := (decl_inst n Equality.sort n).
-Variable (T : indDef n) (sT : forall i, sig_class Equality.sort (Ind.decl T i)).
+Variable (sT : forall i, sig_class Equality.sort (Ind.Def.decl T i)).
 
 Import IndF.
 
@@ -117,21 +118,17 @@ Qed.
 End EqType.
 
 Definition pack :=
-  fun (T : Type) =>
-  fun n (T_ind : indType n) & phant_id T (Ind.sort T_ind) =>
-  fun (D_eq : decl_inst n Equality.sort n) =>
-  fun & phant_id (Ind.decl T_ind) (untag_decl D_eq) =>
-  fun Ts cTs idx =>
-  fun (T_ind' := Ind.Pack (@Ind.Mixin n T (@Ind.Def _ Ts cTs) idx)) =>
-  fun & phant_id T_ind T_ind' =>
+  fun (T_ind : indType) =>
+  fun (D_eq : decl_inst (Ind.Def.n T_ind) Equality.sort (Ind.Def.n T_ind)) =>
+  fun & phant_id (Ind.Def.decl T_ind) (untag_decl D_eq) =>
   fun sT & phant_id (decl_inst_class D_eq) sT =>
-  cast Equality.mixin_of (type_idxP T_ind')^-1
-    (@EqMixin _ _ (@eq_opP n T_ind' sT (type_idx T_ind'))).
+  cast Equality.mixin_of (Ind.idxE T_ind)^-1
+    (@EqMixin _ _ (@eq_opP T_ind sT (Ind.idx T_ind))).
 
 End DerEqType.
 
 Notation "[ 'derive' 'nored' 'eqMixin' 'for' T ]" :=
-  (@DerEqType.pack T _ _ id _ id _ _ _ id _ id)
+  (@DerEqType.pack [indType of T] _ id _ id)
   (at level 0) : form_scope.
 
 Ltac derive_eqMixin T :=
@@ -160,8 +157,9 @@ Notation "[ 'derive' 'lazy' 'eqMixin' 'for' T ]" :=
 
 Section TreeOfInd.
 
-Variables (n : nat) (T : indDef n).
-Let D := Ind.decl T.
+Variables (T : indDef).
+Notation n := (Ind.Def.n T).
+Let D := Ind.Def.decl T.
 
 Import GenTree.
 Import PolyType.
@@ -238,15 +236,15 @@ End TreeOfInd.
 
 Definition pack_tree_of_indK :=
   fun (T : Type) =>
-  fun n (sT_ind : indType n) & phant_id (Ind.sort sT_ind) T =>
-  @tree_of_coq_indK _ sT_ind (type_idx sT_ind).
+  fun (sT_ind : indType) & phant_id (Ind.sort sT_ind) T =>
+  @tree_of_coq_indK sT_ind (Ind.idx sT_ind).
 
 Notation "[ 'derive' 'choiceMixin' 'for' T ]" :=
-  (PcanChoiceMixin (@pack_tree_of_indK T _ _ id))
+  (PcanChoiceMixin (@pack_tree_of_indK T _ id))
   (at level 0, format "[ 'derive'  'choiceMixin'  'for'  T ]") : form_scope.
 
 Notation "[ 'derive' 'countMixin' 'for' T ]" :=
-  (PcanCountMixin (@pack_tree_of_indK T _ _ id))
+  (PcanCountMixin (@pack_tree_of_indK T _ id))
   (at level 0, format "[ 'derive' 'countMixin'  'for'  T ]") : form_scope.
 
 Module DerFinType.
@@ -292,8 +290,9 @@ Fixpoint all_finbP n : forall (f : fin n -> bool),
 
 (** It is strange to derive a finType instance for a mutually inductive type,
 but you never know...*)
-Variable (n : nat) (T : indCountType n).
-Notation D := (Ind.decl T).
+Variable (T : indCountType).
+Notation n := (Ind.Def.n T).
+Notation D := (Ind.Def.decl T).
 
 Hypothesis sT : forall i, sig_class Finite.sort (D i).
 
@@ -361,18 +360,16 @@ Qed.
 End FinType.
 
 Definition pack :=
-  fun (T : Type) =>
-  fun n (T_ind : indType n) & phant_id T (Ind.sort T_ind) =>
-  fun (D_fin : decl_inst n Finite.sort n) =>
-  fun & phant_id (Ind.decl T_ind) (untag_decl D_fin) =>
-  fun (Ts : lift_class Countable.sort n) cTs idx =>
-  let T_ind' := Ind.Pack (@Ind.Mixin n T (@Ind.Def _ (untag_sort Ts) cTs) idx) in
-  fun & phant_id T_ind T_ind' =>
-  let T_count := lift_class_proj Countable.class Ts in
-  let T_ind_count := @IndCountType n Ts T_count T_ind' in
+  fun (T_ind : indType) =>
+  fun (D_fin : decl_inst (Ind.Def.n T_ind) Finite.sort (Ind.Def.n T_ind)) =>
+  fun & phant_id (Ind.Def.decl T_ind) (untag_decl D_fin) =>
+  fun (Ts : lift_class Countable.sort (Ind.Def.n T_ind)) =>
+  fun & phant_id (@Ind.Def.sorts T_ind) (untag_sort Ts) =>
+  fun T_count & phant_id (lift_class_proj Countable.class Ts) T_count =>
+  let T_ind_count := @IndCountType _ _ T_count T_ind in
   fun sT & phant_id (decl_inst_class D_fin) sT =>
-  fun (not_rec : all_finb (fun i => all (all (negb \o @is_rec n)) (Ind.decl T_ind' i))) =>
-  FinMixin (@enum_indP n T_ind_count sT not_rec (type_idx T_ind')).
+  fun (not_rec : all_finb (fun i => all (all (negb \o @is_rec (Ind.Def.n T_ind))) (Ind.Def.decl T_ind i))) =>
+  FinMixin (@enum_indP T_ind_count sT not_rec (Ind.idx T_ind)).
 
 End DerFinType.
 
@@ -382,7 +379,7 @@ override this behavior by using the [[derive red finMixin for T]] variant
 below. *)
 
 Notation "[ 'derive' 'finMixin' 'for' T ]" :=
-  (@DerFinType.pack T _ _ id _ id _ _ _ id _ id erefl)
+  (@DerFinType.pack [indType of T] _ id _ id _ id _ id erefl)
   (at level 0) : form_scope.
 
 Ltac derive_red_finMixin T :=
@@ -416,14 +413,14 @@ Record packedOrderType := Pack {
 
 Section Def.
 
-Variable n : nat.
+Variable (T : indChoiceType).
+Notation n := (Ind.Def.n T).
+Notation D := (Ind.Def.decl T).
 Notation arg_class  := (arg_class  sort).
 Notation arg_inst   := (arg_inst   n sort).
 Notation arity_inst := (arity_inst n sort).
 Notation sig_inst   := (sig_inst   n sort).
 Notation decl_inst  := (decl_inst  n sort).
-Variable (T : indChoiceType n).
-Notation D := (Ind.decl T).
 Variable (sT : forall i, sig_class sort (D i)).
 
 Import IndF.
@@ -549,16 +546,15 @@ End Def.
 End DerOrderType.
 
 Definition pack :=
-  fun (T : Type) =>
-  fun n (T_ind : indType n) & phant_id T (Ind.sort T_ind) =>
-  fun (D_ord : decl_inst n sort n) & phant_id (Ind.decl T_ind) (untag_decl D_ord) =>
-  fun (Ts : lift_class Choice.sort n) cTs idx =>
-  let T_ind' := Ind.Pack (@Ind.Mixin n T (@Ind.Def _ (untag_sort Ts) cTs) idx) in
-  fun & phant_id T_ind T_ind' =>
-  let T_choice := lift_class_proj Choice.class Ts in
-  let T_ind_choice := @IndChoiceType n Ts T_choice T_ind' in
+  fun (T_ind : indType) =>
+  fun (D_ord : decl_inst (Ind.Def.n T_ind) sort (Ind.Def.n T_ind)) =>
+  fun & phant_id (Ind.Def.decl T_ind) (untag_decl D_ord) =>
+  fun (Ts : lift_class Choice.sort (Ind.Def.n T_ind)) =>
+  fun & phant_id (@Ind.Def.sorts T_ind) (untag_sort Ts) =>
+  fun T_choice & phant_id (lift_class_proj Choice.class Ts) T_choice =>
+  let T_ind_choice := @IndChoiceType _ _ T_choice T_ind in
   fun sT & phant_id (decl_inst_class D_ord) sT =>
-  @ind_porderMixin n T_ind_choice sT (type_idx T_ind').
+  @ind_porderMixin T_ind_choice sT (Ind.idx T_ind).
 
 End DerOrderType.
 
@@ -566,7 +562,7 @@ Canonical packOrderType disp (T : orderType disp) :=
   DerOrderType.Pack T.
 
 Notation "[ 'derive' 'nored' 'orderMixin' 'for' T ]" :=
-  (@DerOrderType.pack T _ _ id _ id _ _ _ id _ id)
+  (@DerOrderType.pack [indType of T] _ id _ id _ id _ id)
   (at level 0) : form_scope.
 
 Ltac derive_orderMixin T :=
@@ -629,7 +625,7 @@ Definition option_indMixin T :=
 Canonical option_indType T :=
   Eval hnf in IndType (option T) (option_indMixin T).
 Definition option_orderMixin Tord :=
-  [derive orderMixin for option Tord].
+  [derive lazy orderMixin for option Tord].
 Canonical option_porderType Tord :=
   Eval hnf in POrderType tt (option Tord) (option_orderMixin Tord).
 Canonical option_latticeType Tord :=
