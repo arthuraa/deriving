@@ -27,9 +27,9 @@ with   baz_rect := Induction for baz Sort Type.
 Combined Scheme foo_bar_baz_rect from foo_rect, bar_rect, baz_rect.
 
 Definition foo_bar_baz_indDef := [indDef for foo_bar_baz_rect].
-Canonical foo_indType := IndType _ foo foo_bar_baz_indDef.
-Canonical bar_indType := IndType _ bar foo_bar_baz_indDef.
-Canonical baz_indType := IndType _ baz foo_bar_baz_indDef.
+Canonical foo_indType := IndType foo foo_bar_baz_indDef.
+Canonical bar_indType := IndType bar foo_bar_baz_indDef.
+Canonical baz_indType := IndType baz foo_bar_baz_indDef.
 
 Definition foo_eqMixin := [derive lazy eqMixin for foo].
 Canonical foo_eqType := EqType foo foo_eqMixin.
