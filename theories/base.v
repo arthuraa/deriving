@@ -5,11 +5,14 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 Set Universe Polymorphism.
+Set Primitive Projections.
 
 Declare Scope deriving_scope.
 Delimit Scope deriving_scope with deriving.
 Open Scope deriving_scope.
 Create HintDb deriving.
+
+Notation "f \o g" := (fun x => f (g x)) (only parsing) : deriving_scope.
 
 Definition eq_eqb (T : eqType) x y (p q : x = y :> T) := true.
 

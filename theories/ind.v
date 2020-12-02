@@ -448,8 +448,8 @@ End Basic.
 
 Module Def.
 
-Record class_of n sorts := Class {
-  decl      : declaration n;
+Set Primitive Projections.
+Record class_of n sorts (decl : declaration n) := Class {
   Cons      : constructors decl sorts;
   rec       : recursor decl sorts;
   case      : destructor decl sorts;
@@ -461,18 +461,22 @@ Record class_of n sorts := Class {
 Record type := Pack {
   n : nat;
   sorts : fin n -> Type;
-  class : class_of sorts
+  decl : declaration n;
+  class : class_of sorts decl;
 }.
+Unset Primitive Projections.
 
 End Def.
 
 Section ClassDef.
 
+Set Primitive Projections.
 Record mixin_of T := Mixin {
   def  : Def.type;
   idx  : fin (Def.n def);
   idxE : T = Def.sorts idx;
 }.
+Unset Primitive Projections.
 
 Record type := Pack {sort : Type; _ : mixin_of sort}.
 Local Coercion sort : type >-> Sortclass.
@@ -480,8 +484,8 @@ Local Notation class_of := mixin_of.
 
 Variables (T : Type) (cT : type).
 Definition class := let: Pack _ c as cT' := cT return class_of cT' in c.
-Definition clone n Ts cTs i iE :=
-  let sTs := @Mixin T (@Def.Pack n Ts cTs) i iE in
+Definition clone n Ts D cTs i iE :=
+  let sTs := @Mixin T (@Def.Pack n Ts D cTs) i iE in
   fun & phant_id class sTs => @Pack T sTs.
 Let xT := let: Pack T _ := cT in T.
 Notation xclass := (class : class_of xT).
@@ -500,12 +504,14 @@ Coercion sort : type >-> Sortclass.
 Coercion class : type >-> class_of.
 Coercion def : class_of >-> indDef.
 Notation indType := type.
-Notation "[ 'indType' 'of' T ]" := (@clone T _ _ _ _ _ _ id)
+Notation "[ 'indType' 'of' T ]" := (@clone T _ _ _ _ _ _ _ id)
   (at level 0, format "[ 'indType'  'of'  T ]") : form_scope.
 End Exports.
 
 End Ind.
 Export Ind.Exports.
+
+Arguments Ind.Def.decl : clear implicits.
 
 Class find_idx n (Ts : fin n -> Type) (T : Type) i (e : T = Ts i) :=
   make_find_idx { }.
@@ -557,12 +563,12 @@ Hint Unfold Ind.destructor_of_recursor : deriving.
 Hint Unfold Ind.ind_branch' : deriving.
 Hint Unfold Ind.ind_branch : deriving.
 Hint Unfold Ind.induction : deriving.
-Hint Unfold Ind.Def.decl : deriving.
 Hint Unfold Ind.Def.Cons : deriving.
 Hint Unfold Ind.Def.rec : deriving.
 Hint Unfold Ind.Def.case : deriving.
 Hint Unfold Ind.Def.n : deriving.
 Hint Unfold Ind.Def.sorts : deriving.
+Hint Unfold Ind.Def.decl : deriving.
 Hint Unfold Ind.Def.class : deriving.
 Hint Unfold Ind.class : deriving.
 Hint Unfold Ind.def : deriving.
@@ -642,7 +648,7 @@ Notation F := (@fobj _ D).
 Arguments Cons {n D T i} _ _.
 
 Definition Roll i (x : F T i) : T i :=
-  @Ind.Def.Cons _ _ T i (constr x) (args x).
+  @Ind.Def.Cons _ _ _ T i (constr x) (args x).
 
 Definition rec_branches_of_fun S (body : F (T *F S) -F> S) :
   hlist2 (@Ind.rec_branch _ D T S) :=
@@ -653,7 +659,7 @@ Definition rec_branches_of_fun S (body : F (T *F S) -F> S) :
          (fun l => body i (Cons j l))))).
 
 Definition rec S (body : F (T *F S) -F> S) :=
-  @Ind.Def.rec _ _ T S (rec_branches_of_fun body).
+  @Ind.Def.rec _ _ _ T S (rec_branches_of_fun body).
 
 Definition lift_type R i : fin (Ind.Def.n T) -> Type :=
   fun j => if leq_fin i j is inl e then R else unit.
@@ -678,7 +684,7 @@ Definition des_branches_of_fun i R (body : F T i -> R) :
 
 Definition case i R (body : F T i -> R) x :=
   cast id (lift_typeE R i)
-    (@Ind.Def.case _ _ T _ (des_branches_of_fun body) i x).
+    (@Ind.Def.case _ _ _ T _ (des_branches_of_fun body) i x).
 
 Lemma recE S f i (a : F T i) :
   @rec S f i (Roll a) =
@@ -730,7 +736,7 @@ have {}IH i (a : F (fun j => {x & Q j x}) i) :
   by apply: (Q_of_P); apply: IH.
 move=> i x {P_of_QK Q_of_PK Q_of_P TP_of_TQ}; apply: P_of_Q.
 move: {P} Q IH i x.
-rewrite /Roll; case: (T) => n S [/= D Cs _ _ _ _ indP] P.
+rewrite /Roll; case: (T) => n S D [/= Cs _ _ _ _ indP] P.
 have {}indP :
     (forall i j, Ind.ind_branch' P (Cs i j)) ->
     (forall i x, P i x).
@@ -932,8 +938,9 @@ Module IndEqType.
 Record type := Pack {
   n         : nat;
   sorts     : fin n -> Type;
+  decl      : declaration n;
   eq_class  : forall i, Equality.class_of (sorts i);
-  ind_class : Ind.Def.class_of sorts;
+  ind_class : Ind.Def.class_of sorts decl;
 }.
 
 Definition eqType T i := Equality.Pack (@eq_class T i).
@@ -954,6 +961,7 @@ Export IndEqType.Exports.
 
 Hint Unfold IndEqType.n : deriving.
 Hint Unfold IndEqType.sorts : deriving.
+Hint Unfold IndEqType.decl : deriving.
 Hint Unfold IndEqType.eq_class : deriving.
 Hint Unfold IndEqType.ind_class : deriving.
 Hint Unfold IndEqType.eqType : deriving.
@@ -964,8 +972,9 @@ Module IndChoiceType.
 Record type := Pack {
   n            : nat;
   sorts        : fin n -> Type;
+  decl         : declaration n;
   choice_class : forall i, Choice.class_of (sorts i);
-  ind_class    : Ind.Def.class_of sorts;
+  ind_class    : Ind.Def.class_of sorts decl;
 }.
 
 Definition eqType T i := Equality.Pack (@choice_class T i).
@@ -988,6 +997,7 @@ Export IndChoiceType.Exports.
 
 Hint Unfold IndChoiceType.n : deriving.
 Hint Unfold IndChoiceType.sorts : deriving.
+Hint Unfold IndChoiceType.decl : deriving.
 Hint Unfold IndChoiceType.choice_class : deriving.
 Hint Unfold IndChoiceType.ind_class : deriving.
 Hint Unfold IndChoiceType.eqType : deriving.
@@ -999,8 +1009,9 @@ Module IndCountType.
 Record type := Pack {
   n           : nat;
   sorts       : fin n -> Type;
+  decl        : declaration n;
   count_class : forall i, Countable.class_of (sorts i);
-  ind_class   : Ind.Def.class_of sorts;
+  ind_class   : Ind.Def.class_of sorts decl;
 }.
 
 Definition eqType T i := Equality.Pack (@count_class T i).
@@ -1025,6 +1036,7 @@ Export IndCountType.Exports.
 
 Hint Unfold IndCountType.n : deriving.
 Hint Unfold IndCountType.sorts : deriving.
+Hint Unfold IndCountType.decl : deriving.
 Hint Unfold IndCountType.count_class : deriving.
 Hint Unfold IndCountType.ind_class : deriving.
 Hint Unfold IndCountType.eqType : deriving.
