@@ -7,3 +7,4 @@
 CoqMakefile
 CoqMakefile.conf
 theories/tactics.v
+.dir-locals.el
