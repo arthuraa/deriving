@@ -12,10 +12,10 @@ Inductive tree (T : Type) :=
 | Node of T & tree T & tree T.
 Arguments Leaf {_} _.
 
-Definition tree_indMixin T :=
-  [indMixin for @tree_rect T].
+Definition tree_indDef T :=
+  [indDef for @tree_rect T].
 Canonical tree_indType T :=
-  Eval hnf in IndType (tree T) (tree_indMixin T).
+  Eval hnf in IndType (tree T) (tree_indDef T).
 
 Definition tree_eqMixin (T : eqType) :=
   [derive eqMixin for tree T].

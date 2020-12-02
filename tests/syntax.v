@@ -16,10 +16,10 @@ lang
 Inductive base_lit : Set :=
   | LitInt (n : nat) | LitBool (b : bool) | LitUnit | LitPoison
   | LitLoc (l : nat) | LitProphecy (p: nat).
-Definition base_lit_indMixin :=
-  [indMixin for base_lit_rect].
+Definition base_lit_indDef :=
+  [indDef for base_lit_rect].
 Canonical base_lit_indType :=
-  IndType base_lit base_lit_indMixin.
+  IndType base_lit base_lit_indDef.
 Definition base_lit_eqMixin :=
   [derive lazy eqMixin for base_lit].
 Canonical base_lit_eqType :=
@@ -45,10 +45,10 @@ Canonical base_lit_orderType :=
 
 Inductive un_op : Set :=
   | NegOp | MinusUnOp.
-Definition un_op_indMixin :=
-  [indMixin for un_op_rect].
+Definition un_op_indDef :=
+  [indDef for un_op_rect].
 Canonical un_op_indType :=
-  IndType un_op un_op_indMixin.
+  IndType un_op un_op_indDef.
 Definition un_op_eqMixin :=
   [derive eqMixin for un_op].
 Canonical un_op_eqType :=
@@ -82,10 +82,10 @@ Inductive bin_op : Set :=
   | ShiftLOp | ShiftROp
   | LeOp | LtOp | EqOp
   | OffsetOp.
-Definition bin_op_indMixin :=
-  [indMixin for bin_op_rect].
+Definition bin_op_indDef :=
+  [indDef for bin_op_rect].
 Canonical bin_op_indType :=
-  IndType bin_op bin_op_indMixin.
+  IndType bin_op bin_op_indDef.
 Definition bin_op_eqMixin :=
   [derive lazy eqMixin for bin_op].
 Canonical bin_op_eqType :=
@@ -158,12 +158,12 @@ with   val_rect  := Induction for val  Sort Type.
 
 Combined Scheme expr_val_rect from expr_rect, val_rect.
 
-Definition expr_val_indMixin :=
-  [indMixin for expr_val_rect].
+Definition expr_val_indDef :=
+  [indDef for expr_val_rect].
 Canonical expr_indType :=
-  IndType expr expr_val_indMixin.
+  IndType expr expr_val_indDef.
 Canonical val_indType :=
-  IndType val expr_val_indMixin.
+  IndType val expr_val_indDef.
 Definition expr_eqMixin :=
   [derive lazy eqMixin for expr].
 Canonical expr_eqType :=

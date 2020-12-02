@@ -41,8 +41,8 @@ Definition seq_rose_rect
 
 Combined Scheme rose_seq_rose_rect from rose_rect, seq_rose_rect.
 
-Definition rose_seq_rose_indMixin := [indMixin for rose_seq_rose_rect].
-Canonical rose_indType := IndType rose rose_seq_rose_indMixin.
+Definition rose_seq_rose_indDef := [indDef for rose_seq_rose_rect].
+Canonical rose_indType := IndType rose rose_seq_rose_indDef.
 Definition rose_eqMixin := [derive eqMixin for rose].
 Canonical rose_eqType := EqType rose rose_eqMixin.
 Definition rose_choiceMixin := [derive choiceMixin for rose].
