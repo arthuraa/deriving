@@ -7,5 +7,11 @@
 theories/base.v
 theories/ind.v
 theories/tactics.v
+theories/infer.v
 theories/instances.v
 theories/deriving.v
+
+theories/instances/eqtype.v
+theories/instances/tree_of_ind.v
+theories/instances/fintype.v
+theories/instances/order.v
