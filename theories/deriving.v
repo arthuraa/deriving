@@ -1,1 +1,1 @@
-From deriving Require Export ind tactics instances.
+From deriving Require Export ind tactics infer instances.
