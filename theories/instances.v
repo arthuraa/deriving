@@ -19,29 +19,29 @@ Implicit Types Teq : eqType.
 Implicit Types Tord : orderType tt.
 
 Definition unit_indDef :=
-  Eval simpl in [indDef for unit_rect].
+  [indDef for unit_rect].
 Canonical unit_indType :=
-  Eval hnf in IndType unit unit_indDef.
+  IndType unit unit_indDef.
 
 Definition void_indDef :=
-  Eval simpl in [indDef for Empty_set_rect].
+  [indDef for Empty_set_rect].
 Canonical void_indType :=
-  Eval hnf in IndType void void_indDef.
+  IndType void void_indDef.
 
 Definition bool_indDef :=
-  Eval simpl in [indDef for bool_rect].
+  [indDef for bool_rect].
 Canonical bool_indType :=
-  Eval hnf in IndType bool bool_indDef.
+  IndType bool bool_indDef.
 
 Definition nat_indDef :=
-  Eval simpl in [indDef for nat_rect].
+  [indDef for nat_rect].
 Canonical nat_indType :=
-  Eval hnf in IndType nat nat_indDef.
+  IndType nat nat_indDef.
 
 Definition option_indDef T :=
-  Eval simpl in [indDef for @option_rect T].
+  [indDef for @option_rect T].
 Canonical option_indType T :=
-  Eval hnf in IndType (option T) (option_indDef T).
+  IndType (option T) (option_indDef T).
 Definition option_orderMixin Tord :=
   [derive orderMixin for option Tord].
 Canonical option_porderType Tord :=
@@ -54,106 +54,106 @@ Canonical option_orderType Tord :=
   Eval hnf in OrderType (option Tord) (option_orderMixin Tord).
 
 Definition sum_indDef T1 T2 :=
-  Eval simpl in [indDef for @sum_rect T1 T2].
+  [indDef for @sum_rect T1 T2].
 Canonical sum_indType T1 T2 :=
-  Eval hnf in IndType (T1 + T2) (sum_indDef T1 T2).
+  IndType (T1 + T2) (sum_indDef T1 T2).
 
 Definition prod_indDef T1 T2 :=
-  Eval simpl in [indDef for @prod_rect T1 T2].
+  [indDef for @prod_rect T1 T2].
 Canonical prod_indType T1 T2 :=
-  Eval hnf in IndType (T1 * T2) (prod_indDef T1 T2).
+  IndType (T1 * T2) (prod_indDef T1 T2).
 
 Definition seq_indDef T :=
-  Eval simpl in [indDef for @list_rect T].
+  [indDef for @list_rect T].
 Canonical seq_indType T :=
-  Eval hnf in IndType (seq T) (seq_indDef T).
+  IndType (seq T) (seq_indDef T).
 
 Definition comparison_indDef :=
   [indDef for comparison_rect].
 Canonical comparison_indType :=
-  Eval hnf in IndType comparison comparison_indDef.
+  IndType comparison comparison_indDef.
 Definition comparison_eqMixin :=
   [derive eqMixin for comparison].
 Canonical comparison_eqType :=
   Eval hnf in EqType comparison comparison_eqMixin.
 Definition comparison_choiceMixin :=
-  Eval simpl in [derive choiceMixin for comparison].
+  [derive choiceMixin for comparison].
 Canonical comparison_choiceType :=
   Eval hnf in ChoiceType comparison comparison_choiceMixin.
 Definition comparison_countMixin :=
-  Eval simpl in [derive countMixin for comparison].
+  [derive countMixin for comparison].
 Canonical comparison_countType :=
   Eval hnf in CountType comparison comparison_countMixin.
 Definition comparison_finMixin :=
-  Eval simpl in [derive finMixin for comparison].
+  [derive finMixin for comparison].
 Canonical comparison_finType :=
   Eval hnf in FinType comparison comparison_finMixin.
 
 Definition positive_indDef :=
-  Eval simpl in [indDef for positive_rect].
+  [indDef for positive_rect].
 Canonical positive_indType :=
-  Eval hnf in IndType positive positive_indDef.
+  IndType positive positive_indDef.
 Definition positive_eqMixin :=
-  Eval simpl in [derive eqMixin for positive].
+  [derive eqMixin for positive].
 Canonical positive_eqType :=
   Eval hnf in EqType positive positive_eqMixin.
 Definition positive_choiceMixin :=
-  Eval simpl in [derive choiceMixin for positive].
+  [derive choiceMixin for positive].
 Canonical positive_choiceType :=
   Eval hnf in ChoiceType positive positive_choiceMixin.
 Definition positive_countMixin :=
-  Eval simpl in [derive countMixin for positive].
+  [derive countMixin for positive].
 Canonical positive_countType :=
   Eval hnf in CountType positive positive_countMixin.
 
 Definition bin_nat_indDef :=
-  Eval simpl in [indDef for N_rect].
+  [indDef for N_rect].
 Canonical bin_nat_indType :=
-  Eval hnf in IndType N bin_nat_indDef.
+  IndType N bin_nat_indDef.
 Definition bin_nat_choiceMixin :=
-  Eval simpl in [derive choiceMixin for N].
+  [derive choiceMixin for N].
 Canonical bin_nat_choiceType :=
   Eval hnf in ChoiceType N bin_nat_choiceMixin.
 Definition bin_nat_countMixin :=
-  Eval simpl in [derive countMixin for N].
+  [derive countMixin for N].
 Canonical bin_nat_countType :=
   Eval hnf in CountType N bin_nat_countMixin.
 
 Definition Z_indDef :=
-  Eval simpl in [indDef for Z_rect].
+  [indDef for Z_rect].
 Canonical Z_indType :=
-  Eval hnf in IndType Z Z_indDef.
+  IndType Z Z_indDef.
 Definition Z_eqMixin :=
-  Eval simpl in [derive eqMixin for Z].
+  [derive eqMixin for Z].
 Canonical Z_eqType :=
   Eval hnf in EqType Z Z_eqMixin.
 Definition Z_choiceMixin :=
-  Eval simpl in [derive choiceMixin for Z].
+  [derive choiceMixin for Z].
 Canonical Z_choiceType :=
   Eval hnf in ChoiceType Z Z_choiceMixin.
 Definition Z_countMixin :=
-  Eval simpl in [derive countMixin for Z].
+  [derive countMixin for Z].
 Canonical Z_countType :=
   Eval hnf in CountType Z Z_countMixin.
 
 Definition ascii_indDef :=
-  Eval simpl in [indDef for ascii_rect].
+  [indDef for ascii_rect].
 Canonical ascii_indType :=
-  Eval hnf in IndType ascii ascii_indDef.
+  IndType ascii ascii_indDef.
 Definition ascii_eqMixin :=
-  Eval simpl in [derive eqMixin for ascii].
+  [derive eqMixin for ascii].
 Canonical ascii_eqType :=
   Eval hnf in EqType ascii ascii_eqMixin.
 Definition ascii_choiceMixin :=
-  Eval simpl in [derive choiceMixin for ascii].
+  [derive choiceMixin for ascii].
 Canonical ascii_choiceType :=
   Eval hnf in ChoiceType ascii ascii_choiceMixin.
 Definition ascii_countMixin :=
-  Eval simpl in [derive countMixin for ascii].
+  [derive countMixin for ascii].
 Canonical ascii_countType :=
   Eval hnf in CountType ascii ascii_countMixin.
 Definition ascii_finMixin :=
-  Eval simpl in [derive finMixin for ascii].
+  [derive finMixin for ascii].
 Canonical ascii_finType :=
   Eval hnf in FinType ascii ascii_finMixin.
 Definition ascii_orderMixin :=
@@ -168,19 +168,19 @@ Canonical ascii_orderType :=
   Eval hnf in OrderType ascii ascii_orderMixin.
 
 Definition string_indDef :=
-  Eval simpl in [indDef for string_rect].
+  [indDef for string_rect].
 Canonical string_indType :=
-  Eval hnf in IndType string string_indDef.
+  IndType string string_indDef.
 Definition string_eqMixin :=
-  Eval simpl in [derive eqMixin for string].
+  [derive eqMixin for string].
 Canonical string_eqType :=
   Eval hnf in EqType string string_eqMixin.
 Definition string_choiceMixin :=
-  Eval simpl in [derive choiceMixin for string].
+  [derive choiceMixin for string].
 Canonical string_choiceType :=
   Eval hnf in ChoiceType string string_choiceMixin.
 Definition string_countMixin :=
-  Eval simpl in [derive countMixin for string].
+  [derive countMixin for string].
 Canonical string_countType :=
   Eval hnf in CountType string string_countMixin.
 Definition string_orderMixin :=
