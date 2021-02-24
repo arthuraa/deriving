@@ -37,15 +37,6 @@ commands:
           opam install --with-test .
 
 jobs:
-  coq-8-10:
-    <<: *defaults
-    steps:
-    - startup
-    - prepare
-    - build
-    docker:
-    - image: coqorg/coq:8.10.2
-
   coq-8-11:
     <<: *defaults
     steps:
@@ -74,10 +65,21 @@ jobs:
     docker:
     - image: coqorg/coq:8.12.0
 
+  coq-8-13-mathcomp-1-12-0:
+    <<: *defaults
+    steps:
+    - startup
+    - prepare:
+        mathcomp-version: '1.12.0'
+    - build
+    docker:
+    - image: coqorg/coq:8.13.0
+
+
 workflows:
   build:
     jobs:
-    - coq-8-10
     - coq-8-11
     - coq-8-12
     - coq-8-12-mathcomp-1-11-0
+    - coq-8-13-mathcomp-1-12-0
