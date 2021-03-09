@@ -73,8 +73,17 @@ jobs:
         mathcomp-version: '1.12.0'
     - build
     docker:
-    - image: coqorg/coq:8.13.0
+    - image: coqorg/coq:8.13.1
 
+  coq-dev:
+    <<: *defaults
+    steps:
+    - startup
+    - prepare:
+        mathcomp-version: 'dev'
+    - build
+    docker:
+    - image: coqorg/coq:dev
 
 workflows:
   build:
@@ -83,3 +92,4 @@ workflows:
     - coq-8-12
     - coq-8-12-mathcomp-1-11-0
     - coq-8-13-mathcomp-1-12-0
+    - coq-dev
