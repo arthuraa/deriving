@@ -41,7 +41,8 @@ jobs:
     <<: *defaults
     steps:
     - startup
-    - prepare
+    - prepare:
+        mathcomp-version: '1.11.0'
     - build
     docker:
     - image: coqorg/coq:8.11
