@@ -76,10 +76,10 @@ In such cases, it is a good idea to keep the instance opaque (e.g. defined with
 ## Installation
 
 Deriving can be installed through the
-[`extra-dev`](https://coq.inria.fr/opam/extra-dev/README.md) repository:
+[`released`](https://coq.inria.fr/opam/released/README.md) repository:
 
 ```shell
-opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev
+opam repo add coq-released https://coq.inria.fr/opam/released
 opam install coq-deriving
 ```
 
