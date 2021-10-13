@@ -53,6 +53,17 @@ resorting to OCaml code.  This feature is not documented yet, but you can refer
 to the definition of the instances provided by Deriving in
 `theories/instances`. Or drop me a line!
 
+## Record instances
+
+Coq does not generate induction principles for record types by default.  If you
+want to derive an instances for a record type, you need to generate the
+induction principle by hand:
+
+    Record foo := (* ... *)
+    Scheme foo_rect := Induction for foo Sort Type.
+
+Check the tests for [an example](tests/records.v).
+
 ## Simplification and performance issues
 
 It is useful for instances of certain classes to have good reduction behavior
