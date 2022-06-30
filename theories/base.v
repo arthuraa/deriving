@@ -7,6 +7,9 @@ Unset Printing Implicit Defensive.
 Set Universe Polymorphism.
 Set Primitive Projections.
 
+(* Backwards compatibility for hint locality attributes *)
+Set Warnings "-unsupported-attributes".
+
 Declare Scope deriving_scope.
 Delimit Scope deriving_scope with deriving.
 Open Scope deriving_scope.
@@ -29,6 +32,7 @@ Definition cast T (P : T -> Type) x y (e : x = y) : P x -> P y :=
   match e with erefl => id end.
 
 Arguments cast {_} _ {_ _} _.
+#[global]
 Hint Unfold cast : deriving.
 
 Notation "e1 * e2" := (etrans e1 e2) : deriving_scope.
@@ -83,13 +87,21 @@ Definition castD T (P : T -> Type) x y z (p : x = y) (q : y = z) :
   forall a, cast P (p * q) a = cast P q (cast P p a) :=
   match q with erefl => fun a => erefl end.
 
+#[global]
 Hint Unfold Logic.eq_sym : deriving.
+#[global]
 Hint Unfold Logic.eq_trans : deriving.
+#[global]
 Hint Unfold etrans : deriving.
+#[global]
 Hint Unfold esym : deriving.
+#[global]
 Hint Unfold congr1 : deriving.
+#[global]
 Hint Unfold f_equal : deriving.
+#[global]
 Hint Unfold fst : deriving.
+#[global]
 Hint Unfold snd : deriving.
 
 (** An alternative to the standard prod type, to avoid name clashes and universe
@@ -101,7 +113,9 @@ Arguments Cell {_ _}.
 Arguments hd {_ _}.
 Arguments tl {_ _}.
 
+#[global]
 Hint Unfold hd : deriving.
+#[global]
 Hint Unfold tl : deriving.
 
 Notation "x ::: y" := (Cell x y) (at level 60) : deriving_scope.
@@ -171,20 +185,32 @@ End PolyType.
 
 Import PolyType.
 
+#[global]
 Hint Unfold PolyType.sval : deriving.
+#[global]
 Hint Unfold PolyType.svalP : deriving.
+#[global]
 Hint Unfold PolyType.list_of_seq : deriving.
+#[global]
 Hint Unfold PolyType.seq_of_list : deriving.
+#[global]
 Hint Unfold PolyType.size : deriving.
+#[global]
 Hint Unfold PolyType.map : deriving.
+#[global]
 Hint Unfold PolyType.foldr : deriving.
+#[global]
 Hint Unfold PolyType.sumn : deriving.
+#[global]
 Hint Unfold PolyType.cat : deriving.
+#[global]
 Hint Unfold PolyType.flatten : deriving.
+#[global]
 Hint Unfold PolyType.all : deriving.
 
 Fixpoint fin n :=
   if n is n.+1 then option (fin n) else void.
+#[global]
 Hint Unfold fin : deriving.
 
 Fixpoint all_fin n : (fin n -> Prop) -> Prop :=
@@ -192,6 +218,7 @@ Fixpoint all_fin n : (fin n -> Prop) -> Prop :=
   | 0    => fun P => True
   | n.+1 => fun P => P None /\ @all_fin n (fun i => P (Some i))
   end.
+#[global]
 Hint Unfold all_fin : deriving.
 
 Lemma all_finP n (P : fin n -> Prop) : all_fin P <-> (forall i, P i).
@@ -206,6 +233,7 @@ Fixpoint all_finb n : (fin n -> bool) -> bool :=
   | 0    => fun f => true
   | n.+1 => fun f => f None && @all_finb n (fun i => f (Some i))
   end.
+#[global]
 Hint Unfold all_finb : deriving.
 
 Fixpoint nth_fin T (xs : seq T) : fin (size xs) -> T :=
@@ -213,19 +241,23 @@ Fixpoint nth_fin T (xs : seq T) : fin (size xs) -> T :=
   | [::]    => fun n => match n with end
   | x :: xs => fun n => if n is Some n then nth_fin n else x
   end.
+#[global]
 Hint Unfold nth_fin : deriving.
 
 Definition fnth T S (f : T -> S) (xs : seq T) (i : fin (size xs)) : S :=
   f (nth_fin i).
 Arguments fnth {T S} f xs i.
+#[global]
 Hint Unfold fnth : deriving.
 
 Definition fcons n T (x : T) (f : fin n -> T) : fin n.+1 -> T :=
   fun i => if i is Some i then f i else x.
+#[global]
 Hint Unfold fcons : deriving.
 
 Definition fnil T : fin 0 -> T :=
   fun i => match i with end.
+#[global]
 Hint Unfold fnil : deriving.
 
 Fixpoint leq_fin n : forall i j : fin n, (i = j) + bool :=
@@ -243,6 +275,7 @@ Fixpoint leq_fin n : forall i j : fin n, (i = j) + bool :=
                             else inr false
       end
   end.
+#[global]
 Hint Unfold leq_fin : deriving.
 
 Fixpoint leq_finii n : forall i : fin n, @leq_fin n i i = inl erefl :=
@@ -260,6 +293,7 @@ Fixpoint leq_finii n : forall i : fin n, @leq_fin n i i = inl erefl :=
                       (@leq_finii n i)
              end
   end.
+#[global]
 Hint Unfold leq_finii : deriving.
 
 Fixpoint nat_of_fin n : fin n -> nat :=
@@ -267,6 +301,7 @@ Fixpoint nat_of_fin n : fin n -> nat :=
   | 0    => fun i => match i with end
   | n.+1 => fun i => if i is Some i then (nat_of_fin i).+1 else 0
   end.
+#[global]
 Hint Unfold nat_of_fin : deriving.
 
 Fixpoint finW n : forall (m : fin n), fin (nat_of_fin m) -> fin n :=
@@ -282,6 +317,7 @@ Fixpoint finW n : forall (m : fin n), fin (nat_of_fin m) -> fin n :=
       end
     end
   end.
+#[global]
 Hint Unfold finW : deriving.
 
 Lemma leq_nat_of_fin n (i j : fin n) :
@@ -300,6 +336,7 @@ Fixpoint fin_of_nat n m : option (fin n) :=
   | n.+1 => if m is m.+1 then if fin_of_nat n m is Some i then Some (Some i) else None
             else Some None
   end.
+#[global]
 Hint Unfold fin_of_nat : deriving.
 
 Lemma nat_of_finK n : pcancel (@nat_of_fin n) (@fin_of_nat n).
@@ -329,6 +366,7 @@ Fixpoint enum_fin n : seq (fin n) :=
   | 0 => [::]
   | n.+1 => None :: map Some (enum_fin n)
   end.
+#[global]
 Hint Unfold enum_fin : deriving.
 
 Fixpoint size_map T S (f : T -> S) (s : seq T) : size (map f s) = size s :=
@@ -355,6 +393,7 @@ Fixpoint sum_of_fin n m : fin (n + m) -> fin n + fin m :=
                 end
     end
   end.
+#[global]
 Hint Unfold sum_of_fin : deriving.
 Arguments sum_of_fin : clear implicits.
 
@@ -367,6 +406,7 @@ Fixpoint fin_of_sumL n m : fin n -> fin (n + m) :=
               | Some i => Some (@fin_of_sumL n m i)
               end
   end.
+#[global]
 Hint Unfold fin_of_sumL : deriving.
 Arguments fin_of_sumL : clear implicits.
 
@@ -375,6 +415,7 @@ Fixpoint fin_of_sumR n m : fin m -> fin (n + m) :=
   | 0 => id
   | n.+1 => fun i => Some (@fin_of_sumR n m i)
   end.
+#[global]
 Hint Unfold fin_of_sumR : deriving.
 Arguments fin_of_sumR : clear implicits.
 
@@ -383,6 +424,7 @@ Definition fin_of_sum n m (i : fin n + fin m) : fin (n + m) :=
   | inl i => fin_of_sumL n m i
   | inr i => fin_of_sumR n m i
   end.
+#[global]
 Hint Unfold fin_of_sum : deriving.
 Arguments fin_of_sum : clear implicits.
 
@@ -418,6 +460,7 @@ Fixpoint tag_of_fin n : forall (m : fin n -> nat),
                 @Tagged _ (Some (tag p)) (fun i => fin (m i)) (tagged p)
               end
   end.
+#[global]
 Hint Unfold tag_of_fin : deriving.
 Arguments tag_of_fin {n} _ _.
 
@@ -432,11 +475,13 @@ Fixpoint fin_of_tag' n :
               end j in
     fin_of_sum _ _ ij
   end.
+#[global]
 Hint Unfold fin_of_tag' : deriving.
 Arguments fin_of_tag' {n} _ _ _.
 
 Definition fin_of_tag n m (p : {i : fin n & fin (m i)}) :=
   @fin_of_tag' n m (tag p) (tagged p).
+#[global]
 Hint Unfold fin_of_tag : deriving.
 
 Lemma tag_of_finK n m : cancel (@tag_of_fin n m) (@fin_of_tag n m).
@@ -530,11 +575,17 @@ Fixpoint size_seq_of_ilist n : forall (xs : ilist n), size (seq_of_ilist xs) = n
 
 End Ilist.
 
+#[global]
 Hint Unfold ilist : deriving.
+#[global]
 Hint Unfold inth : deriving.
+#[global]
 Hint Unfold ilist_of_fun : deriving.
+#[global]
 Hint Unfold inth_of_fun : deriving.
+#[global]
 Hint Unfold ilist_of_seq : deriving.
+#[global]
 Hint Unfold seq_of_ilist : deriving.
 
 Fixpoint imap T S (f : T -> S) n : ilist T n -> ilist S n :=
@@ -542,6 +593,7 @@ Fixpoint imap T S (f : T -> S) n : ilist T n -> ilist S n :=
   | 0    => fun l => tt
   | n.+1 => fun l => f l.(hd) ::: imap f l.(tl)
   end.
+#[global]
 Hint Unfold imap : deriving.
 
 Lemma imap_eq (T S : Type) (f g : T -> S) :
@@ -616,10 +668,15 @@ Proof. by move=> x; rewrite /hproj hcaseE leq_finii. Qed.
 
 End Hsum.
 
+#[global]
 Hint Unfold hsum : deriving.
+#[global]
 Hint Unfold hsum' : deriving.
+#[global]
 Hint Unfold hin : deriving.
+#[global]
 Hint Unfold hcase : deriving.
+#[global]
 Hint Unfold hproj : deriving.
 
 Section Hlist.
@@ -828,24 +885,43 @@ Fixpoint hfold S n :
 
 End Hlist.
 
+#[global]
 Hint Unfold hlist : deriving.
+#[global]
 Hint Unfold hlist' : deriving.
+#[global]
 Hint Unfold hlist2 : deriving.
+#[global]
 Hint Unfold hfun : deriving.
+#[global]
 Hint Unfold hfun' : deriving.
+#[global]
 Hint Unfold happ : deriving.
+#[global]
 Hint Unfold hcurry : deriving.
+#[global]
 Hint Unfold hfun2 : deriving.
+#[global]
 Hint Unfold happ2 : deriving.
+#[global]
 Hint Unfold hcurry2 : deriving.
+#[global]
 Hint Unfold hdfun : deriving.
+#[global]
 Hint Unfold hdapp : deriving.
+#[global]
 Hint Unfold hnth : deriving.
+#[global]
 Hint Unfold seq_of_hlist : deriving.
+#[global]
 Hint Unfold hlist_of_seq : deriving.
+#[global]
 Hint Unfold hlist_of_fun : deriving.
+#[global]
 Hint Unfold all_hlist : deriving.
+#[global]
 Hint Unfold all_hlist2 : deriving.
+#[global]
 Hint Unfold hfold : deriving.
 
 Fixpoint hmap n :
@@ -854,16 +930,19 @@ Fixpoint hmap n :
   | 0    => fun _ _ _ _  => tt
   | n.+1 => fun _ _ f xs => f None xs.(hd) ::: hmap (fun j => f (Some j)) xs.(tl)
   end.
+#[global]
 Hint Unfold hmap : deriving.
 
 Definition hmap2 n (m : fin n -> nat) (T S : forall i, fin (m i) -> Type)
   (f : forall i j, T i j -> S i j) : hlist2 T -> hlist2 S :=
   hmap (fun i => hmap (fun j => f i j)).
+#[global]
 Hint Unfold hmap2 : deriving.
 
 Definition hmap' I T_ S_ (f : forall i : I, T_ i -> S_ i) xs :
   hlist' T_ xs -> hlist' S_ xs :=
   hmap (fun i : fin (size xs) => f (nth_fin i)).
+#[global]
 Hint Unfold hmap' : deriving.
 
 Lemma hmap_eq n (T_ S_ : fin n -> Type) (f g : forall i, T_ i -> S_ i) :
@@ -927,6 +1006,7 @@ Fixpoint hzip n :
   | 0    => fun T_ S_ xs ys => tt
   | n.+1 => fun T_ S_ xs ys => (xs.(hd), ys.(hd)) ::: hzip xs.(tl) ys.(tl)
   end.
+#[global]
 Hint Unfold hzip : deriving.
 
 Fixpoint hlist_eq n :
@@ -936,6 +1016,7 @@ Fixpoint hlist_eq n :
   | 0    => fun T_ S_ e => erefl
   | n.+1 => fun T_ S_ e => congr2 cell (e None) (hlist_eq (fun i => e (Some i)))
   end.
+#[global]
 Hint Unfold hlist_eq : deriving.
 
 Lemma hlist_eq_hmap n T_ S_ e xs :
@@ -961,6 +1042,7 @@ Fixpoint hfun_eq n :
   | 0    => fun T_ S_ e R => erefl
   | n.+1 => fun T_ S_ e R => congr2 (fun X Y => X -> Y) (e None) (hfun_eq (fun i => e (Some i)) R)
   end.
+#[global]
 Hint Unfold hfun_eq : deriving.
 
 Lemma hfun_eqV n  T_ S_ e R :
@@ -1118,6 +1200,7 @@ Fixpoint hlist1' m : (fin m.+1 -> Type) -> Type :=
   | 0    => fun X => X None
   | m.+1 => fun X => X None * hlist1' (fun i => X (Some i))
   end%type.
+#[global]
 Hint Unfold hlist1' : deriving.
 
 Fixpoint hnth1' m : forall T, @hlist1' m T -> forall i : fin m.+1, T i :=
@@ -1127,6 +1210,7 @@ Fixpoint hnth1' m : forall T, @hlist1' m T -> forall i : fin m.+1, T i :=
   | m.+1 =>
     fun T l i => if i isn't Some i then l.1 else @hnth1' m _ l.2 i
   end.
+#[global]
 Hint Unfold hnth1' : deriving.
 
 Definition hlist1 m :=
@@ -1134,6 +1218,7 @@ Definition hlist1 m :=
   | 0    => fun _ => unit
   | n.+1 => fun X => hlist1' X
   end.
+#[global]
 Hint Unfold hlist1 : deriving.
 
 Definition hnth1 m :=
@@ -1142,4 +1227,5 @@ Definition hnth1 m :=
   | n.+1 => fun X l i => hnth1' l i
   end.
 Coercion hnth1 : hlist1 >-> Funclass.
+#[global]
 Hint Unfold hnth1 : deriving.
