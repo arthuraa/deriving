@@ -56,8 +56,8 @@ to the definition of the instances provided by Deriving in
 ## Record instances
 
 Coq does not generate induction principles for record types by default.  If you
-want to derive an instances for a record type, you need to generate the
-induction principle by hand:
+want to derive an instance for a record type, you need to generate the induction
+principle by hand:
 
     Record foo := (* ... *)
     Scheme foo_rect := Induction for foo Sort Type.
