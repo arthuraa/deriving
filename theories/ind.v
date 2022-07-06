@@ -9,6 +9,9 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+(* Backwards compatibility for hint locality attributes *)
+Set Warnings "-unsupported-attributes".
+
 Open Scope deriving_scope.
 
 Record fun_split n (R : Type) (T : R) (Ts : fin n -> R) := FunSplit {
@@ -27,9 +30,13 @@ Definition fsE2 n R T Ts (TTs : @fun_split n R T Ts) :
 Canonical fun_split1 n R (TTs : fin n.+1 -> R) :=
   @FunSplit n R (TTs None) (fun i => TTs (Some i)) TTs erefl (fun=> erefl).
 
+#[global]
 Hint Unfold fs_fun : deriving.
+#[global]
 Hint Unfold fsE1 : deriving.
+#[global]
 Hint Unfold fsE2 : deriving.
+#[global]
 Hint Unfold fun_split1 : deriving.
 
 Section LiftClass.
@@ -75,14 +82,23 @@ Definition lift_class_proj n cK
 
 End LiftClass.
 
+#[global]
 Hint Unfold eq_class : deriving.
+#[global]
 Hint Unfold untag_sort : deriving.
+#[global]
 Hint Unfold ts_nil_tag : deriving.
+#[global]
 Hint Unfold ts_cons_tag : deriving.
+#[global]
 Hint Unfold lift_class_sort : deriving.
+#[global]
 Hint Unfold lift_class_class : deriving.
+#[global]
 Hint Unfold nil_lift_class : deriving.
+#[global]
 Hint Unfold cons_lift_class : deriving.
+#[global]
 Hint Unfold lift_class_proj : deriving.
 
 Arguments lift_class_proj {K sort n cK} class sTs i.
@@ -265,38 +281,71 @@ Qed.
 
 End Signature.
 
+#[global]
 Hint Unfold type_of_arg : deriving.
+#[global]
 Hint Unfold type_of_arg_map : deriving.
+#[global]
 Hint Unfold is_rec : deriving.
+#[global]
 Hint Unfold arity : deriving.
+#[global]
 Hint Unfold signature : deriving.
+#[global]
 Hint Unfold declaration : deriving.
+#[global]
 Hint Unfold empty_decl : deriving.
+#[global]
 Hint Unfold add_arity : deriving.
+#[global]
 Hint Unfold add_arity_ind : deriving.
+#[global]
 Hint Unfold arg_class : deriving.
+#[global]
 Hint Unfold arg_inst_sort : deriving.
+#[global]
 Hint Unfold arg_inst_class : deriving.
+#[global]
 Hint Unfold arity_class : deriving.
+#[global]
 Hint Unfold arity_inst_sort : deriving.
+#[global]
 Hint Unfold arity_inst_class : deriving.
+#[global]
 Hint Unfold sig_class : deriving.
+#[global]
 Hint Unfold sig_inst_sort : deriving.
+#[global]
 Hint Unfold sig_inst_class : deriving.
+#[global]
 Hint Unfold untag_decl : deriving.
+#[global]
 Hint Unfold decl_inst_sort : deriving.
+#[global]
 Hint Unfold decl_inst_class : deriving.
+#[global]
 Hint Unfold NonRec_arg_inst : deriving.
+#[global]
 Hint Unfold Rec_arg_inst : deriving.
+#[global]
 Hint Unfold nth_fin_arg_inst : deriving.
+#[global]
 Hint Unfold nil_arity_inst : deriving.
+#[global]
 Hint Unfold cons_arity_inst : deriving.
+#[global]
 Hint Unfold nil_sig_inst : deriving.
+#[global]
 Hint Unfold cons_sig_inst : deriving.
+#[global]
 Hint Unfold nil_decl_tag : deriving.
+#[global]
 Hint Unfold cons_decl_tag : deriving.
+#[global]
 Hint Unfold nil_decl_inst : deriving.
+#[global]
 Hint Unfold cons_decl_inst : deriving.
+#[global]
 Hint Unfold arity_rec : deriving.
 
 Definition arg_class_map
@@ -310,6 +359,7 @@ Definition arg_class_map
   | Rec i    => fun _  => tt
   end.
 
+#[global]
 Hint Unfold arg_class_map : deriving.
 
 Definition pack_decl_inst
@@ -526,11 +576,13 @@ Definition find_idx_there n (Ts : fin n.+1 -> Type) T i e
   find_idx n.+1 Ts T (Some i) e :=
   make_find_idx.
 
+#[global]
 Hint Extern 1 (find_idx ?m ?Ts ?T _ _) =>
   match eval hnf in m with
   | ?n.+1 => eapply (@find_idx_here n Ts)
   end : typeclass_instances.
 
+#[global]
 Hint Extern 2 (find_idx ?m ?Ts ?T _ _) =>
   match eval hnf in m with
   | ?n.+1 => eapply (@find_idx_there n Ts)
@@ -543,41 +595,77 @@ Definition pack_indType
 
 Notation IndType T Ts := (@pack_indType T Ts _ _ _).
 
+#[global]
 Hint Unfold Ind.Cidx : deriving.
+#[global]
 Hint Unfold Ind.args : deriving.
+#[global]
 Hint Unfold Ind.args_map : deriving.
+#[global]
 Hint Unfold Ind.constructors : deriving.
+#[global]
 Hint Unfold Ind.empty_cons : deriving.
+#[global]
 Hint Unfold Ind.add_cons : deriving.
+#[global]
 Hint Unfold Ind.rec_branch' : deriving.
+#[global]
 Hint Unfold Ind.rec_branch : deriving.
+#[global]
 Hint Unfold Ind.recursor : deriving.
+#[global]
 Hint Unfold Ind.rec_branch'_of_hfun' : deriving.
+#[global]
 Hint Unfold Ind.hfun'_of_rec_branch' : deriving.
+#[global]
 Hint Unfold Ind.recursor_eq : deriving.
+#[global]
 Hint Unfold Ind.des_branch : deriving.
+#[global]
 Hint Unfold Ind.destructor : deriving.
+#[global]
 Hint Unfold Ind.destructor_eq : deriving.
+#[global]
 Hint Unfold Ind.rec_of_des_branch : deriving.
+#[global]
 Hint Unfold Ind.destructor_of_recursor : deriving.
+#[global]
 Hint Unfold Ind.ind_branch' : deriving.
+#[global]
 Hint Unfold Ind.ind_branch : deriving.
+#[global]
 Hint Unfold Ind.induction : deriving.
+#[global]
 Hint Unfold Ind.Def.Cons : deriving.
+#[global]
 Hint Unfold Ind.Def.rec : deriving.
+#[global]
 Hint Unfold Ind.Def.case : deriving.
+#[global]
 Hint Unfold Ind.Def.n : deriving.
+#[global]
 Hint Unfold Ind.Def.sorts : deriving.
+#[global]
 Hint Unfold Ind.Def.decl : deriving.
+#[global]
 Hint Unfold Ind.Def.class : deriving.
+#[global]
 Hint Unfold Ind.class : deriving.
+#[global]
 Hint Unfold Ind.def : deriving.
+#[global]
 Hint Unfold Ind.idx : deriving.
+#[global]
 Hint Unfold Ind.idxE : deriving.
+#[global]
 Hint Unfold Ind.sort : deriving.
+#[global]
 Hint Unfold Ind.clone : deriving.
+#[global]
 Hint Unfold find_idx_here : deriving.
+#[global]
 Hint Unfold find_idx_there : deriving.
+#[global]
 Hint Unfold pack_indType : deriving.
 
 Module IndF.
@@ -775,17 +863,29 @@ End TypeDef.
 
 End IndF.
 
+#[global]
 Hint Unfold IndF.constr : deriving.
+#[global]
 Hint Unfold IndF.args : deriving.
+#[global]
 Hint Unfold IndF.fmap : deriving.
+#[global]
 Hint Unfold IndF.Roll : deriving.
+#[global]
 Hint Unfold IndF.rec_branches_of_fun : deriving.
+#[global]
 Hint Unfold IndF.rec : deriving.
+#[global]
 Hint Unfold IndF.lift_type : deriving.
+#[global]
 Hint Unfold IndF.lift_typeE : deriving.
+#[global]
 Hint Unfold IndF.lift_type_of : deriving.
+#[global]
 Hint Unfold IndF.des_branches_of_fun : deriving.
+#[global]
 Hint Unfold IndF.case : deriving.
+#[global]
 Hint Unfold IndF.unroll : deriving.
 
 Section InferInstances.
@@ -890,13 +990,21 @@ Arguments read_rect : clear implicits.
 Arguments bless_rect : clear implicits.
 Arguments infer_ind : clear implicits.
 
+#[global]
 Hint Unfold infer_arity_end : deriving.
+#[global]
 Hint Unfold infer_arity_rec : deriving.
+#[global]
 Hint Unfold infer_arity_nonrec : deriving.
+#[global]
 Hint Unfold infer_decl_end : deriving.
+#[global]
 Hint Unfold infer_decl_cons : deriving.
+#[global]
 Hint Unfold read_rect_type : deriving.
+#[global]
 Hint Unfold read_rect_done : deriving.
+#[global]
 Hint Unfold do_infer_ind : deriving.
 
 Ltac infer_arity :=
@@ -910,6 +1018,7 @@ Ltac infer_arity :=
     eapply (@infer_arity_nonrec n Ts Ps S branchT)
   end.
 
+#[global]
 Hint Extern 0 (infer_arity _ _ _ _ _ _ _) => infer_arity : typeclass_instances.
 
 Ltac infer_decl :=
@@ -921,6 +1030,7 @@ Ltac infer_decl :=
     eapply (@infer_decl_end n Ts Ps)
   end.
 
+#[global]
 Hint Extern 0 (infer_decl _ _ _ _ _ _) => infer_decl : typeclass_instances.
 
 Ltac bless_rect :=
@@ -931,6 +1041,7 @@ Ltac bless_rect :=
                              (fun P => rect (fun i _ => P i)))
   end.
 
+#[global]
 Hint Extern 0 (bless_rect _ _ _ _ _ _ _) => bless_rect : typeclass_instances.
 
 Module IndEqType.
@@ -959,12 +1070,19 @@ End IndEqType.
 
 Export IndEqType.Exports.
 
+#[global]
 Hint Unfold IndEqType.n : deriving.
+#[global]
 Hint Unfold IndEqType.sorts : deriving.
+#[global]
 Hint Unfold IndEqType.decl : deriving.
+#[global]
 Hint Unfold IndEqType.eq_class : deriving.
+#[global]
 Hint Unfold IndEqType.ind_class : deriving.
+#[global]
 Hint Unfold IndEqType.eqType : deriving.
+#[global]
 Hint Unfold IndEqType.indDef : deriving.
 
 Module IndChoiceType.
@@ -995,13 +1113,21 @@ End IndChoiceType.
 
 Export IndChoiceType.Exports.
 
+#[global]
 Hint Unfold IndChoiceType.n : deriving.
+#[global]
 Hint Unfold IndChoiceType.sorts : deriving.
+#[global]
 Hint Unfold IndChoiceType.decl : deriving.
+#[global]
 Hint Unfold IndChoiceType.choice_class : deriving.
+#[global]
 Hint Unfold IndChoiceType.ind_class : deriving.
+#[global]
 Hint Unfold IndChoiceType.eqType : deriving.
+#[global]
 Hint Unfold IndChoiceType.choiceType : deriving.
+#[global]
 Hint Unfold IndChoiceType.indDef : deriving.
 
 Module IndCountType.
@@ -1034,12 +1160,21 @@ End IndCountType.
 
 Export IndCountType.Exports.
 
+#[global]
 Hint Unfold IndCountType.n : deriving.
+#[global]
 Hint Unfold IndCountType.sorts : deriving.
+#[global]
 Hint Unfold IndCountType.decl : deriving.
+#[global]
 Hint Unfold IndCountType.count_class : deriving.
+#[global]
 Hint Unfold IndCountType.ind_class : deriving.
+#[global]
 Hint Unfold IndCountType.eqType : deriving.
+#[global]
 Hint Unfold IndCountType.choiceType : deriving.
+#[global]
 Hint Unfold IndCountType.countType : deriving.
+#[global]
 Hint Unfold IndCountType.indDef : deriving.
