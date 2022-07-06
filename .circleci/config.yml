@@ -46,6 +46,7 @@ jobs:
     - build
     docker:
     - image: coqorg/coq:8.11
+    resource_class: large
 
   coq-8-12-mathcomp-1-11-0:
     <<: *defaults
