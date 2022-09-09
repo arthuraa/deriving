@@ -99,3 +99,10 @@ Alternatively, you can compile Deriving from source:
 ```shell
 make && make install
 ```
+
+## Citing
+
+If you want to cite Deriving, you can refer to its [Zenodo page][1].
+
+  [1]: https://zenodo.org/record/7065501#.YxuE-9LMKEC
+
