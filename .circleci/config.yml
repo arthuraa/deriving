@@ -29,11 +29,20 @@ commands:
             --kind=version << parameters.mathcomp-version >>
           opam install --deps-only .
 
+  set-jobs:
+    steps:
+    - run:
+        name: Set number of jobs
+        command: |
+          opam var --global jobs=1
+
+
   build:
     steps:
     - run:
         name: Building deriving
-        command:
+        command: |
+          opam var jobs
           opam install --with-test .
 
 jobs:
@@ -98,12 +107,12 @@ jobs:
     docker:
     - image: coqorg/coq:8.16
 
-  coq-8-17-mathcomp-1-16-0:
+  coq-8-17-mathcomp-dev:
     <<: *defaults
     steps:
     - startup
     - prepare:
-        mathcomp-version: '1.16.0'
+        mathcomp-version: 'dev'
     - build
     docker:
     - image: coqorg/coq:8.17
@@ -127,5 +136,5 @@ workflows:
     - coq-8-14-mathcomp-1-13-0
     - coq-8-15-mathcomp-1-15-0
     - coq-8-16-mathcomp-1-16-0
-    - coq-8-17-mathcomp-1-16-0
+    - coq-8-17-mathcomp-dev
     - coq-dev
