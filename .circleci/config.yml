@@ -29,11 +29,20 @@ commands:
             --kind=version << parameters.mathcomp-version >>
           opam install --deps-only .
 
+  set-jobs:
+    steps:
+    - run:
+        name: Set number of jobs
+        command: |
+          opam var --global jobs=1
+
+
   build:
     steps:
     - run:
         name: Building deriving
-        command:
+        command: |
+          opam var jobs
           opam install --with-test .
 
 jobs:
