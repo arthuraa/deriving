@@ -4,7 +4,6 @@ From mathcomp Require Import
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-Set Universe Polymorphism.
 Set Primitive Projections.
 
 (* Backwards compatibility for hint locality attributes *)
@@ -106,7 +105,7 @@ Hint Unfold snd : deriving.
 
 (** An alternative to the standard prod type, to avoid name clashes and universe
     issues. *)
-
+Set Universe Polymorphism.
 Record cell T S := Cell { hd : T; tl : S }.
 
 Arguments Cell {_ _}.
@@ -508,6 +507,8 @@ Definition cast_fin n m (e : n = m) : forall (i : fin n.+1),
   | erefl => fun i => if i is None then erefl else erefl
   end.
 
+Unset Universe Polymorphism.
+
 Fixpoint fin_eqMixin n : Equality.mixin_of (fin n) :=
   match n with
   | 0 => void_eqMixin
@@ -530,6 +531,8 @@ Fixpoint fin_countMixin n : Countable.mixin_of (fin n) :=
   end.
 Canonical fin_countType n :=
   Eval hnf in CountType (fin n) (fin_countMixin n).
+
+Set Universe Polymorphism.
 
 Section Ilist.
 
@@ -1080,6 +1083,7 @@ Proof. by case. Qed.
 
 End ProdCell.
 
+Unset Universe Polymorphism.
 Definition cell_eqMixin (T S : eqType) := CanEqMixin (@prod_of_cellK T S).
 Canonical cell_eqType T S := EqType _ (@cell_eqMixin T S).
 Definition cell_choiceMixin (T S : choiceType) :=
@@ -1194,6 +1198,8 @@ Definition hlist_countMixin n (T_ : fin n -> countType) :=
   cast Countable.mixin_of (svalP lift) (Countable.mixin (Countable.class (sval lift))).
 Canonical hlist_countType n T_ :=
   Eval hnf in CountType (hlist _) (@hlist_countMixin n T_).
+
+Set Universe Polymorphism.
 
 Fixpoint hlist1' m : (fin m.+1 -> Type) -> Type :=
   match m with
