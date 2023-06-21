@@ -55,6 +55,7 @@ jobs:
     - build
     docker:
     - image: coqorg/coq:8.17
+    resource_class: 'large'
 
   coq-8-17-mathcomp-dev:
     <<: *defaults
@@ -65,6 +66,7 @@ jobs:
     - build
     docker:
     - image: coqorg/coq:8.17
+    resource_class: 'large'
 
   coq-dev:
     <<: *defaults
@@ -75,6 +77,7 @@ jobs:
     - build
     docker:
     - image: coqorg/coq:dev
+  resource_class: 'large'
 
 workflows:
   build:
