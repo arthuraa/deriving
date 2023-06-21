@@ -512,24 +512,29 @@ Definition cast_fin n m (e : n = m) : forall (i : fin n.+1),
 
 Unset Universe Polymorphism.
 
-(* FIXME: Equality.pack_ is an internal function *)
 Fixpoint fin_eqClass n : Equality (fin n) :=
   match n return Equality (fin n) with
-  | 0 => Equality.on void
-  | n.+1 => Equality.on (option (Equality.pack_ (fin_eqClass n)))
+  | 0 =>
+    Equality.on void
+  | n.+1 =>
+    Equality.on (option (HB.pack_for Equality.type (fin n) (fin_eqClass n)))
   end.
 
-(* FIXME: Choice.pack_ is an internal function *)
 Fixpoint fin_choiceClass n : Choice (fin n) :=
   match n with
-  | 0 => Choice.on void
-  | n.+1 => Choice.on (option (Choice.Pack (fin_choiceClass n)))
+  | 0 =>
+    Choice.on void
+  | n.+1 =>
+    Choice.on (option (HB.pack_for Choice.type (fin n) (fin_choiceClass n)))
   end.
 
 Fixpoint fin_countClass n : Countable (fin n) :=
   match n with
-  | 0 => Countable.on void
-  | n.+1 => Countable.on (option (Countable.Pack (fin_countClass n)))
+  | 0 =>
+    Countable.on void
+  | n.+1 =>
+    Countable.on (option (HB.pack_for Countable.type (fin n)
+                            (fin_countClass n)))
   end.
 
 Section FinInstances.
