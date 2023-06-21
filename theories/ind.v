@@ -1,3 +1,5 @@
+From HB Require Import structures.
+
 From mathcomp Require Import
   ssreflect ssrfun ssrbool ssrnat eqtype seq choice fintype.
 
@@ -1050,18 +1052,16 @@ Record type := Pack {
   n         : nat;
   sorts     : fin n -> Type;
   decl      : declaration n;
-  eq_class  : forall i, Equality.class_of (sorts i);
+  eq_class  : forall i, Equality (sorts i);
   ind_class : Ind.Def.class_of sorts decl;
 }.
 
-Definition eqType T i := Equality.Pack (@eq_class T i).
 Definition indDef T := Ind.Def.Pack (ind_class T).
 
 Module Import Exports.
 Notation indEqType := type.
 Notation IndEqType := Pack.
 Coercion sorts : type >-> Funclass.
-Canonical eqType.
 Coercion indDef : type >-> Ind.Def.type.
 Canonical indDef.
 End Exports.
@@ -1069,6 +1069,11 @@ End Exports.
 End IndEqType.
 
 Export IndEqType.Exports.
+
+Section IndEqTypeInstances.
+Variables (T : indEqType) (i : fin (IndEqType.n T)).
+HB.instance Definition indEqType_eqType := IndEqType.eq_class i.
+End IndEqTypeInstances.
 
 #[global]
 Hint Unfold IndEqType.n : deriving.
@@ -1081,8 +1086,6 @@ Hint Unfold IndEqType.eq_class : deriving.
 #[global]
 Hint Unfold IndEqType.ind_class : deriving.
 #[global]
-Hint Unfold IndEqType.eqType : deriving.
-#[global]
 Hint Unfold IndEqType.indDef : deriving.
 
 Module IndChoiceType.
@@ -1091,20 +1094,16 @@ Record type := Pack {
   n            : nat;
   sorts        : fin n -> Type;
   decl         : declaration n;
-  choice_class : forall i, Choice.class_of (sorts i);
+  choice_class : forall i, Choice (sorts i);
   ind_class    : Ind.Def.class_of sorts decl;
 }.
 
-Definition eqType T i := Equality.Pack (@choice_class T i).
-Definition choiceType T i := Choice.Pack (@choice_class T i).
 Definition indDef T := Ind.Def.Pack (ind_class T).
 
 Module Import Exports.
 Notation indChoiceType := type.
 Notation IndChoiceType := Pack.
 Coercion sorts : type >-> Funclass.
-Canonical eqType.
-Canonical choiceType.
 Coercion indDef : type >-> Ind.Def.type.
 Canonical indDef.
 End Exports.
@@ -1124,11 +1123,12 @@ Hint Unfold IndChoiceType.choice_class : deriving.
 #[global]
 Hint Unfold IndChoiceType.ind_class : deriving.
 #[global]
-Hint Unfold IndChoiceType.eqType : deriving.
-#[global]
-Hint Unfold IndChoiceType.choiceType : deriving.
-#[global]
 Hint Unfold IndChoiceType.indDef : deriving.
+
+Section IndChoiceTypeInstances.
+Variables (T : indChoiceType) (i : fin (IndChoiceType.n T)).
+HB.instance Definition _ := IndChoiceType.choice_class i.
+End IndChoiceTypeInstances.
 
 Module IndCountType.
 
@@ -1136,22 +1136,16 @@ Record type := Pack {
   n           : nat;
   sorts       : fin n -> Type;
   decl        : declaration n;
-  count_class : forall i, Countable.class_of (sorts i);
+  count_class : forall i, Countable (sorts i);
   ind_class   : Ind.Def.class_of sorts decl;
 }.
 
-Definition eqType T i := Equality.Pack (@count_class T i).
-Definition choiceType T i := Choice.Pack (@count_class T i).
-Definition countType T i := Countable.Pack (@count_class T i).
 Definition indDef T := Ind.Def.Pack (ind_class T).
 
 Module Import Exports.
 Notation indCountType := type.
 Notation IndCountType := Pack.
 Coercion sorts : type >-> Funclass.
-Canonical eqType.
-Canonical choiceType.
-Canonical countType.
 Coercion indDef : type >-> Ind.Def.type.
 Canonical indDef.
 End Exports.
@@ -1159,6 +1153,11 @@ End Exports.
 End IndCountType.
 
 Export IndCountType.Exports.
+
+Section IndCountTypeInstances.
+Variables (T : indCountType) (i : fin (IndCountType.n T)).
+HB.instance Definition _ := IndCountType.count_class i.
+End IndCountTypeInstances.
 
 #[global]
 Hint Unfold IndCountType.n : deriving.
@@ -1170,11 +1169,5 @@ Hint Unfold IndCountType.decl : deriving.
 Hint Unfold IndCountType.count_class : deriving.
 #[global]
 Hint Unfold IndCountType.ind_class : deriving.
-#[global]
-Hint Unfold IndCountType.eqType : deriving.
-#[global]
-Hint Unfold IndCountType.choiceType : deriving.
-#[global]
-Hint Unfold IndCountType.countType : deriving.
 #[global]
 Hint Unfold IndCountType.indDef : deriving.

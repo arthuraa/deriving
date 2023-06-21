@@ -1,3 +1,5 @@
+From HB Require Import structures.
+
 From mathcomp Require Import
   ssreflect ssrfun ssrbool ssrnat eqtype seq choice fintype finset order.
 
@@ -17,15 +19,20 @@ Definition tree_indDef T :=
 Canonical tree_indType T :=
   Eval hnf in IndType (tree T) (tree_indDef T).
 
-Definition tree_eqMixin (T : eqType) :=
-  [derive eqMixin for tree T].
-Canonical tree_eqType (T : eqType) :=
-  Eval hnf in EqType (tree T) (tree_eqMixin T).
-Definition tree_choiceMixin (T : choiceType) :=
-  [derive choiceMixin for tree T].
-Canonical tree_choiceType (T : choiceType) :=
-  Eval hnf in ChoiceType (tree T) (tree_choiceMixin T).
-Definition tree_countMixin (T : countType) :=
-  [derive countMixin for tree T].
-Canonical tree_countType (T : countType) :=
-  Eval hnf in CountType (tree T) (tree_countMixin T).
+Section TreeEqType.
+Variable T : eqType.
+Definition tree_eqMixin := [derive eqMixin for tree T].
+HB.instance Definition _ := tree_eqMixin.
+End TreeEqType.
+
+Section TreeChoiceType.
+Variable T : choiceType.
+Definition tree_choiceMixin := [derive choiceMixin for tree T].
+HB.instance Definition _ := tree_choiceMixin.
+End TreeChoiceType.
+
+Section TreeCountType.
+Variable T : countType.
+Definition tree_countMixin := [derive countMixin for tree T].
+HB.instance Definition _ := tree_countMixin.
+End TreeCountType.

@@ -76,23 +76,23 @@ Qed.
 
 End EqType.
 
-Definition pack T :=
+Definition pack (T : Type) :=
   [infer indType of T with Equality.sort as sT n sorts D cD in
-   cast Equality.mixin_of (Ind.idxE sT)^-1
-    (@EqMixin _ _ (@eq_opP sT cD (Ind.idx sT)))].
+   cast (fun A => Equality.mixin_of A) (Ind.idxE sT)^-1
+    (hasDecEq.Axioms_ _ (@eq_opP sT cD (Ind.idx sT)))].
 
 End DerEqType.
 
 Notation "[ 'derive' 'nored' 'eqMixin' 'for' T ]" :=
-  (@DerEqType.pack T _ id _ _ _ _ _ _ id _ id _ id)
+  (@DerEqType.pack T _ id _ id _ id)
   (at level 0) : form_scope.
 
 Ltac derive_eqMixin T :=
   match eval hnf in [derive nored eqMixin for T] with
-  | @EqMixin _ ?op ?opP =>
+  | @hasDecEq.Axioms_ _ ?op ?opP =>
     let op := eval unfold DerEqType.eq_op, DerEqType.eq_op_branch in op in
     let op := eval deriving_compute in op in
-    exact (@EqMixin T op opP)
+    exact (@hasDecEq.Axioms_ T op opP)
   end.
 
 Notation "[ 'derive' 'eqMixin' 'for' T ]" :=
@@ -101,10 +101,10 @@ Notation "[ 'derive' 'eqMixin' 'for' T ]" :=
 
 Ltac derive_lazy_eqMixin T :=
   match eval hnf in [derive nored eqMixin for T] with
-  | @EqMixin _ ?op ?opP =>
+  | @hasDecEq.Axioms_ _ ?op ?opP =>
     let op := eval unfold DerEqType.eq_op, DerEqType.eq_op_branch in op in
     let op := eval deriving_lazy in op in
-    exact (@EqMixin T op opP)
+    exact (@hasDecEq.Axioms_ T op opP)
   end.
 
 Notation "[ 'derive' 'lazy' 'eqMixin' 'for' T ]" :=

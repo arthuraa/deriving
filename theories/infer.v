@@ -47,11 +47,11 @@ Notation "[ 'indDef' 'for' rect ]" :=
   (at level 0) : form_scope.
 
 Notation "[ 'infer' 'indType' 'of' T 'as' sT n sorts D 'in' e ]" :=
-  (fun (sT' : indType) & phant_id T%type (Ind.sort sT') =>
-   fun n (sorts : fin n -> Type) (D : declaration n) =>
-   fun (def : Ind.Def.class_of sorts D) (i : fin n) (iE : T%type = sorts i) =>
-   let sT := Ind.Pack (@Ind.Mixin T (@Ind.Def.Pack n sorts D def) i iE) in
-   fun & phant_id sT' sT => e)
+  (fun (sT : indType) & phant_id T%type (Ind.sort sT) =>
+   let n : nat := Ind.Def.n sT in
+   let sorts : fin n -> Type := @Ind.Def.sorts sT in
+   let D : declaration n := Ind.Def.decl sT in
+   e)
   (at level 0, sT ident, n ident, sorts ident, D ident)
   : form_scope.
 

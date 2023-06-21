@@ -1,3 +1,5 @@
+From HB Require Import structures.
+
 From mathcomp Require Import
   ssreflect ssrfun ssrbool ssrnat eqtype seq choice fintype finset order.
 
@@ -44,8 +46,8 @@ Combined Scheme rose_seq_rose_rect from rose_rect, seq_rose_rect.
 Definition rose_seq_rose_indDef := [indDef for rose_seq_rose_rect].
 Canonical rose_indType := IndType rose rose_seq_rose_indDef.
 Definition rose_eqMixin := [derive eqMixin for rose].
-Canonical rose_eqType := EqType rose rose_eqMixin.
+HB.instance Definition _ := rose_eqMixin.
 Definition rose_choiceMixin := [derive choiceMixin for rose].
-Canonical rose_choiceType := Eval hnf in ChoiceType rose rose_choiceMixin.
+HB.instance Definition _ := rose_choiceMixin.
 Definition rose_countMixin := [derive countMixin for rose].
-Canonical rose_countType := Eval hnf in CountType rose rose_countMixin.
+HB.instance Definition _ := rose_countMixin.

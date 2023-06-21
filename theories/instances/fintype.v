@@ -123,7 +123,7 @@ Qed.
 
 End FinType.
 
-Definition pack T :=
+Definition pack (T : Type) :=
   [infer indType of T with Finite.sort as sT n sorts D cD in
    fun (Ts : lift_class Countable.sort n) =>
    fun & phant_id sorts (untag_sort Ts) =>
@@ -131,7 +131,7 @@ Definition pack T :=
    let T_ind_count := @IndCountType _ _ _ T_count sT in
    fun cD' & phant_id cD cD' =>
    fun (not_rec : all_finb (fun i => all (all (negb \o @is_rec n)) (D i))) =>
-   FinMixin (@enum_indP T_ind_count cD' not_rec (Ind.idx sT))].
+   isFinite.Build _ (@enum_indP T_ind_count cD' not_rec (Ind.idx sT))].
 
 End DerFinType.
 
@@ -141,12 +141,13 @@ override this behavior by using the [[derive red finMixin for T]] variant
 below. *)
 
 Notation "[ 'derive' 'finMixin' 'for' T ]" :=
-  (@DerFinType.pack T _ id _ _ _ _ _ _ id _ id _ id _ id _ id _ id erefl)
+  (@DerFinType.pack T _ id _ id _ id _ id _ id _ id erefl)
   (at level 0) : form_scope.
 
+(* FIXME: The isFinite.Axioms_ constructor is internal *)
 Ltac derive_red_finMixin T :=
   match eval hnf in [derive finMixin for T] with
-  | @Finite.Mixin _ ?T' ?enum ?enumP=>
+  | @isFinite.Axioms_ ?T' ?eqP ?enum ?enumP=>
     let enum := eval unfold DerFinType.enum_ind,
                             DerFinType.enum_branch,
                             DerFinType.enum_branch_aux,
@@ -155,7 +156,7 @@ Ltac derive_red_finMixin T :=
                             flatten, allpairs, foldr, map, cat
     in enum in
     let enum := eval deriving_compute in enum in
-    exact (@Finite.Mixin _ T' enum enumP)
+    exact (@isFinite.Axioms_ T' eqP  enum enumP)
   end.
 
 Notation "[ 'derive' 'red' 'finMixin' 'for' T ]" :=

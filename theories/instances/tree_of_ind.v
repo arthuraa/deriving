@@ -96,9 +96,13 @@ Definition pack_tree_of_indK :=
   @tree_of_coq_indK sT_ind (Ind.idx sT_ind).
 
 Notation "[ 'derive' 'choiceMixin' 'for' T ]" :=
-  (PcanChoiceMixin (@pack_tree_of_indK T _ id))
+  (PcanChoiceMixin (@pack_tree_of_indK T _ id) :
+    hasChoice.phant_axioms T
+  )
   (at level 0, format "[ 'derive'  'choiceMixin'  'for'  T ]") : form_scope.
 
 Notation "[ 'derive' 'countMixin' 'for' T ]" :=
-  (PcanCountMixin (@pack_tree_of_indK T _ id))
+  (PcanCountMixin (@pack_tree_of_indK T _ id) :
+    isCountable.phant_axioms T
+  )
   (at level 0, format "[ 'derive' 'countMixin'  'for'  T ]") : form_scope.
