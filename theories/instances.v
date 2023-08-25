@@ -40,7 +40,7 @@ Canonical option_indType T :=
 Section OptionOrderType.
 Variable Tord : orderType tt.
 Definition option_orderMixin :=
-  Eval hnf in [derive eqMixin for option Tord].
+  Eval hnf in [derive orderMixin for option Tord].
 HB.instance Definition _ := option_orderMixin.
 End OptionOrderType.
 
