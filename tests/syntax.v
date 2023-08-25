@@ -154,11 +154,11 @@ HB.instance Definition _ := expr_countMixin.
 Definition val_countMixin :=
   [derive countMixin for val].
 HB.instance Definition _ := val_countMixin.
-(* FIXME: Can we make this opaque? *)
-Definition expr_orderMixin :=
-  [derive nored orderMixin for expr].
+Definition expr_orderMixin :
+  Order.isOrder.axioms_ tt expr (Choice.on expr) (Equality.on expr).
+Proof. exact: [derive nored orderMixin for expr]. Qed.
 HB.instance Definition _ := expr_orderMixin.
-(* FIXME: Can we make this opaque? *)
-Definition val_orderMixin :=
-  [derive nored orderMixin for val].
+Definition val_orderMixin :
+  Order.isOrder.axioms_ tt val (Choice.on val) (Equality.on val).
+Proof. exact: [derive nored orderMixin for val]. Qed.
 HB.instance Definition _ := val_orderMixin.
