@@ -6,6 +6,7 @@ The Deriving library builds instances of basic MathComp classes for inductive
 data types with little boilerplate, akin to Haskell's `deriving` functionality.
 To define an `eqType` instance for a type `foo`, just write:
 
+    From HB Require Import structures.
     From mathcomp Require Import ssreflect ssrnat eqtype.
     From deriving Require Import deriving.
 
@@ -16,7 +17,7 @@ To define an `eqType` instance for a type `foo`, just write:
     Canonical foo_indType := IndType foo foo_indDef.
 
     Definition foo_eqMixin := [derive eqMixin for foo].
-    Canonical foo_eqType := EqType foo foo_eqMixin.
+    HB.instance Definition _ := foo_eqMixin.
 
 ## Supported types and limitations
 
