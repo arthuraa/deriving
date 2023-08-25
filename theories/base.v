@@ -1102,22 +1102,26 @@ Unset Universe Polymorphism.
 
 Section CellEqType.
 Variables T S : eqType.
-HB.instance Definition _ := CanEqMixin (@prod_of_cellK T S).
+HB.instance Definition _ :=
+  Equality.copy (cell T S) (can_type (@prod_of_cellK T S)).
 End CellEqType.
 
 Section CellChoiceType.
 Variables T S : choiceType.
-HB.instance Definition _ := CanChoiceMixin (@prod_of_cellK T S).
+HB.instance Definition _ :=
+  Choice.copy (cell T S) (can_type (@prod_of_cellK T S)).
 End CellChoiceType.
 
 Section CellCountType.
 Variables T S : countType.
-HB.instance Definition _ := CanCountMixin (@prod_of_cellK T S).
+HB.instance Definition _ :=
+  Countable.copy (cell T S) (can_type (@prod_of_cellK T S)).
 End CellCountType.
 
 Section CellFinType.
 Variables T S : finType.
-HB.instance Definition _ := CanFinMixin (@prod_of_cellK T S).
+HB.instance Definition _ :=
+  Finite.copy (cell T S) (can_type (@prod_of_cellK T S)).
 End CellFinType.
 
 Section HeterogeneousInstances.
