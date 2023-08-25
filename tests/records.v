@@ -13,3 +13,5 @@ Definition foo_choiceMixin := [derive choiceMixin for foo].
 HB.instance Definition _ := foo_choiceMixin.
 Definition foo_countMixin := [derive countMixin for foo].
 HB.instance Definition _ := foo_countMixin.
+Definition foo_orderMixin := [derive orderMixin for foo].
+HB.instance Definition _ := foo_orderMixin.

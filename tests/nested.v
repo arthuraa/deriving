@@ -51,3 +51,5 @@ Definition rose_choiceMixin := [derive choiceMixin for rose].
 HB.instance Definition _ := rose_choiceMixin.
 Definition rose_countMixin := [derive countMixin for rose].
 HB.instance Definition _ := rose_countMixin.
+Definition rose_orderMixin := [derive orderMixin for rose].
+HB.instance Definition _ := rose_orderMixin.
