@@ -1,3 +1,6 @@
-* Support mutually inductive types
 * Documentation
 * Clean up code
+* Ensure equality and order operations are simplified properly
+* Check why it is not possible to derive the mixin directly in the instance
+E.g. this does not work:
+HB.instance Definition _ := [derive eqMixin for foo].
