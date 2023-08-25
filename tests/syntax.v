@@ -32,7 +32,7 @@ Definition base_lit_countMixin :=
   [derive countMixin for base_lit].
 HB.instance Definition _ := base_lit_countMixin.
 Definition base_lit_orderMixin :=
-  [derive lazy orderMixin for base_lit].
+  [derive orderMixin for base_lit].
 HB.instance Definition _ := base_lit_orderMixin.
 
 Inductive un_op : Set :=
@@ -68,7 +68,7 @@ Definition bin_op_indDef :=
 Canonical bin_op_indType :=
   IndType bin_op bin_op_indDef.
 Definition bin_op_eqMixin :=
-  [derive lazy eqMixin for bin_op].
+  [derive eqMixin for bin_op].
 HB.instance Definition _ := bin_op_eqMixin.
 Definition bin_op_choiceMixin :=
   [derive choiceMixin for bin_op].
@@ -80,7 +80,7 @@ Definition bin_op_finMixin :=
   [derive finMixin for bin_op].
 HB.instance Definition _ := bin_op_finMixin.
 Definition bin_op_orderMixin :=
-  [derive lazy orderMixin for bin_op].
+  [derive orderMixin for bin_op].
 HB.instance Definition _ := bin_op_orderMixin.
 
 Unset Elimination Schemes.

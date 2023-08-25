@@ -29,5 +29,5 @@ Definition three_finMixin :=
   [derive finMixin for three].
 HB.instance Definition _ := three_finMixin.
 Definition three_orderMixin :=
-  [derive lazy orderMixin for three].
+  [derive orderMixin for three].
 HB.instance Definition _ := three_orderMixin.
