@@ -84,7 +84,7 @@ Definition pack (T : Type) :=
 End DerEqType.
 
 Notation "[ 'derive' 'nored' 'eqMixin' 'for' T ]" :=
-  (@DerEqType.pack T _ id _ id _ id)
+  (@DerEqType.pack T _ id _ _ _ _ _ _ id _ id _ id)
   (at level 0) : form_scope.
 
 Ltac derive_eqMixin T :=

@@ -33,6 +33,7 @@ Canonical foo_indType := IndType foo foo_bar_baz_indDef.
 Canonical bar_indType := IndType bar foo_bar_baz_indDef.
 Canonical baz_indType := IndType baz foo_bar_baz_indDef.
 
+(* FIXME: Why aren't the recursors being simplified away here? *)
 Definition foo_eqMixin := [derive eqMixin for foo].
 HB.instance Definition _ := foo_eqMixin.
 Definition bar_eqMixin := [derive eqMixin for bar].
@@ -51,6 +52,7 @@ Definition bar_countMixin := [derive countMixin for bar].
 HB.instance Definition _ := bar_countMixin.
 Definition baz_countMixin := [derive countMixin for baz].
 HB.instance Definition _ := baz_countMixin.
+(* FIXME: Why aren't the recursors being simplified away here? *)
 Definition foo_orderMixin := [derive orderMixin for foo].
 HB.instance Definition _ := foo_orderMixin.
 Definition bar_orderMixin := [derive orderMixin for bar].

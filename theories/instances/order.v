@@ -171,7 +171,7 @@ Canonical packOrderType disp (T : orderType disp) :=
   DerOrderType.Pack T.
 
 Notation "[ 'derive' 'nored' 'orderMixin' 'for' T ]" :=
-  (@DerOrderType.pack T _ id _ id _ id _ id _ id _ id :
+  (@DerOrderType.pack T _ id _ _ _ _ _ _ id _ id _ id _ id _ id _ id :
     Order.isOrder.axioms_ tt T _ _
   )
   (at level 0) : form_scope.

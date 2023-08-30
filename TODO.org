@@ -4,3 +4,5 @@
 * Check why it is not possible to derive the mixin directly in the instance
 E.g. this does not work:
 HB.instance Definition _ := [derive eqMixin for foo].
+* Find a better way of writing packing functions (cf. infer.v and the derive notation in eqtype.v)
+* By default, [derive nored eqMixin for ...] does not simplify the type of the mixin

@@ -141,7 +141,7 @@ override this behavior by using the [[derive red finMixin for T]] variant
 below. *)
 
 Notation "[ 'derive' 'finMixin' 'for' T ]" :=
-  (@DerFinType.pack T _ id _ id _ id _ id _ id _ id erefl)
+  (@DerFinType.pack T _ id _ _ _ _ _ _ id _ id _ id _ id _ id _ id erefl)
   (at level 0) : form_scope.
 
 (* FIXME: The isFinite.Axioms_ constructor is internal *)

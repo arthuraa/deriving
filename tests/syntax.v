@@ -134,13 +134,13 @@ Canonical expr_indType :=
   IndType expr expr_val_indDef.
 Canonical val_indType :=
   IndType val expr_val_indDef.
-(* FIXME: can we remove nored from here? *)
-Definition expr_eqMixin :=
-  [derive nored eqMixin for expr].
+(* FIXME: can we make these definitions transparent? *)
+Definition expr_eqMixin : Equality.mixin_of expr.
+Proof. exact: [derive nored eqMixin for expr]. Qed.
 HB.instance Definition _ := expr_eqMixin.
-(* FIXME: can we remove nored from here? *)
-Definition val_eqMixin :=
-  [derive nored eqMixin for val].
+(* FIXME: can we make these definitions transparent? *)
+Definition val_eqMixin : Equality.mixin_of val.
+Proof. exact: [derive nored eqMixin for val]. Qed.
 HB.instance Definition _ := val_eqMixin.
 Definition expr_choiceMixin :=
   [derive choiceMixin for expr].
