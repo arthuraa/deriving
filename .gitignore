@@ -8,3 +8,8 @@ CoqMakefile
 CoqMakefile.conf
 theories/tactics.v
 .dir-locals.el
+.direnv
+.envrc
+make_tactics
+make_tactics.cmo
+make_tactics.cmi
