@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Make Deriving compatible with Hierarchy Builder and MathComp 2.0.0.
+
 ## [0.1.1] - 2023-03-10
 ### Fixed
 - Add `global` locality annotations to comply with newer versions of Coq
