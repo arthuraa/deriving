@@ -21,18 +21,18 @@ Canonical tree_indType T :=
 
 Section TreeEqType.
 Variable T : eqType.
-Definition tree_eqMixin := [derive eqMixin for tree T].
-HB.instance Definition _ := tree_eqMixin.
+Definition tree_hasDecEq := [derive hasDecEq for tree T].
+HB.instance Definition _ := tree_hasDecEq.
 End TreeEqType.
 
 Section TreeChoiceType.
 Variable T : choiceType.
-Definition tree_choiceMixin := [derive choiceMixin for tree T].
-HB.instance Definition _ := tree_choiceMixin.
+Definition tree_hasChoice := [derive hasChoice for tree T].
+HB.instance Definition _ := tree_hasChoice.
 End TreeChoiceType.
 
 Section TreeCountType.
 Variable T : countType.
-Definition tree_countMixin := [derive countMixin for tree T].
-HB.instance Definition _ := tree_countMixin.
+Definition tree_isCountable := [derive isCountable for tree T].
+HB.instance Definition _ := tree_isCountable.
 End TreeCountType.

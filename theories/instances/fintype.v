@@ -140,13 +140,13 @@ since it is not used much -- indeed, [Finite.enum] is even kept opaque. You can
 override this behavior by using the [[derive red finMixin for T]] variant
 below. *)
 
-Notation "[ 'derive' 'finMixin' 'for' T ]" :=
+Notation "[ 'derive' 'isFinite' 'for' T ]" :=
   (@DerFinType.pack T _ id _ _ _ _ _ _ id _ id _ id _ id _ id _ id erefl)
   (at level 0) : form_scope.
 
 (* FIXME: The isFinite.Axioms_ constructor is internal *)
-Ltac derive_red_finMixin T :=
-  match eval hnf in [derive finMixin for T] with
+Ltac derive_red_isFinite T :=
+  match eval hnf in [derive isFinite for T] with
   | @isFinite.Axioms_ ?T' ?eqP ?enum ?enumP=>
     let enum := eval unfold DerFinType.enum_ind,
                             DerFinType.enum_branch,
@@ -159,6 +159,18 @@ Ltac derive_red_finMixin T :=
     exact (@isFinite.Axioms_ T' eqP  enum enumP)
   end.
 
+Notation "[ 'derive' 'red' 'isFinite' 'for' T ]" :=
+  (ltac:(derive_red_isFinite T))
+  (at level 0, format "[ 'derive' 'red' 'isFinite'  'for'  T ]") : form_scope.
+
+#[deprecated(since="deriving 0.2.0",
+      note="Use [derive isFinite for _]")]
+Notation "[ 'derive' 'finMixin' 'for' T ]" :=
+  ([derive isFinite for T])
+  (at level 0) : form_scope.
+
+#[deprecated(since="deriving 0.2.0",
+      note="Use [derive red isFinite for _] instead")]
 Notation "[ 'derive' 'red' 'finMixin' 'for' T ]" :=
-  (ltac:(derive_red_finMixin T))
-  (at level 0, format "[ 'derive' 'red' 'finMixin'  'for'  T ]") : form_scope.
+  ([derive red isFinite for T])
+  (at level 0) : form_scope.

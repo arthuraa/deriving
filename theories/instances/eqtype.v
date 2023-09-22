@@ -83,30 +83,48 @@ Definition pack (T : Type) :=
 
 End DerEqType.
 
-Notation "[ 'derive' 'nored' 'eqMixin' 'for' T ]" :=
+Notation "[ 'derive' 'nored' 'hasDecEq' 'for' T ]" :=
   (@DerEqType.pack T _ id _ _ _ _ _ _ id _ id _ id)
   (at level 0) : form_scope.
 
-Ltac derive_eqMixin T :=
-  match eval hnf in [derive nored eqMixin for T] with
+Ltac derive_hasDecEq T :=
+  match eval hnf in [derive nored hasDecEq for T] with
   | @hasDecEq.Axioms_ _ ?op ?opP =>
     let op := eval unfold DerEqType.eq_op, DerEqType.eq_op_branch in op in
     let op := eval deriving_compute in op in
     exact (@hasDecEq.Axioms_ T op opP)
   end.
 
-Notation "[ 'derive' 'eqMixin' 'for' T ]" :=
-  (ltac:(derive_eqMixin T))
+Notation "[ 'derive' 'hasDecEq' 'for' T ]" :=
+  (ltac:(derive_hasDecEq T))
   (at level 0) : form_scope.
 
-Ltac derive_lazy_eqMixin T :=
-  match eval hnf in [derive nored eqMixin for T] with
+Ltac derive_lazy_hasDecEq T :=
+  match eval hnf in [derive nored hasDecEq for T] with
   | @hasDecEq.Axioms_ _ ?op ?opP =>
     let op := eval unfold DerEqType.eq_op, DerEqType.eq_op_branch in op in
     let op := eval deriving_lazy in op in
     exact (@hasDecEq.Axioms_ T op opP)
   end.
 
+Notation "[ 'derive' 'lazy' 'hasDecEq' 'for' T ]" :=
+  (ltac:(derive_lazy_hasDecEq T))
+  (at level 0) : form_scope.
+
+#[deprecated(since="deriving 0.2.0",
+      note="Use [derive nored hasDecEq for _] instead")]
+Notation "[ 'derive' 'nored' 'eqMixin' 'for' T ]" :=
+  ([derive nored hasDecEq for T])
+  (at level 0) : form_scope.
+
+#[deprecated(since="deriving 0.2.0",
+      note="Use [derive hasDecEq for _] instead")]
+Notation "[ 'derive' 'eqMixin' 'for' T ]" :=
+  ([derive hasDecEq for T])
+  (at level 0) : form_scope.
+
+#[deprecated(since="deriving 0.2.0",
+      note="Use [derive lazy hasDecEq for _] instead")]
 Notation "[ 'derive' 'lazy' 'eqMixin' 'for' T ]" :=
-  (ltac:(derive_lazy_eqMixin T))
+  ([derive lazy hasDecEq for T])
   (at level 0) : form_scope.

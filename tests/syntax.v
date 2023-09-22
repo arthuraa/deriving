@@ -22,18 +22,18 @@ Definition base_lit_indDef :=
   [indDef for base_lit_rect].
 Canonical base_lit_indType :=
   IndType base_lit base_lit_indDef.
-Definition base_lit_eqMixin :=
-  [derive lazy eqMixin for base_lit].
-HB.instance Definition _ := base_lit_eqMixin.
-Definition base_lit_choiceMixin :=
-  [derive choiceMixin for base_lit].
-HB.instance Definition _ := base_lit_choiceMixin.
-Definition base_lit_countMixin :=
-  [derive countMixin for base_lit].
-HB.instance Definition _ := base_lit_countMixin.
-Definition base_lit_orderMixin :=
-  [derive orderMixin for base_lit].
-HB.instance Definition _ := base_lit_orderMixin.
+Definition base_lit_hasDecEq :=
+  [derive lazy hasDecEq for base_lit].
+HB.instance Definition _ := base_lit_hasDecEq.
+Definition base_lit_hasChoice :=
+  [derive hasChoice for base_lit].
+HB.instance Definition _ := base_lit_hasChoice.
+Definition base_lit_isCountable :=
+  [derive isCountable for base_lit].
+HB.instance Definition _ := base_lit_isCountable.
+Definition base_lit_isOrder :=
+  [derive isOrder for base_lit].
+HB.instance Definition _ := base_lit_isOrder.
 
 Inductive un_op : Set :=
   | NegOp | MinusUnOp.
@@ -41,21 +41,21 @@ Definition un_op_indDef :=
   [indDef for un_op_rect].
 Canonical un_op_indType :=
   IndType un_op un_op_indDef.
-Definition un_op_eqMixin :=
-  [derive eqMixin for un_op].
-HB.instance Definition _ := un_op_eqMixin.
-Definition un_op_choiceMixin :=
-  [derive choiceMixin for un_op].
-HB.instance Definition _ := un_op_choiceMixin.
-Definition un_op_countMixin :=
-  [derive countMixin for un_op].
-HB.instance Definition _ := un_op_countMixin.
-Definition un_op_finMixin :=
-  [derive finMixin for un_op].
-HB.instance Definition _ := un_op_finMixin.
-Definition un_op_orderMixin :=
-  [derive orderMixin for un_op].
-HB.instance Definition _ := un_op_orderMixin.
+Definition un_op_hasDecEq :=
+  [derive hasDecEq for un_op].
+HB.instance Definition _ := un_op_hasDecEq.
+Definition un_op_hasChoice :=
+  [derive hasChoice for un_op].
+HB.instance Definition _ := un_op_hasChoice.
+Definition un_op_isCountable :=
+  [derive isCountable for un_op].
+HB.instance Definition _ := un_op_isCountable.
+Definition un_op_isFinite :=
+  [derive isFinite for un_op].
+HB.instance Definition _ := un_op_isFinite.
+Definition un_op_isOrder :=
+  [derive isOrder for un_op].
+HB.instance Definition _ := un_op_isOrder.
 
 Inductive bin_op : Set :=
   | PlusOp | MinusOp | MultOp | QuotOp | RemOp
@@ -67,21 +67,21 @@ Definition bin_op_indDef :=
   [indDef for bin_op_rect].
 Canonical bin_op_indType :=
   IndType bin_op bin_op_indDef.
-Definition bin_op_eqMixin :=
-  [derive eqMixin for bin_op].
-HB.instance Definition _ := bin_op_eqMixin.
-Definition bin_op_choiceMixin :=
-  [derive choiceMixin for bin_op].
-HB.instance Definition _ := bin_op_choiceMixin.
-Definition bin_op_countMixin :=
-  [derive countMixin for bin_op].
-HB.instance Definition _ := bin_op_countMixin.
-Definition bin_op_finMixin :=
-  [derive finMixin for bin_op].
-HB.instance Definition _ := bin_op_finMixin.
-Definition bin_op_orderMixin :=
-  [derive orderMixin for bin_op].
-HB.instance Definition _ := bin_op_orderMixin.
+Definition bin_op_hasDecEq :=
+  [derive hasDecEq for bin_op].
+HB.instance Definition _ := bin_op_hasDecEq.
+Definition bin_op_hasChoice :=
+  [derive hasChoice for bin_op].
+HB.instance Definition _ := bin_op_hasChoice.
+Definition bin_op_isCountable :=
+  [derive isCountable for bin_op].
+HB.instance Definition _ := bin_op_isCountable.
+Definition bin_op_isFinite :=
+  [derive isFinite for bin_op].
+HB.instance Definition _ := bin_op_isFinite.
+Definition bin_op_isOrder :=
+  [derive isOrder for bin_op].
+HB.instance Definition _ := bin_op_isOrder.
 
 Unset Elimination Schemes.
 Inductive expr :=
@@ -135,30 +135,28 @@ Canonical expr_indType :=
 Canonical val_indType :=
   IndType val expr_val_indDef.
 (* FIXME: can we make these definitions transparent? *)
-Definition expr_eqMixin : Equality.mixin_of expr.
-Proof. exact: [derive nored eqMixin for expr]. Qed.
-HB.instance Definition _ := expr_eqMixin.
+Definition expr_hasDecEq : Equality.mixin_of expr.
+Proof. exact: [derive nored hasDecEq for expr]. Qed.
+HB.instance Definition _ := expr_hasDecEq.
 (* FIXME: can we make these definitions transparent? *)
-Definition val_eqMixin : Equality.mixin_of val.
-Proof. exact: [derive nored eqMixin for val]. Qed.
-HB.instance Definition _ := val_eqMixin.
-Definition expr_choiceMixin :=
-  [derive choiceMixin for expr].
-HB.instance Definition _ := expr_choiceMixin.
-Definition val_choiceMixin :=
-  [derive choiceMixin for val].
-HB.instance Definition _ := val_choiceMixin.
-Definition expr_countMixin :=
-  [derive countMixin for expr].
-HB.instance Definition _ := expr_countMixin.
-Definition val_countMixin :=
-  [derive countMixin for val].
-HB.instance Definition _ := val_countMixin.
-Definition expr_orderMixin :
-  Order.isOrder.axioms_ tt expr (Choice.on expr) (Equality.on expr).
-Proof. exact: [derive nored orderMixin for expr]. Qed.
-HB.instance Definition _ := expr_orderMixin.
-Definition val_orderMixin :
-  Order.isOrder.axioms_ tt val (Choice.on val) (Equality.on val).
-Proof. exact: [derive nored orderMixin for val]. Qed.
-HB.instance Definition _ := val_orderMixin.
+Definition val_hasDecEq : Equality.mixin_of val.
+Proof. exact: [derive nored hasDecEq for val]. Qed.
+HB.instance Definition _ := val_hasDecEq.
+Definition expr_hasChoice :=
+  [derive hasChoice for expr].
+HB.instance Definition _ := expr_hasChoice.
+Definition val_hasChoice :=
+  [derive hasChoice for val].
+HB.instance Definition _ := val_hasChoice.
+Definition expr_isCountable :=
+  [derive isCountable for expr].
+HB.instance Definition _ := expr_isCountable.
+Definition val_isCountable :=
+  [derive isCountable for val].
+HB.instance Definition _ := val_isCountable.
+Definition expr_isOrder : Order.isOrder tt expr.
+Proof. exact: [derive nored isOrder for expr]. Qed.
+HB.instance Definition _ := expr_isOrder.
+Definition val_isOrder : Order.isOrder tt val.
+Proof. exact: [derive nored isOrder for val]. Qed.
+HB.instance Definition _ := val_isOrder.
