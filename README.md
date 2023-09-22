@@ -81,7 +81,7 @@ In such cases, it is a good idea to keep the instance opaque (e.g. defined with
 
 ## Requirements
 
-- Coq 8.17
+- Coq 8.17 -- 8.18
 
 - `coq-mathcomp-ssreflect` 2.0.0
 
