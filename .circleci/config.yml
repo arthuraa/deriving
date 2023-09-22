@@ -46,66 +46,16 @@ commands:
           opam install --with-test .
 
 jobs:
-  coq-8-11:
+  coq-8-17-mathcomp-2-0-0:
     <<: *defaults
     steps:
     - startup
     - prepare:
-        mathcomp-version: '1.11.0'
+        mathcomp-version: '2.0.0'
     - build
     docker:
-    - image: coqorg/coq:8.11
-    resource_class: large
-
-  coq-8-12-mathcomp-1-11-0:
-    <<: *defaults
-    steps:
-    - startup
-    - prepare:
-        mathcomp-version: '1.11.0'
-    - build
-    docker:
-    - image: coqorg/coq:8.12
-
-  coq-8-13-mathcomp-1-13-0:
-    <<: *defaults
-    steps:
-    - startup
-    - prepare:
-        mathcomp-version: '1.13.0'
-    - build
-    docker:
-    - image: coqorg/coq:8.13
-
-  coq-8-14-mathcomp-1-13-0:
-    <<: *defaults
-    steps:
-    - startup
-    - prepare:
-        mathcomp-version: '1.13.0'
-    - build
-    docker:
-    - image: coqorg/coq:8.14
-
-  coq-8-15-mathcomp-1-15-0:
-    <<: *defaults
-    steps:
-    - startup
-    - prepare:
-        mathcomp-version: '1.15.0'
-    - build
-    docker:
-    - image: coqorg/coq:8.15
-
-  coq-8-16-mathcomp-1-16-0:
-    <<: *defaults
-    steps:
-    - startup
-    - prepare:
-        mathcomp-version: '1.16.0'
-    - build
-    docker:
-    - image: coqorg/coq:8.16
+    - image: coqorg/coq:8.17
+    resource_class: 'large'
 
   coq-8-17-mathcomp-dev:
     <<: *defaults
@@ -116,6 +66,29 @@ jobs:
     - build
     docker:
     - image: coqorg/coq:8.17
+    resource_class: 'large'
+
+  coq-8-18-mathcomp-2-0-0:
+    <<: *defaults
+    steps:
+    - startup
+    - prepare:
+        mathcomp-version: '2.0.0'
+    - build
+    docker:
+    - image: coqorg/coq:8.18
+    resource_class: 'large'
+
+  coq-8-18-mathcomp-dev:
+    <<: *defaults
+    steps:
+    - startup
+    - prepare:
+        mathcomp-version: 'dev'
+    - build
+    docker:
+    - image: coqorg/coq:8.18
+    resource_class: 'large'
 
   coq-dev:
     <<: *defaults
@@ -126,15 +99,13 @@ jobs:
     - build
     docker:
     - image: coqorg/coq:dev
+  resource_class: 'large'
 
 workflows:
   build:
     jobs:
-    - coq-8-11
-    - coq-8-12-mathcomp-1-11-0
-    - coq-8-13-mathcomp-1-13-0
-    - coq-8-14-mathcomp-1-13-0
-    - coq-8-15-mathcomp-1-15-0
-    - coq-8-16-mathcomp-1-16-0
+    - coq-8-17-mathcomp-2-0-0
     - coq-8-17-mathcomp-dev
+    - coq-8-18-mathcomp-2-0-0
+    - coq-8-18-mathcomp-dev
     - coq-dev

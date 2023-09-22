@@ -6,6 +6,7 @@ The Deriving library builds instances of basic MathComp classes for inductive
 data types with little boilerplate, akin to Haskell's `deriving` functionality.
 To define an `eqType` instance for a type `foo`, just write:
 
+    From HB Require Import structures.
     From mathcomp Require Import ssreflect ssrnat eqtype.
     From deriving Require Import deriving.
 
@@ -15,8 +16,8 @@ To define an `eqType` instance for a type `foo`, just write:
     Definition foo_indDef := [indDef for foo_rect].
     Canonical foo_indType := IndType foo foo_indDef.
 
-    Definition foo_eqMixin := [derive eqMixin for foo].
-    Canonical foo_eqType := EqType foo foo_eqMixin.
+    Definition foo_hasDecEq := [derive hasDecEq for foo].
+    HB.instance Definition _ := foo_hasDecEq.
 
 ## Supported types and limitations
 
@@ -72,17 +73,17 @@ instances as much as possible, to make them more similar to hand-written code.
 However, this process can be too slow for large definitions, so it can be
 disabled with the `nored` flag:
 
-    Definition large_type_eqMixin : Equality.mixin_of large_type.
-    Proof. exact [derive nored eqMixin for large_type]. Qed.
+    Definition large_type_hasDecEq : Equality.mixin_of large_type.
+    Proof. exact [derive nored hasDecEq for large_type]. Qed.
 
 In such cases, it is a good idea to keep the instance opaque (e.g. defined with
 `Qed`) to avoid slowdown.
 
 ## Requirements
 
-- Coq 8.11 -- 8.17
+- Coq 8.17
 
-- `coq-mathcomp-ssreflect` 1.11 -- 1.16
+- `coq-mathcomp-ssreflect` 2.0.0
 
 ## Installation
 

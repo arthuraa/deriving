@@ -1,3 +1,5 @@
+From HB Require Import structures.
+
 From mathcomp Require Import
   ssreflect ssrfun ssrbool ssrnat eqtype seq choice fintype finset order.
 
@@ -20,28 +22,18 @@ Definition base_lit_indDef :=
   [indDef for base_lit_rect].
 Canonical base_lit_indType :=
   IndType base_lit base_lit_indDef.
-Definition base_lit_eqMixin :=
-  [derive lazy eqMixin for base_lit].
-Canonical base_lit_eqType :=
-  EqType base_lit base_lit_eqMixin.
-Definition base_lit_choiceMixin :=
-  [derive choiceMixin for base_lit].
-Canonical base_lit_choiceType :=
-  Eval hnf in ChoiceType base_lit base_lit_choiceMixin.
-Definition base_lit_countMixin :=
-  [derive countMixin for base_lit].
-Canonical base_lit_countType :=
-  Eval hnf in CountType base_lit base_lit_countMixin.
-Definition base_lit_orderMixin :=
-  [derive lazy orderMixin for base_lit].
-Canonical base_lit_porderType :=
-  Eval hnf in POrderType tt base_lit base_lit_orderMixin.
-Canonical base_lit_latticeType :=
-  Eval hnf in LatticeType base_lit base_lit_orderMixin.
-Canonical base_lit_distrLatticeType :=
-  Eval hnf in DistrLatticeType base_lit base_lit_orderMixin.
-Canonical base_lit_orderType :=
-  Eval hnf in OrderType base_lit base_lit_orderMixin.
+Definition base_lit_hasDecEq :=
+  [derive lazy hasDecEq for base_lit].
+HB.instance Definition _ := base_lit_hasDecEq.
+Definition base_lit_hasChoice :=
+  [derive hasChoice for base_lit].
+HB.instance Definition _ := base_lit_hasChoice.
+Definition base_lit_isCountable :=
+  [derive isCountable for base_lit].
+HB.instance Definition _ := base_lit_isCountable.
+Definition base_lit_isOrder :=
+  [derive isOrder for base_lit].
+HB.instance Definition _ := base_lit_isOrder.
 
 Inductive un_op : Set :=
   | NegOp | MinusUnOp.
@@ -49,32 +41,21 @@ Definition un_op_indDef :=
   [indDef for un_op_rect].
 Canonical un_op_indType :=
   IndType un_op un_op_indDef.
-Definition un_op_eqMixin :=
-  [derive eqMixin for un_op].
-Canonical un_op_eqType :=
-  EqType un_op un_op_eqMixin.
-Definition un_op_choiceMixin :=
-  [derive choiceMixin for un_op].
-Canonical un_op_choiceType :=
-  Eval hnf in ChoiceType un_op un_op_choiceMixin.
-Definition un_op_countMixin :=
-  [derive countMixin for un_op].
-Canonical un_op_countType :=
-  Eval hnf in CountType un_op un_op_countMixin.
-Definition un_op_finMixin :=
-  [derive finMixin for un_op].
-Canonical un_op_finType :=
-  Eval hnf in FinType un_op un_op_finMixin.
-Definition un_op_orderMixin :=
-  [derive orderMixin for un_op].
-Canonical un_op_porderType :=
-  Eval hnf in POrderType tt un_op un_op_orderMixin.
-Canonical un_op_latticeType :=
-  Eval hnf in LatticeType un_op un_op_orderMixin.
-Canonical un_op_distrLatticeType :=
-  Eval hnf in DistrLatticeType un_op un_op_orderMixin.
-Canonical un_op_orderType :=
-  Eval hnf in OrderType un_op un_op_orderMixin.
+Definition un_op_hasDecEq :=
+  [derive hasDecEq for un_op].
+HB.instance Definition _ := un_op_hasDecEq.
+Definition un_op_hasChoice :=
+  [derive hasChoice for un_op].
+HB.instance Definition _ := un_op_hasChoice.
+Definition un_op_isCountable :=
+  [derive isCountable for un_op].
+HB.instance Definition _ := un_op_isCountable.
+Definition un_op_isFinite :=
+  [derive isFinite for un_op].
+HB.instance Definition _ := un_op_isFinite.
+Definition un_op_isOrder :=
+  [derive isOrder for un_op].
+HB.instance Definition _ := un_op_isOrder.
 
 Inductive bin_op : Set :=
   | PlusOp | MinusOp | MultOp | QuotOp | RemOp
@@ -86,32 +67,21 @@ Definition bin_op_indDef :=
   [indDef for bin_op_rect].
 Canonical bin_op_indType :=
   IndType bin_op bin_op_indDef.
-Definition bin_op_eqMixin :=
-  [derive lazy eqMixin for bin_op].
-Canonical bin_op_eqType :=
-  EqType bin_op bin_op_eqMixin.
-Definition bin_op_choiceMixin :=
-  [derive choiceMixin for bin_op].
-Canonical bin_op_choiceType :=
-  Eval hnf in ChoiceType bin_op bin_op_choiceMixin.
-Definition bin_op_countMixin :=
-  [derive countMixin for bin_op].
-Canonical bin_op_countType :=
-  Eval hnf in CountType bin_op bin_op_countMixin.
-Definition bin_op_finMixin :=
-  [derive finMixin for bin_op].
-Canonical bin_op_finType :=
-  Eval hnf in FinType bin_op bin_op_finMixin.
-Definition bin_op_orderMixin :=
-  [derive lazy orderMixin for bin_op].
-Canonical bin_op_porderType :=
-  Eval hnf in POrderType tt bin_op bin_op_orderMixin.
-Canonical bin_op_latticeType :=
-  Eval hnf in LatticeType bin_op bin_op_orderMixin.
-Canonical bin_op_distrLatticeType :=
-  Eval hnf in DistrLatticeType bin_op bin_op_orderMixin.
-Canonical bin_op_orderType :=
-  Eval hnf in OrderType bin_op bin_op_orderMixin.
+Definition bin_op_hasDecEq :=
+  [derive hasDecEq for bin_op].
+HB.instance Definition _ := bin_op_hasDecEq.
+Definition bin_op_hasChoice :=
+  [derive hasChoice for bin_op].
+HB.instance Definition _ := bin_op_hasChoice.
+Definition bin_op_isCountable :=
+  [derive isCountable for bin_op].
+HB.instance Definition _ := bin_op_isCountable.
+Definition bin_op_isFinite :=
+  [derive isFinite for bin_op].
+HB.instance Definition _ := bin_op_isFinite.
+Definition bin_op_isOrder :=
+  [derive isOrder for bin_op].
+HB.instance Definition _ := bin_op_isOrder.
 
 Unset Elimination Schemes.
 Inductive expr :=
@@ -164,47 +134,29 @@ Canonical expr_indType :=
   IndType expr expr_val_indDef.
 Canonical val_indType :=
   IndType val expr_val_indDef.
-Definition expr_eqMixin :=
-  [derive lazy eqMixin for expr].
-Canonical expr_eqType :=
-  EqType expr expr_eqMixin.
-Definition val_eqMixin :=
-  [derive lazy eqMixin for val].
-Canonical val_eqType :=
-  EqType val val_eqMixin.
-Definition expr_choiceMixin :=
-  [derive choiceMixin for expr].
-Canonical expr_choiceType :=
-  Eval hnf in ChoiceType expr expr_choiceMixin.
-Definition val_choiceMixin :=
-  [derive choiceMixin for val].
-Canonical val_choiceType :=
-  Eval hnf in ChoiceType val val_choiceMixin.
-Definition expr_countMixin :=
-  [derive countMixin for expr].
-Canonical expr_countType :=
-  Eval hnf in CountType expr expr_countMixin.
-Definition val_countMixin :=
-  [derive countMixin for val].
-Canonical val_countType :=
-  Eval hnf in CountType val val_countMixin.
-Definition expr_orderMixin : leOrderMixin expr_choiceType.
-Proof. exact [derive nored orderMixin for expr]. Qed.
-Canonical expr_porderType :=
-  Eval hnf in POrderType tt expr expr_orderMixin.
-Canonical expr_latticeType :=
-  Eval hnf in LatticeType expr expr_orderMixin.
-Canonical expr_distrLatticeType :=
-  Eval hnf in DistrLatticeType expr expr_orderMixin.
-Canonical expr_orderType :=
-  Eval hnf in OrderType expr expr_orderMixin.
-Definition val_orderMixin : leOrderMixin val_choiceType.
-Proof. exact [derive nored orderMixin for val]. Qed.
-Canonical val_porderType :=
-  Eval hnf in POrderType tt val val_orderMixin.
-Canonical val_latticeType :=
-  Eval hnf in LatticeType val val_orderMixin.
-Canonical val_distrLatticeType :=
-  Eval hnf in DistrLatticeType val val_orderMixin.
-Canonical val_orderType :=
-  Eval hnf in OrderType val val_orderMixin.
+(* FIXME: can we make these definitions transparent? *)
+Definition expr_hasDecEq : Equality.mixin_of expr.
+Proof. exact: [derive nored hasDecEq for expr]. Qed.
+HB.instance Definition _ := expr_hasDecEq.
+(* FIXME: can we make these definitions transparent? *)
+Definition val_hasDecEq : Equality.mixin_of val.
+Proof. exact: [derive nored hasDecEq for val]. Qed.
+HB.instance Definition _ := val_hasDecEq.
+Definition expr_hasChoice :=
+  [derive hasChoice for expr].
+HB.instance Definition _ := expr_hasChoice.
+Definition val_hasChoice :=
+  [derive hasChoice for val].
+HB.instance Definition _ := val_hasChoice.
+Definition expr_isCountable :=
+  [derive isCountable for expr].
+HB.instance Definition _ := expr_isCountable.
+Definition val_isCountable :=
+  [derive isCountable for val].
+HB.instance Definition _ := val_isCountable.
+Definition expr_isOrder : Order.isOrder tt expr.
+Proof. exact: [derive nored isOrder for expr]. Qed.
+HB.instance Definition _ := expr_isOrder.
+Definition val_isOrder : Order.isOrder tt val.
+Proof. exact: [derive nored isOrder for val]. Qed.
+HB.instance Definition _ := val_isOrder.

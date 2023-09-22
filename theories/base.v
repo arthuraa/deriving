@@ -1,10 +1,10 @@
+From HB Require Import structures.
 From mathcomp Require Import
   ssreflect ssrfun ssrbool ssrnat eqtype seq choice fintype.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-Set Universe Polymorphism.
 Set Primitive Projections.
 
 (* Backwards compatibility for hint locality attributes *)
@@ -17,16 +17,18 @@ Create HintDb deriving.
 
 Notation "f \o g" := (fun x => f (g x)) (only parsing) : deriving_scope.
 
-Definition eq_eqb (T : eqType) x y (p q : x = y :> T) := true.
+Section EqEqType.
 
-Lemma eq_eqbP T x y : Equality.axiom (@eq_eqb T x y).
-Proof.
-move=> p q; apply: ReflectT; apply: eq_irrelevance.
-Qed.
+Variable (T : eqType) (x y : T).
 
-Definition eq_eqMixin T x y := EqMixin (@eq_eqbP T x y).
+Definition eq_eqb (p q : x = y :> T) := true.
 
-Canonical eq_eqType T x y := EqType (x = y) (@eq_eqMixin T x y).
+Lemma eq_eqbP : Equality.axiom eq_eqb.
+Proof. move=> p q; apply: ReflectT; apply: eq_irrelevance. Qed.
+
+HB.instance Definition _ := hasDecEq.Build (x = y) eq_eqbP.
+
+End EqEqType.
 
 Definition cast T (P : T -> Type) x y (e : x = y) : P x -> P y :=
   match e with erefl => id end.
@@ -106,7 +108,7 @@ Hint Unfold snd : deriving.
 
 (** An alternative to the standard prod type, to avoid name clashes and universe
     issues. *)
-
+Set Universe Polymorphism.
 Record cell T S := Cell { hd : T; tl : S }.
 
 Arguments Cell {_ _}.
@@ -508,28 +510,44 @@ Definition cast_fin n m (e : n = m) : forall (i : fin n.+1),
   | erefl => fun i => if i is None then erefl else erefl
   end.
 
-Fixpoint fin_eqMixin n : Equality.mixin_of (fin n) :=
-  match n with
-  | 0 => void_eqMixin
-  | n.+1 => option_eqMixin (EqType _ (fin_eqMixin n))
-  end.
-Canonical fin_eqType n := EqType (fin n) (fin_eqMixin n).
+Unset Universe Polymorphism.
 
-Fixpoint fin_choiceMixin n : Choice.mixin_of (fin n) :=
-  match n with
-  | 0 => void_choiceMixin
-  | n.+1 => option_choiceMixin (ChoiceType _ (fin_choiceMixin n))
+Fixpoint fin_eqClass n : Equality (fin n) :=
+  match n return Equality (fin n) with
+  | 0 =>
+    Equality.on void
+  | n.+1 =>
+    Equality.on (option (HB.pack_for Equality.type (fin n) (fin_eqClass n)))
   end.
-Canonical fin_choiceType n :=
-  Eval hnf in ChoiceType (fin n) (fin_choiceMixin n).
 
-Fixpoint fin_countMixin n : Countable.mixin_of (fin n) :=
+Fixpoint fin_choiceClass n : Choice (fin n) :=
   match n with
-  | 0 => void_countMixin
-  | n.+1 => option_countMixin (CountType _ (fin_countMixin n))
+  | 0 =>
+    Choice.on void
+  | n.+1 =>
+    Choice.on (option (HB.pack_for Choice.type (fin n) (fin_choiceClass n)))
   end.
-Canonical fin_countType n :=
-  Eval hnf in CountType (fin n) (fin_countMixin n).
+
+Fixpoint fin_countClass n : Countable (fin n) :=
+  match n with
+  | 0 =>
+    Countable.on void
+  | n.+1 =>
+    Countable.on (option (HB.pack_for Countable.type (fin n)
+                            (fin_countClass n)))
+  end.
+
+Section FinInstances.
+
+Variable n : nat.
+
+HB.instance Definition _ := fin_eqClass n.
+HB.instance Definition _ := fin_choiceClass n.
+HB.instance Definition _ := fin_countClass n.
+
+End FinInstances.
+
+Set Universe Polymorphism.
 
 Section Ilist.
 
@@ -1080,20 +1098,31 @@ Proof. by case. Qed.
 
 End ProdCell.
 
-Definition cell_eqMixin (T S : eqType) := CanEqMixin (@prod_of_cellK T S).
-Canonical cell_eqType T S := EqType _ (@cell_eqMixin T S).
-Definition cell_choiceMixin (T S : choiceType) :=
-  CanChoiceMixin (@prod_of_cellK T S).
-Canonical cell_choiceType T S :=
-  Eval hnf in ChoiceType _ (@cell_choiceMixin T S).
-Definition cell_countMixin (T S : countType) :=
-  CanCountMixin (@prod_of_cellK T S).
-Canonical cell_countType T S :=
-  Eval hnf in CountType _ (@cell_countMixin T S).
-Definition cell_finMixin (T S : finType) :=
-  CanFinMixin (@prod_of_cellK T S).
-Canonical cell_finType T S :=
-  Eval hnf in FinType _ (@cell_finMixin T S).
+Unset Universe Polymorphism.
+
+Section CellEqType.
+Variables T S : eqType.
+HB.instance Definition _ :=
+  Equality.copy (cell T S) (can_type (@prod_of_cellK T S)).
+End CellEqType.
+
+Section CellChoiceType.
+Variables T S : choiceType.
+HB.instance Definition _ :=
+  Choice.copy (cell T S) (can_type (@prod_of_cellK T S)).
+End CellChoiceType.
+
+Section CellCountType.
+Variables T S : countType.
+HB.instance Definition _ :=
+  Countable.copy (cell T S) (can_type (@prod_of_cellK T S)).
+End CellCountType.
+
+Section CellFinType.
+Variables T S : finType.
+HB.instance Definition _ :=
+  Finite.copy (cell T S) (can_type (@prod_of_cellK T S)).
+End CellFinType.
 
 Section HeterogeneousInstances.
 
@@ -1159,41 +1188,91 @@ Definition hfun_lift K sort n T_ arr_K arr_KP S :=
   @hlist_lift_loop K sort arr_K arr_KP n T_ S.
 Arguments hfun_lift {K} sort {n} _ _ _ S.
 
-Definition hsum_eqMixin n (T_ : fin n -> eqType) :=
+Section HSumEqType.
+
+Variables (n : nat) (T_ : fin n -> eqType).
+
+Definition hsum_eqType :=
+  let sum_eqType := fun A B : eqType => Equality.clone (A + B)%type _ in
+  let void_eqType := Equality.clone void _ in
   let lift := hsum_lift Equality.sort T_ sum_eqType (fun _ _ => erefl) void_eqType erefl in
-  cast Equality.mixin_of (svalP lift) (Equality.class (sval lift)).
-Canonical hsum_eqType n T_ :=
-  EqType (hsum _) (@hsum_eqMixin n T_).
+  cast (fun A => Equality A) (svalP lift) (Equality.class (sval lift)).
 
-Definition hsum_choiceMixin n (T_ : fin n -> choiceType) :=
+HB.instance Definition _ := hsum_eqType.
+
+End HSumEqType.
+
+Section HSumChoiceType.
+
+Variables (n : nat) (T_ : fin n -> choiceType).
+
+Definition hsum_choiceType :=
+  let sum_choiceType := fun A B : choiceType => Choice.clone (A + B)%type _ in
+  let void_choiceType := Choice.clone void _ in
   let lift := hsum_lift Choice.sort T_ sum_choiceType (fun _ _ => erefl) void_choiceType erefl in
-  cast Choice.mixin_of (svalP lift) (Choice.mixin (Choice.class (sval lift))).
-Canonical hsum_choiceType n T_ :=
-  Eval hnf in ChoiceType (hsum _) (@hsum_choiceMixin n T_).
+  cast (fun A => Choice A) (svalP lift) (Choice.class (sval lift)).
 
-Definition hsum_countMixin n (T_ : fin n -> countType) :=
+HB.instance Definition _ := hsum_choiceType.
+
+End HSumChoiceType.
+
+Section HSumCountType.
+
+Variables (n : nat) (T_ : fin n -> countType).
+
+Definition hsum_countType :=
+  let sum_countType := fun A B : countType => Countable.clone (A + B)%type _ in
+  let void_countType := Countable.clone void _ in
   let lift := hsum_lift Countable.sort T_ sum_countType (fun _ _ => erefl) void_countType erefl in
-  cast Countable.mixin_of (svalP lift) (Countable.mixin (Countable.class (sval lift))).
-Canonical hsum_countType n T_ :=
-  Eval hnf in CountType (hsum _) (@hsum_countMixin n T_).
+  cast (fun A => Countable A) (svalP lift) (Countable.class (sval lift)).
 
-Definition hlist_eqMixin n (T_ : fin n -> eqType) :=
+HB.instance Definition _ := hsum_countType.
+
+End HSumCountType.
+
+Section HListEqType.
+
+Variables (n : nat) (T_ : fin n -> eqType).
+
+Definition hlist_eqType :=
+  let cell_eqType := fun A B : eqType => Equality.clone (cell A B)%type _ in
+  let unit_eqType := Equality.clone unit _ in
   let lift := hlist_lift Equality.sort T_ cell_eqType (fun _ _ => erefl) unit_eqType erefl in
-  cast Equality.mixin_of (svalP lift) (Equality.class (sval lift)).
-Canonical hlist_eqType n T_ :=
-  EqType (hlist _) (@hlist_eqMixin n T_).
+  cast (fun A => Equality A) (svalP lift) (Equality.class (sval lift)).
 
-Definition hlist_choiceMixin n (T_ : fin n -> choiceType) :=
+HB.instance Definition _ := hlist_eqType.
+
+End HListEqType.
+
+Section HListChoiceType.
+
+Variables (n : nat) (T_ : fin n -> choiceType).
+
+Definition hlist_choiceType :=
+  let cell_choiceType := fun A B : choiceType => Choice.clone (cell A B)%type _ in
+  let unit_choiceType := Choice.clone unit _ in
   let lift := hlist_lift Choice.sort T_ cell_choiceType (fun _ _ => erefl) unit_choiceType erefl in
-  cast Choice.mixin_of (svalP lift) (Choice.mixin (Choice.class (sval lift))).
-Canonical hlist_choiceType n T_ :=
-  Eval hnf in ChoiceType (hlist _) (@hlist_choiceMixin n T_).
+  cast (fun A => Choice A) (svalP lift) (Choice.class (sval lift)).
 
-Definition hlist_countMixin n (T_ : fin n -> countType) :=
+HB.instance Definition _ := hlist_choiceType.
+
+End HListChoiceType.
+
+Section HListCountType.
+
+Variables (n : nat) (T_ : fin n -> countType).
+
+Definition hlist_countType :=
+  let cell_countType := fun A B : countType => Countable.clone (cell A B)%type _ in
+  let unit_countType := Countable.clone unit _ in
   let lift := hlist_lift Countable.sort T_ cell_countType (fun _ _ => erefl) unit_countType erefl in
-  cast Countable.mixin_of (svalP lift) (Countable.mixin (Countable.class (sval lift))).
-Canonical hlist_countType n T_ :=
-  Eval hnf in CountType (hlist _) (@hlist_countMixin n T_).
+  cast (fun A => Countable A) (svalP lift) (Countable.class (sval lift)).
+
+HB.instance Definition _ := hlist_countType.
+
+End HListCountType.
+
+Set Universe Polymorphism.
 
 Fixpoint hlist1' m : (fin m.+1 -> Type) -> Type :=
   match m with

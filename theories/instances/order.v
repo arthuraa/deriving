@@ -146,58 +146,84 @@ case=> /= [[x xP] xargs] [y yargs] /=.
 by rewrite eq_sym; case: (altP eqP)=> ?; [apply: IH|apply: xP].
 Qed.
 
-Definition ind_porderMixin i :=
-  @LeOrderMixin _ (@le i) _ _ _
-                (fun _ _ => erefl) (fun _ _ => erefl) (fun _ _ => erefl)
-                (@anti i) (@trans i) (@total i).
+Definition ind_isOrder i :=
+  Eval unfold Order.isOrder.phant_Build in
+  Order.isOrder.Build tt (T i)
+    (fun _ _ => erefl) (fun _ _ => erefl) (fun _ _ => erefl)
+    (@anti i) (@trans i) (@total i).
 
 End Def.
 
 End DerOrderType.
 
-Definition pack T :=
+Definition pack (T : Type) :=
   [infer indType of T with sort as sT n Ts' D cD in
    fun (Ts : lift_class Choice.sort n) =>
    fun & phant_id Ts' (untag_sort Ts) =>
    fun T_choice & phant_id (lift_class_proj Choice.class Ts) T_choice =>
    let T_ind_choice := @IndChoiceType _ _ _ T_choice sT in
    fun cD' & phant_id cD cD' =>
-   @ind_porderMixin T_ind_choice cD' (Ind.idx sT)].
+   @ind_isOrder T_ind_choice cD' (Ind.idx sT)].
 
 End DerOrderType.
 
 Canonical packOrderType disp (T : orderType disp) :=
   DerOrderType.Pack T.
 
-Notation "[ 'derive' 'nored' 'orderMixin' 'for' T ]" :=
-  (@DerOrderType.pack T _ id _ _ _ _ _ _ id _ id _ id _ id _ id _ id)
+Notation "[ 'derive' 'nored' 'isOrder' 'for' T ]" :=
+  (@DerOrderType.pack T%type _ id _ _ _ _ _ _ id _ id _ id _ id _ id _ id :
+    Order.isOrder tt T%type
+  )
   (at level 0) : form_scope.
 
-Ltac derive_orderMixin T :=
-  let mixin := constr:([derive nored orderMixin for T]) in
-  match eval unfold DerOrderType.pack, DerOrderType.ind_porderMixin in mixin with
-  | @LeOrderMixin _ ?le _ _ _ _ _ _ ?anti ?trans ?total =>
+(* FIXME: Axioms_ is an internal function *)
+Ltac derive_isOrder T :=
+  let mixin := constr:([derive nored isOrder for T]) in
+  let mixin :=
+    eval unfold DerOrderType.pack, DerOrderType.ind_isOrder in mixin in
+  match mixin with
+  | @Order.isOrder.Axioms_ ?d ?T' ?choice_m ?eq_m ?le ?lt ?meet ?join _ _ _
+                           ?anti ?trans ?total =>
     let le := eval unfold DerOrderType.le, DerOrderType.le_branch in le in
     let le := eval deriving_compute in le in
-    exact (@LeOrderMixin _ le _ _ _
+    exact (@Order.isOrder.Axioms_ d T choice_m eq_m le _ _ _
                          (fun _ _ => erefl) (fun _ _ => erefl) (fun _ _ => erefl)
                          anti trans total)
   end.
 
-Notation "[ 'derive' 'orderMixin' 'for' T ]" :=
-  (ltac:(derive_orderMixin T))
-  (at level 0, format "[ 'derive'  'orderMixin'  'for'  T ]") : form_scope.
+Notation "[ 'derive' 'isOrder' 'for' T ]" :=
+  (ltac:(derive_isOrder T))
+  (at level 0, format "[ 'derive'  'isOrder'  'for'  T ]") : form_scope.
 
-Ltac derive_lazy_orderMixin T :=
-  let mixin := constr:([derive nored orderMixin for T]) in
-  match eval unfold DerOrderType.pack, DerOrderType.ind_porderMixin in mixin with
-  | @LeOrderMixin _ ?le _ _ _ _ _ _ ?anti ?trans ?total =>
+(* FIXME: Axioms_ is an internal function *)
+Ltac derive_lazy_isOrder T :=
+  let mixin := constr:([derive nored isOrder for T]) in
+  let mixin :=
+    eval unfold DerOrderType.pack, DerOrderType.ind_isOrder in mixin in
+  match mixin with
+  | @Order.isOrder.Axioms_ ?d ?T' ?choice_m ?eq_m ?le ?lt ?meet ?join _ _ _
+                           ?anti ?trans ?total =>
     let le := eval unfold DerOrderType.le, DerOrderType.le_branch in le in
     let le := eval deriving_lazy in le in
-    exact (@LeOrderMixin _ le _ _ _
+    exact (@Order.isOrder.Axioms_ d T choice_m eq_m le _ meet join
                          (fun _ _ => erefl) (fun _ _ => erefl) (fun _ _ => erefl)
                          anti trans total)
   end.
 
+Notation "[ 'derive' 'lazy' 'isOrder' 'for' T ]" :=
+  (ltac:(derive_lazy_isOrder T)) (at level 0) : form_scope.
+
+#[deprecated(since="deriving 0.2.0",
+      note="Use [derive nored isOrder for _] instead")]
+Notation "[ 'derive' 'nored' 'orderMixin' 'for' T ]" :=
+  ([derive nored isOrder for T])
+  (at level 0) : form_scope.
+#[deprecated(since="deriving 0.2.0",
+      note="Use [derive isOrder for _] instead")]
+Notation "[ 'derive' 'orderMixin' 'for' T ]" :=
+  ([derive isOrder for T])
+  (at level 0) : form_scope.
+#[deprecated(since="deriving 0.2.0",
+      note="Use [derive lazy isOrder for _] instead")]
 Notation "[ 'derive' 'lazy' 'orderMixin' 'for' T ]" :=
-  (ltac:(derive_lazy_orderMixin T)) (at level 0) : form_scope.
+  ([derive lazy isOrder for T]) (at level 0) : form_scope.

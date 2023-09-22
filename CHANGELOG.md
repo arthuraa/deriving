@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Make Deriving compatible with Hierarchy Builder and MathComp 2.0.0.
+
+- Following the changes of terminology in MathComp, the syntax for deriving the
+  base mixins has now the form `[derive [<flag>] <mixin> for <type>]`, where
+  + `<flag>` is one of `red`, `nored` or `lazy`.
+  + `<mixin>` is one of `hasDecEq`, `hasChoice`, `isCountable`, `isFinite` or
+    `isOrder`.
+
+### Deprecated
+
+- The derivation forms `[derive ...]` that mention the old MathComp mixin names
+  `eqMixin`, `choiceMixin`, `countMixin`, `finMixin` and `orderMixin` are
+  deprecated.  Use the new names for those mixins, as explained in the previous
+  section.
+
 ## [0.1.1] - 2023-03-10
 ### Fixed
 - Add `global` locality annotations to comply with newer versions of Coq

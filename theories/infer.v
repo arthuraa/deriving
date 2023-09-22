@@ -46,6 +46,9 @@ Notation "[ 'indDef' 'for' rect ]" :=
   (ltac:(ind_def rect))
   (at level 0) : form_scope.
 
+(** In these two notations, we force the indType instance to be unfolded before
+    returning it, so that it can be simplified. *)
+
 Notation "[ 'infer' 'indType' 'of' T 'as' sT n sorts D 'in' e ]" :=
   (fun (sT' : indType) & phant_id T%type (Ind.sort sT') =>
    fun n (sorts : fin n -> Type) (D : declaration n) =>

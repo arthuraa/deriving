@@ -3,6 +3,8 @@
 -arg -w -arg -notation-overridden
 -arg -w -arg -non-reversible-notation
 -arg -w -arg -ssr-search-moved
+-arg -w -arg -redundant-canonical-projection
+-arg -w -arg -projection-no-head-constant
 
 theories/base.v
 theories/ind.v

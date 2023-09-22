@@ -95,10 +95,22 @@ Definition pack_tree_of_indK :=
   fun (sT_ind : indType) & phant_id (Ind.sort sT_ind) T =>
   @tree_of_coq_indK sT_ind (Ind.idx sT_ind).
 
-Notation "[ 'derive' 'choiceMixin' 'for' T ]" :=
-  (PcanChoiceMixin (@pack_tree_of_indK T _ id))
-  (at level 0, format "[ 'derive'  'choiceMixin'  'for'  T ]") : form_scope.
+Notation "[ 'derive' 'hasChoice' 'for' T ]" :=
+  (Choice.copy T%type (pcan_type (@pack_tree_of_indK T _ id)))
+  (at level 0, format "[ 'derive'  'hasChoice'  'for'  T ]") : form_scope.
 
+Notation "[ 'derive' 'isCountable' 'for' T ]" :=
+  (Countable.copy T%type (pcan_type (@pack_tree_of_indK T _ id)))
+  (at level 0, format "[ 'derive' 'isCountable'  'for'  T ]") : form_scope.
+
+#[deprecated(since="deriving 0.2.0",
+      note="Use [derive hasChoice for _] instead")]
+Notation "[ 'derive' 'choiceMixin' 'for' T ]" :=
+  ([derive hasChoice for T])
+  (at level 0) : form_scope.
+
+#[deprecated(since="deriving 0.2.0",
+      note="Use [derive isCountable for _] instead")]
 Notation "[ 'derive' 'countMixin' 'for' T ]" :=
-  (PcanCountMixin (@pack_tree_of_indK T _ id))
-  (at level 0, format "[ 'derive' 'countMixin'  'for'  T ]") : form_scope.
+  ([derive isCountable for T])
+  (at level 0) : form_scope.
