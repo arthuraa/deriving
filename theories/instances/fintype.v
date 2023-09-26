@@ -54,7 +54,7 @@ Fixpoint all_finbP n : forall (f : fin n -> bool),
 
 (** It is strange to derive a finType instance for a mutually inductive type,
 but you never know...*)
-Variable (T : indCountType).
+Variable (T : indEqType).
 Notation n := (Ind.Def.n T).
 Notation D := (Ind.Def.decl T).
 
@@ -84,7 +84,8 @@ Lemma enum_indP i : Finite.axiom (enum_ind i).
 Proof.
 move=> /= x; rewrite -(unrollK x); case: {x} (unroll x)=> j xs.
 rewrite /enum_ind count_flatten -!map_comp /comp /=.
-have <- : seq.sumn [seq j == j' : nat | j' <- list_of_seq (enum_fin (size (D i)))] = 1.
+have <- : seq.sumn [seq j == j' : nat
+                   | j' <- list_of_seq (enum_fin (size (D i)))] = 1.
   rewrite /Ind.Cidx in j {xs} *.
   elim: (size (D i)) j => [|m IH] //= [j|] /=.
     by rewrite list_of_seq_map -map_comp /comp /= -(IH j) add0n.
@@ -125,10 +126,10 @@ End FinType.
 
 Definition pack (T : Type) :=
   [infer indType of T with Finite.sort as sT n sorts D cD in
-   fun (Ts : lift_class Countable.sort n) =>
+   fun (Ts : lift_class Equality.sort n) =>
    fun & phant_id sorts (untag_sort Ts) =>
-   fun T_count & phant_id (lift_class_proj Countable.class Ts) T_count =>
-   let T_ind_count := @IndCountType _ _ _ T_count sT in
+   fun T_count & phant_id (lift_class_proj Equality.class Ts) T_count =>
+   let T_ind_count := @IndEqType _ _ _ T_count sT in
    fun cD' & phant_id cD cD' =>
    fun (not_rec : all_finb (fun i => all (all (negb \o @is_rec n)) (D i))) =>
    isFinite.Build _ (@enum_indP T_ind_count cD' not_rec (Ind.idx sT))].
@@ -141,10 +142,11 @@ override this behavior by using the [[derive red finMixin for T]] variant
 below. *)
 
 Notation "[ 'derive' 'isFinite' 'for' T ]" :=
-  (@DerFinType.pack T _ id _ _ _ _ _ _ id _ id _ id _ id _ id _ id erefl)
+  (@DerFinType.pack T _ id _ _ _ _ _ _ id _ id _ id _ id _ id _ id erefl
+    : isFinite T%type
+  )
   (at level 0) : form_scope.
 
-(* FIXME: The isFinite.Axioms_ constructor is internal *)
 Ltac derive_red_isFinite T :=
   match eval hnf in [derive isFinite for T] with
   | @isFinite.Axioms_ ?T' ?eqP ?enum ?enumP=>
@@ -156,7 +158,7 @@ Ltac derive_red_isFinite T :=
                             flatten, allpairs, foldr, map, cat
     in enum in
     let enum := eval deriving_compute in enum in
-    exact (@isFinite.Axioms_ T' eqP  enum enumP)
+    exact (@isFinite.Build T eqP  enum enumP)
   end.
 
 Notation "[ 'derive' 'red' 'isFinite' 'for' T ]" :=
