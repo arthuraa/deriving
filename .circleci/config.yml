@@ -57,12 +57,12 @@ jobs:
     - image: coqorg/coq:8.17
     resource_class: 'large'
 
-  coq-8-17-mathcomp-dev:
+  coq-8-17-mathcomp-2-2-0:
     <<: *defaults
     steps:
     - startup
     - prepare:
-        mathcomp-version: 'dev'
+        mathcomp-version: '2.2.0'
     - build
     docker:
     - image: coqorg/coq:8.17
@@ -90,6 +90,28 @@ jobs:
     - image: coqorg/coq:8.18
     resource_class: 'large'
 
+  coq-8-19-mathcomp-2-2-0:
+    <<: *defaults
+    steps:
+    - startup
+    - prepare:
+        mathcomp-version: '2.2.0'
+    - build
+    docker:
+    - image: coqorg/coq:8.19
+    resource_class: 'large'
+
+  coq-8-19-mathcomp-dev:
+    <<: *defaults
+    steps:
+    - startup
+    - prepare:
+        mathcomp-version: 'dev'
+    - build
+    docker:
+    - image: coqorg/coq:8.19
+    resource_class: 'large'
+
   coq-dev:
     <<: *defaults
     steps:
@@ -105,7 +127,9 @@ workflows:
   build:
     jobs:
     - coq-8-17-mathcomp-2-0-0
-    - coq-8-17-mathcomp-dev
+    - coq-8-17-mathcomp-2-2-0
     - coq-8-18-mathcomp-2-0-0
     - coq-8-18-mathcomp-dev
+    - coq-8-19-mathcomp-2-2-0
+    - coq-8-19-mathcomp-dev
     - coq-dev
