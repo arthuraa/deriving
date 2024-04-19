@@ -38,7 +38,7 @@ Definition option_indDef T :=
 Canonical option_indType T :=
   IndType (option T) (option_indDef T).
 Section OptionOrderType.
-Variable Tord : orderType tt.
+Variable Tord : orderType Order.default_display.
 Definition option_isOrder :=
   Eval hnf in [derive isOrder for option Tord].
 HB.instance Definition _ := option_isOrder.

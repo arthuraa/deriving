@@ -17,7 +17,7 @@ Section DerOrderType.
 Import Order.Total Order.Theory.
 
 Record packedOrderType := Pack {
-  disp : unit;
+  disp : Order.disp_t;
   sort : orderType disp;
 }.
 
@@ -148,7 +148,7 @@ Qed.
 
 Definition ind_isOrder i :=
   Eval unfold Order.isOrder.phant_Build in
-  Order.isOrder.Build tt (T i)
+  Order.isOrder.Build Order.default_display (T i)
     (fun _ _ => erefl) (fun _ _ => erefl) (fun _ _ => erefl)
     (@anti i) (@trans i) (@total i).
 
@@ -172,7 +172,7 @@ Canonical packOrderType disp (T : orderType disp) :=
 
 Notation "[ 'derive' 'nored' 'isOrder' 'for' T ]" :=
   (@DerOrderType.pack T%type _ id _ _ _ _ _ _ id _ id _ id _ id _ id _ id :
-    Order.isOrder tt T%type
+    Order.isOrder Order.default_display T%type
   )
   (at level 0) : form_scope.
 
