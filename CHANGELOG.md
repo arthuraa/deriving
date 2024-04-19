@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Use new display type for `orderType`, as in MathComp 2.3.0.  The generated
+  instances now use the default display.
+
 ### Deprecated
 
 ### Removed
