@@ -3,7 +3,7 @@ TESTVOFILES=$(TESTVFILES:.v=.vo)
 UNFOLDFILES = theories/ind.v theories/base.v
 
 theories/tactics.v: make_tactics.ml $(UNFOLDFILES)
-	ocaml str.cma make_tactics.ml $(UNFOLDFILES) > theories/tactics.v
+	ocaml -I +str str.cma make_tactics.ml $(UNFOLDFILES) > theories/tactics.v
 
 test: $(TESTVOFILES)
 .PHONY: test

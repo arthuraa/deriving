@@ -13,7 +13,7 @@
       let pkgs = nixpkgs.legacyPackages.${system}; in rec {
             packages = rec {
               coq = pkgs.coq_8_17;
-              coqPackages = pkgs.coqPackages_8_17.overrideScope' (self: super:
+              coqPackages = pkgs.coqPackages_8_17.overrideScope (self: super:
                 { mathcomp = super.mathcomp.override {
                     version = "2.0.0";
                   };
