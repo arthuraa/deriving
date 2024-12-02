@@ -101,6 +101,17 @@ jobs:
     - image: coqorg/coq:8.19
     resource_class: 'large'
 
+  coq-8-19-mathcomp-2-3-0:
+    <<: *defaults
+    steps:
+    - startup
+    - prepare:
+        mathcomp-version: '2.3.0'
+    - build
+    docker:
+    - image: coqorg/coq:8.19
+    resource_class: 'large'
+
   coq-8-19-mathcomp-dev:
     <<: *defaults
     steps:
@@ -131,5 +142,6 @@ workflows:
     - coq-8-18-mathcomp-2-0-0
     - coq-8-18-mathcomp-dev
     - coq-8-19-mathcomp-2-2-0
+    - coq-8-19-mathcomp-2-3-0
     - coq-8-19-mathcomp-dev
     - coq-dev
