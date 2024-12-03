@@ -2,7 +2,7 @@ From HB Require Import structures.
 From mathcomp Require Import
   ssreflect ssrfun ssrbool ssrnat eqtype seq choice fintype order.
 
-From deriving Require Import base ind tactics infer.
+From deriving Require Import base ind tactics infer compat.
 From deriving.instances Require Export eqtype tree_of_ind fintype order.
 
 From Coq Require Import ZArith NArith String Ascii.

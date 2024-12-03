@@ -1,7 +1,7 @@
 From mathcomp Require Import
   ssreflect ssrfun ssrbool ssrnat eqtype seq choice fintype order.
 
-From deriving Require Import base ind tactics infer.
+From deriving Require Import base ind tactics infer compat.
 
 From Coq Require Import ZArith NArith String Ascii.
 
