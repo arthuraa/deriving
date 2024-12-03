@@ -10,12 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Use new display type for `orderType`, as in MathComp 2.3.0.  The generated
-  instances now use the default display.
-
 ### Deprecated
 
 ### Removed
+
+### Fixed
+
+## [0.2.1] - 2024-12-02
+
+### Changed
+
+- Use new display type for `orderType`, as in MathComp 2.3.0.  The generated
+  instances now use the default display.
 
 ### Fixed
 
@@ -48,7 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - First version supporting inductive types.
 
-[Unreleased]: https://github.com/arthuraa/deriving/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/arthuraa/deriving/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/arthuraa/deriving/releases/tag/v0.2.1
 [0.2.0]: https://github.com/arthuraa/deriving/releases/tag/v0.2.0
 [0.1.1]: https://github.com/arthuraa/deriving/releases/tag/v0.1.1
 [0.1.0]: https://github.com/arthuraa/deriving/releases/tag/v0.1.0

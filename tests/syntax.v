@@ -154,9 +154,9 @@ HB.instance Definition _ := expr_isCountable.
 Definition val_isCountable :=
   [derive isCountable for val].
 HB.instance Definition _ := val_isCountable.
-Definition expr_isOrder : Order.isOrder tt expr.
+Definition expr_isOrder : Order.isOrder Order.default_display expr.
 Proof. exact: [derive nored isOrder for expr]. Qed.
 HB.instance Definition _ := expr_isOrder.
-Definition val_isOrder : Order.isOrder tt val.
+Definition val_isOrder : Order.isOrder Order.default_display val.
 Proof. exact: [derive nored isOrder for val]. Qed.
 HB.instance Definition _ := val_isOrder.

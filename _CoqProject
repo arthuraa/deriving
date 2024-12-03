@@ -11,6 +11,7 @@ theories/ind.v
 theories/tactics.v
 theories/infer.v
 theories/instances.v
+theories/compat.v
 theories/deriving.v
 
 theories/instances/eqtype.v

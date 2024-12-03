@@ -12,13 +12,13 @@
     flake-utils.lib.eachDefaultSystem (system:
       let pkgs = nixpkgs.legacyPackages.${system}; in rec {
             packages = rec {
-              coq = pkgs.coq_8_17;
-              coqPackages = pkgs.coqPackages_8_17.overrideScope' (self: super:
+              coq = pkgs.coq_8_19;
+              coqPackages = pkgs.coqPackages_8_19.overrideScope (self: super:
                 { mathcomp = super.mathcomp.override {
-                    version = "2.0.0";
+                    version = "2.2.0";
                   };
                   deriving = super.deriving.overrideAttrs {
-                    version = "0.2.0";
+                    version = "0.2.1";
                     src = ./.;
                   };
                 });
