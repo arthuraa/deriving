@@ -1,3 +1,4 @@
+From Coq Require Import Setoid.
 From HB Require Import structures.
 From mathcomp Require Import
   ssreflect ssrfun ssrbool ssrnat eqtype seq choice fintype order.
