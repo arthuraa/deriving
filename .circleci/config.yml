@@ -79,17 +79,6 @@ jobs:
     - image: coqorg/coq:8.18
     resource_class: 'large'
 
-  coq-8-18-mathcomp-dev:
-    <<: *defaults
-    steps:
-    - startup
-    - prepare:
-        mathcomp-version: 'dev'
-    - build
-    docker:
-    - image: coqorg/coq:8.18
-    resource_class: 'large'
-
   coq-8-19-mathcomp-2-2-0:
     <<: *defaults
     steps:
@@ -112,18 +101,40 @@ jobs:
     - image: coqorg/coq:8.19
     resource_class: 'large'
 
-  coq-8-19-mathcomp-dev:
+  coq-8-19-mathcomp-2-4-0:
     <<: *defaults
     steps:
     - startup
     - prepare:
-        mathcomp-version: 'dev'
+        mathcomp-version: '2.4.0'
     - build
     docker:
     - image: coqorg/coq:8.19
     resource_class: 'large'
 
-  coq-dev:
+  coq-8-20-mathcomp-2-4-0:
+    <<: *defaults
+    steps:
+    - startup
+    - prepare:
+        mathcomp-version: '2.4.0'
+    - build
+    docker:
+    - image: coqorg/coq:8.20
+    resource_class: 'large'
+
+  rocq-9-0-mathcomp-2-4-0:
+    <<: *defaults
+    steps:
+    - startup
+    - prepare:
+        mathcomp-version: '2.4.0'
+    - build
+    docker:
+    - image: rocq/rocq-prover:9.0
+    resource_class: 'large'
+
+  rocq-dev:
     <<: *defaults
     steps:
     - startup
@@ -131,7 +142,7 @@ jobs:
         mathcomp-version: 'dev'
     - build
     docker:
-    - image: coqorg/coq:dev
+    - image: rocq/rocq-prover:dev
   resource_class: 'large'
 
 workflows:
@@ -140,8 +151,9 @@ workflows:
     - coq-8-17-mathcomp-2-0-0
     - coq-8-17-mathcomp-2-2-0
     - coq-8-18-mathcomp-2-0-0
-    - coq-8-18-mathcomp-dev
     - coq-8-19-mathcomp-2-2-0
     - coq-8-19-mathcomp-2-3-0
-    - coq-8-19-mathcomp-dev
-    - coq-dev
+    - coq-8-19-mathcomp-2-4-0
+    - coq-8-20-mathcomp-2-4-0
+    - rocq-9-0-mathcomp-2-4-0
+    - rocq-dev
