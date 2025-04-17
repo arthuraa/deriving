@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [0.2.2] - 2025-04-17
+
+### Fixed
+
 - Add explicit import of `Coq.Setoid`, for compatibility with MathComp 2.4.0.
 
 ## [0.2.1] - 2024-12-02
@@ -56,7 +60,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - First version supporting inductive types.
 
-[Unreleased]: https://github.com/arthuraa/deriving/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/arthuraa/deriving/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/arthuraa/deriving/releases/tag/v0.2.2
 [0.2.1]: https://github.com/arthuraa/deriving/releases/tag/v0.2.1
 [0.2.0]: https://github.com/arthuraa/deriving/releases/tag/v0.2.0
 [0.1.1]: https://github.com/arthuraa/deriving/releases/tag/v0.1.1
