@@ -81,9 +81,9 @@ In such cases, it is a good idea to keep the instance opaque (e.g. defined with
 
 ## Requirements
 
-- Coq 8.17 -- 8.19
+- Coq 8.17 -- Rocq 9.0
 
-- `coq-mathcomp-ssreflect` 2.0.0 -- 2.3.0
+- `coq-mathcomp-ssreflect` 2.0.0 -- 2.4.0
 
 ## Installation
 
