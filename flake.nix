@@ -13,7 +13,7 @@
     nix-github-actions.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = inputs@{ self, flake-parts, nix-github-actions, ... }:
+  outputs = inputs@{ self, flake-parts, nixpkgs, nix-github-actions, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
         # To import a flake module
@@ -47,6 +47,10 @@
 
         # Equivalent to  inputs'.nixpkgs.legacyPackages.hello;
         packages.default = pkgs.coqPackages.deriving;
+
+        checks.default = pkgs.coqPackages.deriving.overrideAttrs {
+          doCheck = true;
+        };
       };
       flake = {
         # The usual flake attributes can be defined here, including system-
@@ -54,7 +58,9 @@
         # those are more easily expressed in perSystem.
 
         githubActions = nix-github-actions.lib.mkGithubMatrix {
-          checks = self.packages;
+          checks = nixpkgs.lib.getAttrs
+            [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ]
+            self.checks;
         };
 
         overlays.default = final: prev: {
@@ -62,6 +68,7 @@
             deriving = prev.lib.overrideCoqDerivation {
               defaultVersion = "dev";
               release.dev.src = ./.;
+              checkPhase = "make test";
             } prev.deriving;
           });
         };

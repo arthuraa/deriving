@@ -1,7 +1,5 @@
 # Deriving ─ Generic instances for Coq inductive types
 
-[![arthuraa](https://circleci.com/gh/arthuraa/deriving.svg?style=shield)](https://circleci.com/gh/arthuraa/deriving/tree/master)
-
 The Deriving library builds instances of basic MathComp classes for inductive
 data types with little boilerplate, akin to Haskell's `deriving` functionality.
 To define an `eqType` instance for a type `foo`, just write:
