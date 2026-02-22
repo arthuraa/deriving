@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Adapt to https://github.com/rocq-prover/rocq/pull/21611
+
 ## [0.2.2] - 2025-04-17
 
 ### Fixed
