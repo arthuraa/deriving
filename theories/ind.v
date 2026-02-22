@@ -366,7 +366,7 @@ Hint Unfold arg_class_map : deriving.
 
 Definition pack_decl_inst
   n (D : declaration n) (Di : decl_inst n Equality.sort n)
-  of phant_id D (untag_decl (decl_inst_sort Di)) := Di.
+  & phant_id D (untag_decl (decl_inst_sort Di)) := Di.
 
 Unset Universe Polymorphism.
 
@@ -592,7 +592,7 @@ Hint Extern 2 (find_idx ?m ?Ts ?T _ _) =>
 
 Definition pack_indType
   T (Ts : indDef) i e
-  of find_idx (Ind.Def.n Ts) Ts T i e :=
+  & find_idx (Ind.Def.n Ts) Ts T i e :=
   Ind.Pack (@Ind.Mixin T Ts i e).
 
 Notation IndType T Ts := (@pack_indType T Ts _ _ _).
