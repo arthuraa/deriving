@@ -71,6 +71,11 @@ Derivation flags: `[derive ...]` (cbv simplification), `[derive lazy ...]` (lazy
 
 Test files in `tests/` serve as both regression tests and usage examples: `syntax.v` (mutual recursion, `nored`), `tree.v`, `mutual.v`, `nested.v`, `three.v` (three-way mutual), `records.v`.
 
+## Style Guidelines
+
+- Keep lines as close to 80 characters as possible, but never above 80.
+- Use ssreflect tactics by default.
+
 ## CI
 
 GitHub Actions with Nix (`nix build`) across x86_64-linux, aarch64-linux, aarch64-darwin, x86_64-darwin. Caching via Cachix.
