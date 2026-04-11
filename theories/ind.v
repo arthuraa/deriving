@@ -495,10 +495,11 @@ Definition ind_branch D T P (Cs : constructors D T) i (j : Cidx D i) :=
   @ind_branch' T P i (nth_fin j) (Cs i j).
 
 Definition induction D T (Cs : constructors D T) :=
-  forall (P : forall i, T i -> Type),
-    (forall (i : fin n) (j : Cidx D i),
-       @ind_branch' T P i (nth_fin j) (Cs i j)) ->
-    hlist1 (fun i => forall x, P i x).
+  @hdfun n (fun i => T i -> Type)
+    (fun P : flist (fun i => T i -> Type) =>
+     hfun2 (fun i : fin n => enum_fin (size (D i)))
+           (@ind_branch D T (fnth_flist P) Cs)
+           (hlist1 (fun i => forall x, P i x))).
 
 End Basic.
 
@@ -816,16 +817,43 @@ Lemma indP P :
   forall i x, P i x.
 Proof.
 move=> IH.
-move: P IH; rewrite /Roll.
-case: (T) => n S D [/= Cs _ _ _ _ indP] P IH.
-apply: (indP P) => i j.
-have {}IH :
-  forall args : hlist (type_of_arg (fun k => {x & P k x})) (nth_fin j),
-    P i (Cs i j (hmap (type_of_arg_map (fun _ => tag)) args)).
-  by move=> args; move: (IH i (Cons j args)).
-move: (Cs i j) IH.
+pose Q : flist (fun i => T i -> Type) := flist_of_fun P.
+pose Q_of_P i a : P i a -> fnth_flist Q i a :=
+  cast id (congr1 (fun F => F a) (fnth_flist_of_fun P i))^-1.
+pose P_of_Q i a : fnth_flist Q i a -> P i a :=
+  cast id (congr1 (fun F => F a) (fnth_flist_of_fun P i)).
+pose TP_of_TQ i x := Tagged (P i) (P_of_Q i (tag x) (tagged x)).
+have Q_of_PK i a : cancel (Q_of_P i a) (P_of_Q i a) := castKV _.
+have P_of_QK i a : cancel (P_of_Q i a) (Q_of_P i a) := castK  _.
+have {}IH i (a : F (fun j => {x & fnth_flist Q j x}) i) :
+    fnth_flist Q i (Roll (fmap (fun _ => tag) a)).
+  rewrite (_ : fmap _ a = fmap (fun _ => tag) (fmap TP_of_TQ a)); last first.
+    by rewrite -[RHS]fmap_comp; apply: fmap_eq=> ? [].
+  by apply: (Q_of_P); apply: IH.
+move=> i x {P_of_QK Q_of_PK Q_of_P TP_of_TQ}; apply: P_of_Q.
+move: {P} Q IH i x.
+rewrite /Roll; case: (T) => n S D [/= Cs _ _ _ _ indP] Q.
+have {}indP :
+    (forall (i : fin n) (j : Ind.Cidx D i),
+       @Ind.ind_branch' n S (fnth_flist Q) i (nth_fin j) (Cs i j)) ->
+    (forall i x, fnth_flist Q i x).
+  move=> hyps i x.
+  pose bs : hlist2 (fun i0 : fin n => enum_fin (PolyType.size (D i0)))
+                   (Ind.ind_branch (fnth_flist Q) Cs) :=
+    hlist2_of_fun
+      (fun i0 : fin n =>
+         hlist_of_fun
+           (fun k : fin (PolyType.size (enum_fin (PolyType.size (D i0)))) =>
+              hyps i0 (nth_fin k))).
+  exact: (hdapp indP Q bs i x).
+move=> hyps; apply: indP=> i j.
+have {}hyps:
+  forall args : hlist (type_of_arg (fun k => {x & fnth_flist Q k x})) (nth_fin j),
+    fnth_flist Q i (Cs i j (hmap (type_of_arg_map (fun _ => tag)) args)).
+  by move=> args; move: (hyps i (Cons j args)).
+move: (Cs i j) hyps.
 elim: (nth_fin j)=> [|[X|k] As IH'] /=.
-- by move=> C /(_ tt).
+- by move=> C hyps; exact: (hyps tt).
 - move=> C hyps x; apply: IH'=> args; exact: (hyps (x ::: args)).
 - move=> C hyps x H; apply: IH'=> args.
   exact: (hyps (existT _ x H ::: args)).

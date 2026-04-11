@@ -943,110 +943,124 @@ Hint Unfold hzip : deriving.
 
 Section Hlist2.
 
-(* Outer level indexed by fin n, inner level by a per-row seq.  This
-   keeps the definitional reduction behaviour of the old fin-indexed
-   *2 variants while the inner hfun/hlist remain seq-indexed (so the
-   bulk of constructor argument handling is still fin-free). *)
+(* Outer level indexed by fin n, inner level by a per-row seq.  The
+   inner element type I is itself a per-row function (I : fin n -> Type),
+   so induction can pick I i = Cidx D i while recursor/destructor use
+   I i = arity n.  The inner hfun/hlist are seq-indexed, so the bulk of
+   constructor argument handling is still fin-free. *)
 
-Fixpoint hlist2 n I :
-  forall (D : fin n -> seq I) (T : forall (i : fin n), I -> Type), Type :=
+Fixpoint hlist2 n :
+  forall (I : fin n -> Type) (D : forall (i : fin n), seq (I i))
+         (T : forall (i : fin n), I i -> Type), Type :=
   match n with
-  | 0    => fun D T => unit
-  | n.+1 => fun D T =>
+  | 0    => fun I D T => unit
+  | n.+1 => fun I D T =>
     cell (hlist (T None) (D None))
-         (@hlist2 n I (fun i => D (Some i)) (fun i => T (Some i)))
+         (@hlist2 n (fun i => I (Some i)) (fun i => D (Some i))
+                    (fun i => T (Some i)))
   end.
 
-Fixpoint hfun2 n I :
-  forall (D : fin n -> seq I) (T : forall (i : fin n), I -> Type) (R : Type),
-    Type :=
+Fixpoint hfun2 n :
+  forall (I : fin n -> Type) (D : forall (i : fin n), seq (I i))
+         (T : forall (i : fin n), I i -> Type) (R : Type), Type :=
   match n with
-  | 0    => fun D T R => R
-  | n.+1 => fun D T R =>
+  | 0    => fun I D T R => R
+  | n.+1 => fun I D T R =>
     hfun (T None) (D None)
-      (@hfun2 n I (fun i => D (Some i)) (fun i => T (Some i)) R)
+      (@hfun2 n (fun i => I (Some i)) (fun i => D (Some i))
+                (fun i => T (Some i)) R)
   end.
 
-Fixpoint happ2 n I :
-  forall (D : fin n -> seq I) (T : forall (i : fin n), I -> Type) R,
+Fixpoint happ2 n :
+  forall (I : fin n -> Type) (D : forall (i : fin n), seq (I i))
+         (T : forall (i : fin n), I i -> Type) R,
     hfun2 D T R -> hlist2 D T -> R :=
   match n with
-  | 0    => fun D T R f _ => f
-  | n.+1 => fun D T R f l =>
-    @happ2 n I (fun i => D (Some i)) (fun i => T (Some i)) R
+  | 0    => fun I D T R f _ => f
+  | n.+1 => fun I D T R f l =>
+    @happ2 n (fun i => I (Some i)) (fun i => D (Some i))
+              (fun i => T (Some i)) R
       (happ f l.(hd)) l.(tl)
   end.
 Coercion happ2 : hfun2 >-> Funclass.
 
-Fixpoint hcurry2 n I :
-  forall (D : fin n -> seq I) (T : forall (i : fin n), I -> Type) R,
+Fixpoint hcurry2 n :
+  forall (I : fin n -> Type) (D : forall (i : fin n), seq (I i))
+         (T : forall (i : fin n), I i -> Type) R,
     (hlist2 D T -> R) -> hfun2 D T R :=
   match n with
-  | 0    => fun D T R f => f tt
-  | n.+1 => fun D T R f =>
+  | 0    => fun I D T R f => f tt
+  | n.+1 => fun I D T R f =>
     hcurry (fun l1 : hlist (T None) (D None) =>
-              @hcurry2 n I (fun i => D (Some i)) (fun i => T (Some i)) R
+              @hcurry2 n (fun i => I (Some i)) (fun i => D (Some i))
+                         (fun i => T (Some i)) R
                 (fun l2 => f (l1 ::: l2)))
   end.
 
-Fixpoint hmap2 n I :
-  forall (D : fin n -> seq I) (T S : forall (i : fin n), I -> Type)
-         (f : forall (i : fin n) (a : I), T i a -> S i a),
+Fixpoint hmap2 n :
+  forall (I : fin n -> Type) (D : forall (i : fin n), seq (I i))
+         (T S : forall (i : fin n), I i -> Type)
+         (f : forall (i : fin n) (a : I i), T i a -> S i a),
     hlist2 D T -> hlist2 D S :=
   match n with
-  | 0    => fun D T S f _ => tt
-  | n.+1 => fun D T S f l =>
+  | 0    => fun I D T S f _ => tt
+  | n.+1 => fun I D T S f l =>
     hmap (f None) l.(hd) :::
-    @hmap2 n I (fun i => D (Some i)) (fun i => T (Some i))
-           (fun i => S (Some i)) (fun i => f (Some i)) l.(tl)
+    @hmap2 n (fun i => I (Some i)) (fun i => D (Some i))
+             (fun i => T (Some i)) (fun i => S (Some i))
+             (fun i => f (Some i)) l.(tl)
   end.
 
-Fixpoint hnth2 n I :
-  forall (D : fin n -> seq I) (T : forall (i : fin n), I -> Type),
+Fixpoint hnth2 n :
+  forall (I : fin n -> Type) (D : forall (i : fin n), seq (I i))
+         (T : forall (i : fin n), I i -> Type),
     hlist2 D T -> forall (i : fin n), hlist (T i) (D i) :=
   match n with
-  | 0    => fun D T l (i : void) => match i with end
-  | n.+1 => fun D T l i =>
+  | 0    => fun I D T l (i : void) => match i with end
+  | n.+1 => fun I D T l i =>
     match i with
     | None    => l.(hd)
-    | Some i' => @hnth2 n I (fun i => D (Some i)) (fun i => T (Some i))
-                        l.(tl) i'
+    | Some i' => @hnth2 n (fun i => I (Some i)) (fun i => D (Some i))
+                          (fun i => T (Some i)) l.(tl) i'
     end
   end.
 Coercion hnth2 : hlist2 >-> Funclass.
 
-Fixpoint hlist2_of_fun n I :
-  forall (D : fin n -> seq I) (T : forall (i : fin n), I -> Type),
+Fixpoint hlist2_of_fun n :
+  forall (I : fin n -> Type) (D : forall (i : fin n), seq (I i))
+         (T : forall (i : fin n), I i -> Type),
     (forall (i : fin n), hlist (T i) (D i)) -> hlist2 D T :=
   match n with
-  | 0    => fun D T f => tt
-  | n.+1 => fun D T f =>
+  | 0    => fun I D T f => tt
+  | n.+1 => fun I D T f =>
     f None :::
-    @hlist2_of_fun n I (fun i => D (Some i)) (fun i => T (Some i))
-      (fun i => f (Some i))
+    @hlist2_of_fun n (fun i => I (Some i)) (fun i => D (Some i))
+                     (fun i => T (Some i)) (fun i => f (Some i))
   end.
 
 Lemma hnth2_of_fun n I D T f i :
   hnth2 (@hlist2_of_fun n I D T f) i = f i.
 Proof.
-by elim: n D T f i => [?? f []|n IH] D T f /= [i|] //=; rewrite IH.
+by elim: n I D T f i => [??? f []|n IH] I D T f /= [i|] //=; rewrite IH.
 Qed.
 
-Fixpoint all_hlist2 n I :
-  forall (D : fin n -> seq I) (T : forall (i : fin n), I -> Type),
+Fixpoint all_hlist2 n :
+  forall (I : fin n -> Type) (D : forall (i : fin n), seq (I i))
+         (T : forall (i : fin n), I i -> Type),
     (hlist2 D T -> Prop) -> Prop :=
   match n with
-  | 0    => fun D T P => P tt
-  | n.+1 => fun D T P =>
+  | 0    => fun I D T P => P tt
+  | n.+1 => fun I D T P =>
     all_hlist (fun l1 : hlist (T None) (D None) =>
-                 @all_hlist2 n I (fun i => D (Some i)) (fun i => T (Some i))
-                             (fun l2 => P (l1 ::: l2)))
+                 @all_hlist2 n (fun i => I (Some i)) (fun i => D (Some i))
+                               (fun i => T (Some i))
+                               (fun l2 => P (l1 ::: l2)))
   end.
 
 Lemma all_hlist2P n I D T P :
   @all_hlist2 n I D T P <-> (forall l, P l).
 Proof.
-elim: n D T P => [|n IH] D T P /=.
+elim: n I D T P => [|n IH] I D T P /=.
   by split => [h [] //|h]; apply: h.
 rewrite all_hlistP; split.
 - by move=> H [l1 l2]; move/(_ l1): H; rewrite IH; apply.
