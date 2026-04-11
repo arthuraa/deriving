@@ -943,64 +943,110 @@ Hint Unfold hzip : deriving.
 
 Section Hlist2.
 
-Fixpoint hlist2 I (T_ : nat -> I -> Type) (xss : seq (seq I)) : Type :=
-  match xss with
-  | [::]      => unit
-  | xs :: xss =>
-    cell (hlist (T_ 0) xs) (@hlist2 I (fun k => T_ k.+1) xss)
+(* Outer level indexed by fin n, inner level by a per-row seq.  This
+   keeps the definitional reduction behaviour of the old fin-indexed
+   *2 variants while the inner hfun/hlist remain seq-indexed (so the
+   bulk of constructor argument handling is still fin-free). *)
+
+Fixpoint hlist2 n I :
+  forall (D : fin n -> seq I) (T : forall (i : fin n), I -> Type), Type :=
+  match n with
+  | 0    => fun D T => unit
+  | n.+1 => fun D T =>
+    cell (hlist (T None) (D None))
+         (@hlist2 n I (fun i => D (Some i)) (fun i => T (Some i)))
   end.
 
-Fixpoint hfun2 I (T_ : nat -> I -> Type) (xss : seq (seq I)) (S : Type) : Type :=
-  match xss with
-  | [::]      => S
-  | xs :: xss =>
-    hfun (T_ 0) xs (@hfun2 I (fun k => T_ k.+1) xss S)
+Fixpoint hfun2 n I :
+  forall (D : fin n -> seq I) (T : forall (i : fin n), I -> Type) (R : Type),
+    Type :=
+  match n with
+  | 0    => fun D T R => R
+  | n.+1 => fun D T R =>
+    hfun (T None) (D None)
+      (@hfun2 n I (fun i => D (Some i)) (fun i => T (Some i)) R)
   end.
 
-Fixpoint happ2 I (T_ : nat -> I -> Type) (xss : seq (seq I)) :
-  forall S, hfun2 T_ xss S -> hlist2 T_ xss -> S :=
-  match xss with
-  | [::]      => fun _ f _ => f
-  | xs :: xss => fun _ f l =>
-    @happ2 I (fun k => T_ k.+1) xss _ (happ f l.(hd)) l.(tl)
+Fixpoint happ2 n I :
+  forall (D : fin n -> seq I) (T : forall (i : fin n), I -> Type) R,
+    hfun2 D T R -> hlist2 D T -> R :=
+  match n with
+  | 0    => fun D T R f _ => f
+  | n.+1 => fun D T R f l =>
+    @happ2 n I (fun i => D (Some i)) (fun i => T (Some i)) R
+      (happ f l.(hd)) l.(tl)
   end.
 Coercion happ2 : hfun2 >-> Funclass.
 
-Fixpoint hcurry2 I (T_ : nat -> I -> Type) (xss : seq (seq I)) :
-  forall S, (hlist2 T_ xss -> S) -> hfun2 T_ xss S :=
-  match xss with
-  | [::]      => fun _ f => f tt
-  | xs :: xss => fun _ f =>
-    hcurry (fun (l1 : hlist (T_ 0) xs) =>
-              @hcurry2 I (fun k => T_ k.+1) xss _
+Fixpoint hcurry2 n I :
+  forall (D : fin n -> seq I) (T : forall (i : fin n), I -> Type) R,
+    (hlist2 D T -> R) -> hfun2 D T R :=
+  match n with
+  | 0    => fun D T R f => f tt
+  | n.+1 => fun D T R f =>
+    hcurry (fun l1 : hlist (T None) (D None) =>
+              @hcurry2 n I (fun i => D (Some i)) (fun i => T (Some i)) R
                 (fun l2 => f (l1 ::: l2)))
   end.
 
-Fixpoint hmap2 I (T_ S_ : nat -> I -> Type)
-  (f : forall k i, T_ k i -> S_ k i) (xss : seq (seq I)) :
-  hlist2 T_ xss -> hlist2 S_ xss :=
-  match xss with
-  | [::]      => fun _ => tt
-  | xs :: xss => fun l =>
-    hmap (f 0) l.(hd) :::
-    @hmap2 I (fun k => T_ k.+1) (fun k => S_ k.+1)
-           (fun k => f k.+1) xss l.(tl)
+Fixpoint hmap2 n I :
+  forall (D : fin n -> seq I) (T S : forall (i : fin n), I -> Type)
+         (f : forall (i : fin n) (a : I), T i a -> S i a),
+    hlist2 D T -> hlist2 D S :=
+  match n with
+  | 0    => fun D T S f _ => tt
+  | n.+1 => fun D T S f l =>
+    hmap (f None) l.(hd) :::
+    @hmap2 n I (fun i => D (Some i)) (fun i => T (Some i))
+           (fun i => S (Some i)) (fun i => f (Some i)) l.(tl)
   end.
 
-Fixpoint all_hlist2 I (T_ : nat -> I -> Type) (xss : seq (seq I)) :
-  (hlist2 T_ xss -> Prop) -> Prop :=
-  match xss with
-  | [::]      => fun P => P tt
-  | xs :: xss => fun P =>
-    all_hlist (fun (l1 : hlist (T_ 0) xs) =>
-                 @all_hlist2 I (fun k => T_ k.+1) xss
+Fixpoint hnth2 n I :
+  forall (D : fin n -> seq I) (T : forall (i : fin n), I -> Type),
+    hlist2 D T -> forall (i : fin n), hlist (T i) (D i) :=
+  match n with
+  | 0    => fun D T l (i : void) => match i with end
+  | n.+1 => fun D T l i =>
+    match i with
+    | None    => l.(hd)
+    | Some i' => @hnth2 n I (fun i => D (Some i)) (fun i => T (Some i))
+                        l.(tl) i'
+    end
+  end.
+Coercion hnth2 : hlist2 >-> Funclass.
+
+Fixpoint hlist2_of_fun n I :
+  forall (D : fin n -> seq I) (T : forall (i : fin n), I -> Type),
+    (forall (i : fin n), hlist (T i) (D i)) -> hlist2 D T :=
+  match n with
+  | 0    => fun D T f => tt
+  | n.+1 => fun D T f =>
+    f None :::
+    @hlist2_of_fun n I (fun i => D (Some i)) (fun i => T (Some i))
+      (fun i => f (Some i))
+  end.
+
+Lemma hnth2_of_fun n I D T f i :
+  hnth2 (@hlist2_of_fun n I D T f) i = f i.
+Proof.
+by elim: n D T f i => [?? f []|n IH] D T f /= [i|] //=; rewrite IH.
+Qed.
+
+Fixpoint all_hlist2 n I :
+  forall (D : fin n -> seq I) (T : forall (i : fin n), I -> Type),
+    (hlist2 D T -> Prop) -> Prop :=
+  match n with
+  | 0    => fun D T P => P tt
+  | n.+1 => fun D T P =>
+    all_hlist (fun l1 : hlist (T None) (D None) =>
+                 @all_hlist2 n I (fun i => D (Some i)) (fun i => T (Some i))
                              (fun l2 => P (l1 ::: l2)))
   end.
 
-Lemma all_hlist2P I (T_ : nat -> I -> Type) (xss : seq (seq I)) P :
-  @all_hlist2 I T_ xss P <-> (forall l, P l).
+Lemma all_hlist2P n I D T P :
+  @all_hlist2 n I D T P <-> (forall l, P l).
 Proof.
-elim: xss T_ P => [|xs xss IH] T_ P /=.
+elim: n D T P => [|n IH] D T P /=.
   by split => [h [] //|h]; apply: h.
 rewrite all_hlistP; split.
 - by move=> H [l1 l2]; move/(_ l1): H; rewrite IH; apply.
@@ -1020,28 +1066,78 @@ Hint Unfold hcurry2 : deriving.
 #[global]
 Hint Unfold hmap2 : deriving.
 #[global]
+Hint Unfold hnth2 : deriving.
+#[global]
+Hint Unfold hlist2_of_fun : deriving.
+#[global]
 Hint Unfold all_hlist2 : deriving.
 
-Section Bridge.
+(* Function-indexed "tuple" used by hdfun/hdapp below (for the motives
+   argument of Ind.induction). *)
+Section Flist.
 
-Fixpoint seqOf_fn n I : (fin n -> seq I) -> seq (seq I) :=
+Fixpoint flist n : (fin n -> Type) -> Type :=
   match n with
-  | 0    => fun _ => [::]
-  | n.+1 => fun D => D None :: seqOf_fn (fun i => D (Some i))
+  | 0    => fun _ => unit
+  | n.+1 => fun T => cell (T None) (flist (fun i => T (Some i)))
   end.
 
-Definition fin_at n A (S : fin n -> A) (default : A) (k : nat) : A :=
-  match fin_of_nat n k with
-  | Some i => S i
-  | None   => default
+Fixpoint fnth_flist n :
+  forall (T : fin n -> Type), flist T -> forall (i : fin n), T i :=
+  match n with
+  | 0    => fun T l (i : void) => match i with end
+  | n.+1 => fun T l i =>
+    match i with
+    | None    => l.(hd)
+    | Some i' => @fnth_flist n (fun j => T (Some j)) l.(tl) i'
+    end
+  end.
+Coercion fnth_flist : flist >-> Funclass.
+
+Fixpoint hdfun n :
+  forall (T : fin n -> Type), (flist T -> Type) -> Type :=
+  match n with
+  | 0    => fun T P => P tt
+  | n.+1 => fun T P => forall (x : T None),
+                @hdfun n (fun i => T (Some i))
+                         (fun xs => P (x ::: xs))
   end.
 
-End Bridge.
+Fixpoint hdapp n :
+  forall (T : fin n -> Type) (P : flist T -> Type),
+    hdfun P -> forall x : flist T, P x :=
+  match n with
+  | 0    => fun T P f x => match x with tt => f end
+  | n.+1 => fun T P f x =>
+    match x with Cell x xs => @hdapp n _ _ (f x) xs end
+  end.
+
+Fixpoint flist_of_fun n :
+  forall (T : fin n -> Type) (f : forall i : fin n, T i), flist T :=
+  match n with
+  | 0    => fun T f => tt
+  | n.+1 => fun T f =>
+    f None ::: @flist_of_fun n (fun i => T (Some i)) (fun i => f (Some i))
+  end.
+
+Lemma fnth_flist_of_fun n T f i :
+  fnth_flist (@flist_of_fun n T f) i = f i.
+Proof.
+by elim: n T f i => [?? []|n IH] T f /= [i|] //=; rewrite IH.
+Qed.
+
+End Flist.
 
 #[global]
-Hint Unfold seqOf_fn : deriving.
+Hint Unfold flist : deriving.
 #[global]
-Hint Unfold fin_at : deriving.
+Hint Unfold fnth_flist : deriving.
+#[global]
+Hint Unfold hdfun : deriving.
+#[global]
+Hint Unfold hdapp : deriving.
+#[global]
+Hint Unfold flist_of_fun : deriving.
 
 Fixpoint hlist_eq I (T_ S_ : I -> Type) (e : forall i, T_ i = S_ i)
   (xs : seq I) : hlist T_ xs = hlist S_ xs :=
