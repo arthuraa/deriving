@@ -41,7 +41,9 @@
             pkgs.coqPackages.coq-lsp
           ];
           inputsFrom = [
-            self'.packages.default
+            # Include checking dependencies when developing, so that we can run
+            # checks.
+            self'.checks.default
           ];
         };
 
@@ -64,12 +66,36 @@
         };
 
         overlays.default = final: prev: {
-          coqPackages = prev.coqPackages.overrideScope (final: prev: {
-            deriving = prev.lib.overrideCoqDerivation {
-              defaultVersion = "dev";
-              release.dev.src = ./.;
-              checkPhase = "make test";
-            } prev.deriving;
+          coqPackages = prev.coqPackages.overrideScope (final': prev': {
+            deriving = prev'.lib.overrideCoqDerivation {
+              version = ./.;
+              checkTarget = "test";
+              checkFlags = [ "VERBOSE=" ];
+              # The nixpkgs coq setup hook sets COQPATH for dependency
+              # lookup, but rocq 9.0+ warns that COQPATH is deprecated
+              # in favour of ROCQPATH.  Translate once, before any
+              # phase runs, to silence the warning everywhere.
+              preConfigure = ''
+                if [ -n "''${COQPATH-}" ]; then
+                  export ROCQPATH="$COQPATH"
+                  unset COQPATH
+                fi
+              '';
+              nativeCheckInputs = [
+                final.gnuplot
+                final'.coq.ocamlPackages.findlib
+                final'.coq.ocamlPackages.csv
+              ];
+              # When the check phase ran, copy the bench artifacts
+              # into $out so CI can upload them.  Guarded so the
+              # non-check build (packages.default) is unaffected.
+              postInstall = ''
+                if [ -d bench/results/latest ]; then
+                  mkdir -p $out/share/deriving/bench
+                  cp -r bench/results/latest/. $out/share/deriving/bench/
+                fi
+              '';
+            } prev'.deriving;
           });
         };
 

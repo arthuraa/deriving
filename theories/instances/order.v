@@ -178,8 +178,8 @@ Notation "[ 'derive' 'nored' 'isOrder' 'for' T ]" :=
   (at level 0) : form_scope.
 
 (* FIXME: Axioms_ is an internal function *)
-Ltac derive_isOrder T :=
-  let mixin := constr:([derive nored isOrder for T]) in
+Ltac simpl_isOrder T noredmixin :=
+  let mixin := eval hnf in noredmixin in
   let mixin :=
     eval unfold DerOrderType.pack, DerOrderType.ind_isOrder in mixin in
   match mixin with
@@ -191,6 +191,9 @@ Ltac derive_isOrder T :=
                          (fun _ _ => erefl) (fun _ _ => erefl) (fun _ _ => erefl)
                          anti trans total)
   end.
+
+Ltac derive_isOrder T :=
+  simpl_isOrder T [derive nored isOrder for T].
 
 Notation "[ 'derive' 'isOrder' 'for' T ]" :=
   (ltac:(derive_isOrder T))

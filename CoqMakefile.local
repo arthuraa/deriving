@@ -2,6 +2,8 @@ TESTVFILES=$(wildcard tests/*.v)
 TESTVOFILES=$(TESTVFILES:.v=.vo)
 UNFOLDFILES = theories/ind.v theories/base.v
 
+include bench/bench.mk
+
 theories/tactics.v: make_tactics.ml $(UNFOLDFILES)
 	ocaml -I +str str.cma make_tactics.ml $(UNFOLDFILES) > theories/tactics.v
 
