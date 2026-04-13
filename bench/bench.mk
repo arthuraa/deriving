@@ -31,16 +31,23 @@ $(BENCH_BUILD)/bench-deps.mk: $(BENCH_CSVS) bench/gen_mk.awk
 
 # The .v recipes are supplied by bench-deps.mk.
 
-# Generic .out rule: coqc the .v file injected as a prerequisite by
-# bench-deps.mk.  Depend on the library VO files (not TESTVOFILES) so only the
-# theories are rebuilt before a bench.  Prereqs expand at rule-read time so we
-# can't reference VOFILES here (it's defined later in CoqMakefile); $(VFILES) is
-# set by `include CoqMakefile.conf` before CoqMakefile.local is read.
+# Generic .out rule: run the .v file injected as a prerequisite by
+# bench-deps.mk through coqtop in batch mode.  Depend on the library VO files
+# (not TESTVOFILES) so only the theories are rebuilt before a bench.  Prereqs
+# expand at rule-read time so we can't reference VOFILES here (it's defined
+# later in CoqMakefile); $(VFILES) is set by `include CoqMakefile.conf` before
+# CoqMakefile.local is read.
+#
+# We use $(COQTOP) -batch rather than $(COQC) because a single .v file is
+# compiled once per repetition: three parallel $(COQC) invocations racing on
+# the same .vo/.vos/.vok/.glob output paths caused intermittent "Uncaught
+# exception End_of_file" anomalies in CI.  coqtop -batch runs the file for
+# side effects without touching any output file.
 $(BENCH_BUILD)/%.out: $(VFILES:.v=.vo)
 	$(SHOW)'BENCH $(filter %.v,$^)'
 	$(HIDE)mkdir -p $(@D)
-	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) \
-	    $(filter %.v,$^) > $@
+	$(HIDE)$(COQTOP) -batch $(COQDEBUG) $(COQFLAGS) $(COQLIBS) \
+	    -load-vernac-source $(basename $(filter %.v,$^)) > $@
 
 $(BENCH_RESULTS)/%.csv: bench/summarize.ml
 	$(SHOW)'SUMMARIZE $@'
