@@ -13,3 +13,6 @@ theories/tactics.v
 make_tactics
 make_tactics.cmo
 make_tactics.cmi
+bench/build/
+bench/results/
+result

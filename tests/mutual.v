@@ -34,7 +34,6 @@ Canonical foo_indType := IndType foo foo_bar_baz_indDef.
 Canonical bar_indType := IndType bar foo_bar_baz_indDef.
 Canonical baz_indType := IndType baz foo_bar_baz_indDef.
 
-(* FIXME: Why aren't the recursors being simplified away here? *)
 Definition foo_hasDecEq := [derive hasDecEq for foo].
 HB.instance Definition _ := foo_hasDecEq.
 Definition bar_hasDecEq := [derive hasDecEq for bar].
@@ -53,7 +52,6 @@ Definition bar_isCountable := [derive isCountable for bar].
 HB.instance Definition _ := bar_isCountable.
 Definition baz_isCountable := [derive isCountable for baz].
 HB.instance Definition _ := baz_isCountable.
-(* FIXME: Why aren't the recursors being simplified away here? *)
 Definition foo_isOrder := [derive isOrder for foo].
 HB.instance Definition _ := foo_isOrder.
 Definition bar_isOrder := [derive isOrder for bar].

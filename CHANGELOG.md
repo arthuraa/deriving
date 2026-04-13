@@ -19,6 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adapt to https://github.com/rocq-prover/rocq/pull/21611,
   https://github.com/math-comp/math-comp/pull/1545.
 
+- Fix inlining of mutual recursors in `[indDef for ...]`.  The destructor
+  stored in `Ind.Def.case` for mutual inductive types contained unreduced
+  calls to the per-type recursors (e.g. `M0_rect ... (M0A n)`), because
+  `eval hnf` refused to delta-unfold a recursor whose structurally recursive
+  argument was not yet supplied.  Replacing `eval hnf` with `eval red` (with
+  `hnf` as fallback) in `unwind_recursor` inlines the underlying fix, so the
+  destructor becomes a clean pattern-match.  This gives a ~1.6-1.8x speedup
+  on `deriving_compute` simplification for mutual types.
+
 
 ## [0.2.2] - 2025-04-17
 

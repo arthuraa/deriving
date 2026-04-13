@@ -88,13 +88,16 @@ Notation "[ 'derive' 'nored' 'hasDecEq' 'for' T ]" :=
   (@DerEqType.pack T _ id _ _ _ _ _ _ id _ id _ id)
   (at level 0) : form_scope.
 
-Ltac derive_hasDecEq T :=
-  match eval hnf in [derive nored hasDecEq for T] with
+Ltac simpl_hasDecEq T noredax :=
+  match eval hnf in noredax with
   | @hasDecEq.Axioms_ _ ?op ?opP =>
     let op := eval unfold DerEqType.eq_op, DerEqType.eq_op_branch in op in
     let op := eval deriving_compute in op in
     exact (@hasDecEq.Axioms_ T op opP)
   end.
+
+Ltac derive_hasDecEq T :=
+  simpl_hasDecEq T [derive nored hasDecEq for T].
 
 Notation "[ 'derive' 'hasDecEq' 'for' T ]" :=
   (ltac:(derive_hasDecEq T))

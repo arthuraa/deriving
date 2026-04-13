@@ -12,6 +12,27 @@ Unset Printing Implicit Defensive.
 
 Open Scope deriving_scope.
 
+(* Use `eval red` (one-step delta on the head constant, then beta)
+   to inline recursor constants into their underlying fix, falling
+   back to `eval hnf` when the head is already a fix or lambda.
+   This matters for mutual types: Combined Scheme produces a wrapper
+   that calls the per-type recursors (M0_rect, M1_rect, ...) as
+   constants.  eval hnf refuses to delta-unfold a recursor whose
+   structurally recursive argument is not yet supplied, so the
+   destructor baked into Ind.Def.case would contain stuck terms
+   like `M0_rect ... (M0A n)`.  Because deriving_compute uses cbv
+   with a fixed delta-whitelist that does not include user-defined
+   recursor names, it cannot reduce these stuck terms, and derived
+   definitions (eq_op, le, ...) carry unreduced recursor calls that
+   blow up at simplification time.  eval red does not have this
+   restriction: it always unfolds the head constant, exposing the
+   mutual fix so that iota reduction can proceed normally. *)
+Ltac head_red rec :=
+  match constr:(tt) with
+  | _ => let r := eval red in rec in r
+  | _ => let r := eval hnf in rec in r
+  end.
+
 Ltac unwind_recursor rec :=
   try red;
   match goal with
@@ -19,11 +40,11 @@ Ltac unwind_recursor rec :=
     let X := fresh "X" in
     intros X; unwind_recursor (rec X)
   | |- prod ?T1 ?T2 =>
-    let rec1 := eval hnf in rec.1 in
-    let rec2 := eval hnf in rec.2 in
+    let rec1 := head_red (rec.1) in
+    let rec2 := head_red (rec.2) in
     split; [unwind_recursor rec1|unwind_recursor rec2]
   | |- forall x, _ =>
-    let rec' := eval hnf in rec in
+    let rec' := head_red rec in
     intros x; destruct x; apply rec'
   end.
 
