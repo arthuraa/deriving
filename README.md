@@ -82,9 +82,11 @@ In such cases, it is a good idea to keep the instance opaque (e.g. defined with
 
 ## Requirements
 
-- Coq 8.17 -- Rocq 9.0
+Deriving has been tested against the following dependencies:
 
-- `coq-mathcomp-ssreflect` 2.0.0 -- 2.4.0
+- Coq 8.17 -- Rocq 9.1
+
+- `coq-mathcomp-ssreflect` 2.2.0 -- 2.5.0
 
 ## Installation
 
