@@ -19,6 +19,7 @@
       # packages.default / checks.default.  Used by the overlay (to decide what
       # to override) and by perSystem (to populate packages and checks).
       coqVersions = [
+        "9_2"
         "9_1"
         "9_0"
         "8_20"
