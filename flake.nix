@@ -19,7 +19,6 @@
       # packages.default / checks.default.  Used by the overlay (to decide what
       # to override) and by perSystem (to populate packages and checks).
       coqVersions = [
-        "9_2"
         "9_1"
         "9_0"
         "8_20"
@@ -77,14 +76,15 @@
         # those are more easily expressed in perSystem.
 
         githubActions = nix-github-actions.lib.mkGithubMatrix {
-          # Drop the "default" check — it is an alias for one of the
-          # versioned checks, and including it would build the same
-          # derivation twice in CI.
-          checks = builtins.mapAttrs
-            (_: checks: builtins.removeAttrs checks [ "default" ])
-            (nixpkgs.lib.getAttrs
-              [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ]
-              self.checks);
+          checks =
+            # Drop the "default" check — it is an alias for one of
+            # the versioned checks, and including it would build
+            # the same derivation twice in CI.
+            builtins.mapAttrs
+              (_: checks: builtins.removeAttrs checks [ "default" ])
+              (nixpkgs.lib.getAttrs
+                [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ]
+                self.checks);
         };
 
         overlays.default = final: prev:
