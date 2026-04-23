@@ -32,6 +32,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v30
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ matrix.system }}-${{ hashFiles('flake.lock') }}
+          restore-prefixes-first-match: nix-${{ matrix.system }}-
+          gc-max-store-size-linux: 2000000000
+          gc-max-store-size-macos: 2000000000
+          purge: true
+          purge-created: 604800
+          purge-primary-key: never
       - run: nix build -L '.#${{ matrix.attr }}'
       - name: Upload bench artifacts
         if: success()
