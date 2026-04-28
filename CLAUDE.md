@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Deriving is a Coq library that automatically derives instances of MathComp classes (`eqType`, `choiceType`, `countType`, `finType`, `orderType`) for inductive data types, analogous to Haskell's `deriving`. It targets Coq 8.17–Rocq 9.0 with MathComp ssreflect 2.0–2.4.
+Deriving is a Coq library that automatically derives instances of MathComp classes (`eqType`, `choiceType`, `countType`, `finType`, `orderType`) for inductive data types, analogous to Haskell's `deriving`. It targets Coq 8.17–Rocq 9.1 with MathComp ssreflect 2.2–2.5.
 
 ## Build Commands
 

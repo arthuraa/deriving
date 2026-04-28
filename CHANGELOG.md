@@ -16,6 +16,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [0.2.3] - 2026-04-28
+
+### Added
+
+- Performance benchmarks (`bench/`) with gnuplot visualization.
+
+- CI now tests Coq 8.17 through Rocq 9.1 on multiple platforms.
+
+- `CONTRIBUTING.md` with testing instructions.
+
+### Changed
+
+- Switched from CircleCI to GitHub Actions.
+
+### Fixed
+
 - Adapt to https://github.com/rocq-prover/rocq/pull/21611,
   https://github.com/math-comp/math-comp/pull/1545.
 
@@ -73,7 +89,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - First version supporting inductive types.
 
-[Unreleased]: https://github.com/arthuraa/deriving/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/arthuraa/deriving/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/arthuraa/deriving/releases/tag/v0.2.3
 [0.2.2]: https://github.com/arthuraa/deriving/releases/tag/v0.2.2
 [0.2.1]: https://github.com/arthuraa/deriving/releases/tag/v0.2.1
 [0.2.0]: https://github.com/arthuraa/deriving/releases/tag/v0.2.0
