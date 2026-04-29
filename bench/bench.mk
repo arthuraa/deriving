@@ -17,8 +17,6 @@ BENCH_OCAML     = ocaml -I $(shell ocamlfind query csv) csv.cma
 bench: $(BENCH_PNGS)
 .PHONY: bench
 
-test: bench
-
 $(BENCH_BUILD)/bench-deps.mk: $(BENCH_CSVS) bench/gen_mk.awk
 	$(SHOW)'BENCH-DEPS $@'
 	$(HIDE)mkdir -p $(@D)

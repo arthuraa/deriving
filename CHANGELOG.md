@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `make test` no longer runs benchmarks.  Use `make bench` for
+  benchmarks alone, or `make check` for both tests and benchmarks
+  (this is what CI runs).
+
 ### Deprecated
 
 ### Removed

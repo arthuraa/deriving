@@ -2,8 +2,11 @@
 
 ## Running the tests
 
-Run `make test` from the repo root (inside `nix develop` if you use the
-flake) to build the library and run the entire test suite.
+There are three useful targets:
+
+- `make test` — run the end-to-end functionality tests only (fast).
+- `make bench` — run the performance benchmarks only.
+- `make check` — run both (`test` + `bench`).  This is what CI runs.
 
 There are two kinds of tests:
 

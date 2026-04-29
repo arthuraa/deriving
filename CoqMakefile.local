@@ -10,6 +10,9 @@ theories/tactics.v: make_tactics.ml $(UNFOLDFILES)
 test: $(TESTVOFILES)
 .PHONY: test
 
+check: test bench
+.PHONY: check
+
 .CoqMakefile.test.d: $(TESTVFILES)
 	$(SHOW)'COQDEP TESTVFILES'
 	$(HIDE)$(COQDEP) -vos -dyndep var $(COQMF_COQLIBS_NOML) $^ $(redir_if_ok)
