@@ -93,7 +93,6 @@
               coqPackages.overrideScope (final': prev': {
                 deriving = prev'.lib.overrideCoqDerivation {
                   version = ./.;
-                  checkTarget = "test";
                   checkFlags = [ "VERBOSE=" ];
                   # The nixpkgs coq setup hook sets COQPATH for dependency
                   # lookup, but rocq 9.0+ warns that COQPATH is deprecated in
