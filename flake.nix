@@ -11,9 +11,11 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     nix-github-actions.url = "github:nix-community/nix-github-actions";
     nix-github-actions.inputs.nixpkgs.follows = "nixpkgs";
+    rocq-mcp.url = "github:arthuraa/rocq-mcp-flake";
+    rocq-mcp.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = inputs@{ self, flake-parts, nixpkgs, nix-github-actions, ... }:
+  outputs = inputs@{ self, flake-parts, nixpkgs, nix-github-actions, rocq-mcp, ... }:
     let
       # Coq/Rocq package sets we test against.  The first entry is exposed as
       # packages.default / checks.default.  Used by the overlay (to decide what
@@ -52,6 +54,26 @@
             self'.checks.default
           ];
         };
+
+        devShells.ai =
+          let
+            aiPkgs = import self.inputs.nixpkgs {
+              inherit system;
+              overlays = [
+                self.overlays.default
+                rocq-mcp.overlays.default
+              ];
+            };
+          in
+          pkgs.mkShell {
+            propagatedBuildInputs = [
+              pkgs.coqPackages.coq-lsp
+              aiPkgs.rocq-mcp
+            ];
+            inputsFrom = [
+              self'.checks.default
+            ];
+          };
 
         packages =
           let packagesByVersion =

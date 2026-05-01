@@ -17,6 +17,10 @@ make install      # Install via opam
 
 Alternative: `nix build` or `nix develop` (provides dev shell with coq-lsp).
 
+Use `nix develop .#ai` to enter the AI-assisted development shell,
+which includes `rocq-mcp` (a Rocq MCP server) in addition to the
+default shell's dependencies.
+
 ## Build System
 
 - `Makefile` generates `CoqMakefile` from `_CoqProject` using `coq_makefile`, then delegates to it.
