@@ -47,6 +47,7 @@ factor showing how each derivation step scales.
 In sweeps that vary the number of mutual types, each derivation step
 runs once per type and the summary CSV records each invocation
 separately (`simpl isOrder T0`, `simpl isOrder T1`, ...).  The plot
-**sums** the per-type times into one line per step, so each point is
-the total work spent on that step across the whole mutual block; use
-the summary CSV directly if you need per-type breakdowns.
+reports the **median** across types as one line per step, so each
+point is the typical per-type cost of that step rather than a sum
+that grows just because the mutual block contains more types.  Use
+the summary CSV directly if you need per-type or total timings.

@@ -60,12 +60,13 @@ that drive the rest of the pipeline:
 For sweeps with more than one mutual type (e.g. `types`), each
 derivation step is recorded once per type — the summary CSV has
 separate rows for `simpl isOrder T0`, `simpl isOrder T1`, etc.  The
-plot strips the trailing ` T<i>` suffix and **sums** the per-type
-times into one line per derivation step, so the y value at a given x
-is the *total* work across all mutual types for that step.  Read the
-PNG as "total cost of running this derivation step on the whole
-mutual block"; if you need per-type timings, use the summary CSV
-directly.
+plot strips the trailing ` T<i>` suffix and reports the **median**
+across types into one line per derivation step, so the y value at a
+given x is the *typical per-type cost* of that step.  We use the
+median rather than the sum so the line tracks how each type's work
+scales with the swept parameter, instead of growing linearly just
+because the mutual block contains more types.  If you need per-type
+or total timings, read the summary CSV directly.
 
 Each benchmark is run several times (`BENCH_REPS` in `bench/bench.mk`) so that
 `plot` can take the median and smooth out noise.  Because every `.out` file is
