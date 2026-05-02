@@ -43,3 +43,10 @@ of nonrecursive arguments, and the combination of both kinds of
 arguments.  Each sweep produces one summary CSV and one PNG plot
 under `bench/results/latest/`, so you end up with one graph per
 factor showing how each derivation step scales.
+
+In sweeps that vary the number of mutual types, each derivation step
+runs once per type and the summary CSV records each invocation
+separately (`simpl isOrder T0`, `simpl isOrder T1`, ...).  The plot
+**sums** the per-type times into one line per step, so each point is
+the total work spent on that step across the whole mutual block; use
+the summary CSV directly if you need per-type breakdowns.

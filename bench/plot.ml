@@ -145,7 +145,7 @@ let run_gnuplot ~dat ~png ~title ~xlabel steps =
   let p fmt = Printf.fprintf oc fmt in
   p "set terminal pngcairo size 900,600 enhanced font 'sans,11'\n";
   p "set output '%s'\n" png;
-  p "set title 'deriving timings vs %s'\n" title;
+  p "set title \"deriving timings vs %s\\n{/*0.8 (per step, summed across mutual types)}\"\n" title;
   p "set xlabel '%s'\n" xlabel;
   p "set ylabel 'seconds (median over reps)'\n";
   p "set key outside right top\n";
