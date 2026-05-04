@@ -68,7 +68,7 @@ Import IndF.
 
 Definition enum_branch_aux :=
   arity_rec
-    _ (fun As => all (negb \o @is_rec n) As -> seq.seq (hlist' (type_of_arg T) As))
+    _ (fun As => all (negb \o @is_rec n) As -> seq.seq (hlist (type_of_arg T) As))
     (fun _ => [:: tt]%SEQ)
     (fun S As rec P => allpairs Cell (Finite.enum S) (rec P))
     (fun i As rec P => ltac:(done)).
