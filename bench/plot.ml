@@ -9,10 +9,12 @@
    `dimension,value,rep,step,seconds`, one row per `Time Definition`
    transaction.  Step labels like "simpl hasDecEq T0" carry a trailing per-type
    " T<digits>" suffix which we strip so multi-type sweeps collapse to a single
-   line per derivation step.  For each (value, rep, step) we sum across types to
-   show total work, then take the median across reps so the final plot has one
-   point per (value, step).  The aggregated table is dumped to a sibling .dat
-   file and fed to gnuplot as wide-format columns. *)
+   line per derivation step.  For each (value, rep, step) we take the median
+   across types — reporting the "typical per-type cost" rather than a sum that
+   grows linearly with the number of mutual types — then take the median across
+   reps so the final plot has one point per (value, step).  The aggregated
+   table is dumped to a sibling .dat file and fed to gnuplot as wide-format
+   columns. *)
 
 let dim_xlabels = [
   "types",  "number of mutually inductive types";
@@ -54,7 +56,7 @@ let median xs =
   else if n mod 2 = 1 then a.(n / 2)
   else (a.(n / 2 - 1) +. a.(n / 2)) /. 2.0
 
-let load_sums path =
+let load_medians path =
   let rows = Csv.load path in
   match rows with
   | [] -> failwith ("empty CSV: " ^ path)
@@ -71,8 +73,11 @@ let load_sums path =
     let i_rep = idx "rep" in
     let i_step = idx "step" in
     let i_secs = idx "seconds" in
-    (* (value, rep, base_step) -> total seconds across types *)
-    let sums = Hashtbl.create 128 in
+    (* (value, rep, base_step) -> seconds for each type, accumulated.
+       After loading, collapse to the median across types so the
+       reported value is "typical per-type cost" rather than a sum
+       that grows just because there are more types in the block. *)
+    let by_types = Hashtbl.create 128 in
     List.iter (fun row ->
       let row = Array.of_list row in
       if Array.length row > i_secs then begin
@@ -81,11 +86,13 @@ let load_sums path =
         let step = base_step row.(i_step) in
         let secs = float_of_string row.(i_secs) in
         let key = (v, r, step) in
-        let prev = try Hashtbl.find sums key with Not_found -> 0.0 in
-        Hashtbl.replace sums key (prev +. secs)
+        let prev = try Hashtbl.find by_types key with Not_found -> [] in
+        Hashtbl.replace by_types key (secs :: prev)
       end
     ) rows;
-    sums
+    let medians = Hashtbl.create 128 in
+    Hashtbl.iter (fun key xs -> Hashtbl.add medians key (median xs)) by_types;
+    medians
 
 let group_by_step sums =
   let by_step = Hashtbl.create 16 in
@@ -145,7 +152,7 @@ let run_gnuplot ~dat ~png ~title ~xlabel steps =
   let p fmt = Printf.fprintf oc fmt in
   p "set terminal pngcairo size 900,600 enhanced font 'sans,11'\n";
   p "set output '%s'\n" png;
-  p "set title 'deriving timings vs %s'\n" title;
+  p "set title \"deriving timings vs %s\\n{/*0.8 (per step, median across mutual types)}\"\n" title;
   p "set xlabel '%s'\n" xlabel;
   p "set ylabel 'seconds (median over reps)'\n";
   p "set key outside right top\n";
@@ -180,8 +187,8 @@ let () =
   let dat_path =
     Filename.concat (Filename.dirname png_path) (dim ^ ".dat")
   in
-  let sums = load_sums csv_path in
-  let by_step = group_by_step sums in
+  let by_rep = load_medians csv_path in
+  let by_step = group_by_step by_rep in
   let values = sorted_values by_step in
   let steps = ordered_steps by_step in
   write_dat dat_path values steps by_step;
