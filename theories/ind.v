@@ -114,9 +114,12 @@ Fixpoint rec_branch' T S i As : Type :=
 Definition rec_branch D T S i (j : Cidx D i) : Type :=
   rec_branch' T S i (nth_fin j).
 
-(** [recursor D T] is the type of the primitive recursor: an [hfun2]
-    taking one branch per [(i, j)] and returning, for each [i], a
-    function [T i -> S i]. *)
+(** [recursor D T] is the type of the primitive recursor: an [hfun2] taking one
+    branch per [(i, j)] and returning, for each [i], a function [T i -> S
+    i]. Note that, after simplification, this reduces exactly to the mutual
+    recursion combinator produced by the [Combined Scheme] command, except that
+    the return types for each mutually defined type are grouped into a single
+    parameter [S]. *)
 
 Definition recursor D T :=
   forall S, hfun2 (@rec_branch D T S) (hlist1 (fun i => T i -> S i)).
@@ -148,9 +151,11 @@ Lemma rec_branch_of_hfunK T S i As f xs :
   @rec_branch'_of_hfun' T S i As f xs = f xs.
 Proof. by elim: As f xs => [|[R|j] As IH] f //= [[x y] xs]. Qed.
 
-(** [recursor_eq] is the equational law: applied to a constructor [Cs i j],
-    the recursor returns the corresponding branch evaluated on the
-    arguments paired with their recursive results. *)
+(** [recursor_eq] is the equational law: applied to a constructor [Cs i j], the
+    recursor returns the corresponding branch evaluated on the arguments paired
+    with their recursive results.  After simplification, this expands to a
+    formula involving only [forall], [/\] and reflexive equatilities, which
+    makes it easily solvable (cf. the [ind_def] tactic in [infer.v]). *)
 
 Definition recursor_eq D T (Cs : constructors D T) (r : recursor D T) :=
   forall S,
@@ -166,6 +171,10 @@ Definition des_branch D T S i (j : Cidx D i) :=
 
 Definition destructor D T :=
   forall S, hfun2 (@des_branch D T S) (hlist1 (fun i => T i -> S i)).
+
+(** Similar to [recursor_eq], but for the destructor.  Once again, the
+    definition ensures that, after simplification, we obtain a formula that can
+    be easily discharged automatically. *)
 
 Definition destructor_eq D T (Cs : constructors D T) (d : destructor D T) :=
   forall S,
@@ -201,6 +210,10 @@ Fixpoint ind_branch' T (P : forall i, T i -> Type) i As :
 
 Definition ind_branch D T P (Cs : constructors D T) i (j : Cidx D i) :=
   @ind_branch' T P i (nth_fin j) (Cs i j).
+
+(** Similar to the recursor, but allows the return type to be dependent.  After
+    simplification, this reduces exactly to the combinator produced by [Combined
+    Scheme]. *)
 
 Definition induction D T (Cs : constructors D T) :=
   @hdfun n (fun i => T i -> Type) (fun P : hlist (fun i => T i -> Type) =>
