@@ -22,7 +22,7 @@ let print_db prefix db =
 
 let _ =
   print_endline "From mathcomp Require Import ssreflect ssrfun.";
-  print_endline "From deriving Require Import base ind.";
+  print_endline "From deriving Require Import base shape lift_class ind ind_class.";
   print_endline "Declare Reduction deriving_compute :=";
   let db = read_files Sys.argv in
   print_db "cbv" db;

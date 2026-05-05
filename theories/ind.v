@@ -1,379 +1,55 @@
+(** * Recursors, destructors, and the [indType] class
+
+    This file gives the deriving framework's view of an inductive type as a
+    bundle of:
+
+    - Constructors [Cons : constructors D T] (one [hfun']-curried function
+      per constructor of each mutually-defined type),
+    - A primitive recursor [rec : recursor D T] and destructor
+      [case : destructor D T] (the [Scheme]-style elimination principles
+      reformulated to take heterogeneous-list-curried branches),
+    - The equational laws [recE]/[caseE] and the induction principle [indP]
+      that tie the constructors, recursor, and destructor together.
+
+    These are packaged in [Ind.Def.class_of].  The [indType] class then
+    bundles a [Ind.Def.type] (a mutual block) with an index [i : fin n]
+    picking which of the mutual types the user actually wants.
+
+    The bottom of the file provides:
+
+    - [find_idx], [pack_indType], and the [IndType] notation: the
+      canonical-structure inference that locates a single type [T] within a
+      mutual [Ind.Def.type].
+
+    - [Module IndF]: a functor view of an [indType].  Where [Ind.Def] takes
+      branches as nested [hfun']s, [IndF] presents each constructor
+      application as a single record [Cons constr args] (the constructor
+      tag plus an [hlist'] of arguments), gives a [fmap] over those
+      arguments, and lifts the primitive [Ind.Def.rec]/[Ind.Def.case] to
+      user-friendly [rec]/[case] combinators that operate on this
+      flat-record view.
+
+    The [IndF] equations [recE]/[caseE] are propositional lemmas, not
+    definitional reductions.  This matters for the [tactics.v] /
+    [deriving_compute] pipeline: simplification has to step through the
+    underlying [Ind.Def.rec]/[Ind.Def.case] rather than rewriting with
+    [recE]/[caseE]. *)
+
 From HB Require Import structures.
 
 From mathcomp Require Import
   ssreflect ssrfun ssrbool ssrnat eqtype seq choice fintype.
-Set SsrOldRewriteGoalsOrder.  (* change Set to Unset when porting the file, then remove the line when requiring MathComp >= 2.6 *)
+Set SsrOldRewriteGoalsOrder.
 
-From deriving Require Import base.
-
-From Coq Require Import ZArith NArith String Ascii.
+From deriving Require Import base shape.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-(* Backwards compatibility for hint locality attributes *)
 Set Warnings "-unsupported-attributes".
 
 Open Scope deriving_scope.
-
-Record fun_split n (R : Type) (T : R) (Ts : fin n -> R) := FunSplit {
-  fs_fun :> fin n.+1 -> R;
-  _      :  T = fs_fun None;
-  _      :  forall i, Ts i = fs_fun (Some i);
-}.
-
-Definition fsE1 n R T Ts (TTs : @fun_split n R T Ts) : T = TTs None :=
-  let: FunSplit _ e _ := TTs in e.
-
-Definition fsE2 n R T Ts (TTs : @fun_split n R T Ts) :
-  forall i, Ts i = TTs (Some i) :=
-  let: FunSplit _ _ e := TTs in e.
-
-Canonical fun_split1 n R (TTs : fin n.+1 -> R) :=
-  @FunSplit n R (TTs None) (fun i => TTs (Some i)) TTs erefl (fun=> erefl).
-
-#[global]
-Hint Unfold fs_fun : deriving.
-#[global]
-Hint Unfold fsE1 : deriving.
-#[global]
-Hint Unfold fsE2 : deriving.
-#[global]
-Hint Unfold fun_split1 : deriving.
-
-Section LiftClass.
-
-Import PolyType.
-
-Variables (K : Type) (sort : K -> Type).
-
-Definition eq_class X := {sX : K | sort sX = X}.
-
-Record tagged_sort n := TaggedSort {
-  untag_sort :> fin n -> Type;
-}.
-
-Definition ts_nil_tag n Ts := @TaggedSort n Ts.
-Canonical ts_cons_tag n Ts := @ts_nil_tag n Ts.
-
-Record lift_class n := LiftClass {
-  lift_class_sort  :> tagged_sort n;
-  _ :  forall i, eq_class (lift_class_sort i);
-}.
-
-Definition lift_class_class n (sTs : lift_class n) :=
-  let: LiftClass _ cTs := sTs return forall i, eq_class (sTs i) in cTs.
-
-Canonical nil_lift_class f :=
-  @LiftClass 0 (ts_nil_tag f) (fun i => match i with end).
-
-Canonical cons_lift_class n
-  (sT : K) (f : lift_class n) (g : fun_split (sort sT) f) :=
-  @LiftClass n.+1 (ts_cons_tag g)
-             (fun i =>
-                match i with
-                | None   => cast eq_class (fsE1 g)   (exist _ sT erefl)
-                | Some i => cast eq_class (fsE2 g i) (lift_class_class f i)
-                end).
-
-Definition lift_class_proj n cK
-           (class : forall sT, cK (sort sT))
-           (sTs : lift_class n) (i : fin n)
-  : cK (sTs i) :=
-  cast cK (svalP (lift_class_class sTs i)) (class _).
-
-End LiftClass.
-
-#[global]
-Hint Unfold eq_class : deriving.
-#[global]
-Hint Unfold untag_sort : deriving.
-#[global]
-Hint Unfold ts_nil_tag : deriving.
-#[global]
-Hint Unfold ts_cons_tag : deriving.
-#[global]
-Hint Unfold lift_class_sort : deriving.
-#[global]
-Hint Unfold lift_class_class : deriving.
-#[global]
-Hint Unfold nil_lift_class : deriving.
-#[global]
-Hint Unfold cons_lift_class : deriving.
-#[global]
-Hint Unfold lift_class_proj : deriving.
-
-Arguments lift_class_proj {K sort n cK} class sTs i.
-
-Notation "T -F> S" :=
-  (forall i, T i -> S i)
-  (at level 30, only parsing, no associativity)
-  : deriving_scope.
-
-Notation "T *F S"  :=
-  (fun i => T i * S i)%type
-  (at level 20, only parsing, no associativity)
-  : deriving_scope.
-
-Set Universe Polymorphism.
-
-Section Signature.
-
-Import PolyType.
-
-Variable n : nat.
-Implicit Types (T S : fin n -> Type).
-
-Variant arg := NonRec of Type | Rec of fin n.
-
-Definition type_of_arg T (A : arg) : Type :=
-  match A with
-  | NonRec X => X
-  | Rec i => T i
-  end.
-
-Definition type_of_arg_map T S (f : T -F> S) A :
-  type_of_arg T A -> type_of_arg S A :=
-  match A with
-  | NonRec X => id
-  | Rec i => f i
-  end.
-
-Definition is_rec A := if A is Rec _ then true else false.
-
-Definition arity        := seq arg.
-Definition signature    := seq arity.
-Definition declaration  := fin n -> signature.
-
-Identity Coercion seq_of_arity : arity >-> seq.
-Identity Coercion seq_of_sig   : signature >-> seq.
-
-Definition empty_decl : declaration :=
-  fun _ => [::].
-
-Definition add_arity (D : declaration) i As : declaration :=
-  fun j => if leq_fin i j is inl _ then As :: D i
-           else D j.
-
-Definition add_arity_ind (P : fin n -> signature -> Type) D i As j :
-  P i (As :: D i) -> P j (D j) -> P j (add_arity D i As j) :=
-  fun H1 H2 =>
-    match leq_fin i j
-    as X
-    return P j (if X is inl _ then As :: D i else D j) with
-    | inl e => cast (fun k => P k (As :: D i)) e H1
-    | inr _ => H2
-    end.
-
-Variables (K : Type) (sort : K -> Type).
-
-Definition arg_class A :=
-  if A is NonRec T then eq_class sort T else unit.
-
-Record arg_inst := ArgInst {
-  arg_inst_sort  :> arg;
-  arg_inst_class :  arg_class arg_inst_sort
-}.
-Arguments ArgInst : clear implicits.
-
-Definition arity_class (As : arity) :=
-  hlist' arg_class As.
-
-Record arity_inst := ArityInst {
-  arity_inst_sort  :> arity;
-  arity_inst_class :  arity_class arity_inst_sort;
-}.
-Arguments ArityInst : clear implicits.
-
-Definition sig_class (Σ : signature) :=
-  hlist' arity_class Σ.
-
-Record sig_inst := SigInst {
-  sig_inst_sort  :> signature;
-  sig_inst_class :  sig_class sig_inst_sort;
-}.
-Arguments SigInst : clear implicits.
-
-Record tagged_decl k := TaggedDecl {
-  untag_decl :> fin k -> signature;
-}.
-
-Record decl_inst k := DeclInst {
-  decl_inst_sort  :> tagged_decl k;
-  _               :  forall i, sig_class (decl_inst_sort i)
-}.
-Arguments DeclInst : clear implicits.
-
-Definition decl_inst_class k (d : decl_inst k) :
-  forall i, sig_class (@decl_inst_sort k d i) :=
-  let: DeclInst _ d := d in d.
-
-Implicit Types (A : arg) (As : arity) (Σ : signature).
-Implicit Types (Ai : arg_inst) (Asi : arity_inst) (Σi : sig_inst).
-
-Canonical NonRec_arg_inst sX :=
-  ArgInst (NonRec (sort sX)) (exist _ sX erefl).
-
-Canonical Rec_arg_inst i :=
-  ArgInst (Rec i) tt.
-
-Canonical nth_fin_arg_inst Asi (i : fin (size Asi)) :=
-  ArgInst (nth_fin i) (arity_inst_class Asi i).
-
-Canonical nil_arity_inst :=
-  ArityInst nil tt.
-
-Canonical cons_arity_inst Ai Asi :=
-  ArityInst (arg_inst_sort Ai :: arity_inst_sort Asi)
-            (arg_inst_class Ai ::: arity_inst_class Asi).
-
-Canonical nth_fin_arity_inst Σi (i : fin (size Σi)) :=
-  ArityInst (nth_fin i) (sig_inst_class Σi i).
-
-Canonical nil_sig_inst :=
-  SigInst nil tt.
-
-Canonical cons_sig_inst Asi Σi :=
-  SigInst (arity_inst_sort Asi :: sig_inst_sort Σi)
-          (arity_inst_class Asi ::: sig_inst_class Σi).
-
-Definition nil_decl_tag k (D : fin k -> signature) := TaggedDecl D.
-Canonical cons_decl_tag k (D : fin k -> signature) := nil_decl_tag D.
-
-Canonical nil_decl_inst f :=
-  DeclInst 0 (nil_decl_tag f) (fun i => match i with end).
-
-Canonical cons_decl_inst k Σi Di
-  (D : fun_split (sig_inst_sort Σi) (untag_decl (@decl_inst_sort k Di))) :=
-  DeclInst k.+1
-           (cons_decl_tag (fs_fun D))
-           (fun i =>
-              match i with
-              | None => cast sig_class (fsE1 D) (sig_inst_class Σi)
-              | Some i => cast sig_class (fsE2 D i) (@decl_inst_class k Di i)
-              end).
-
-Definition arity_rec (P : arity -> Type)
-  (Pnil    : P [::])
-  (PNonRec : forall (sX : K) (As : arity), P As -> P (NonRec (sort sX) :: As))
-  (PRec    : forall i        (As : arity), P As -> P (Rec i            :: As)) :=
-  fix arity_rec As : arity_class As -> P As :=
-    match As with
-    | [::]               => fun cAs =>
-      Pnil
-    | NonRec X :: As => fun cAs =>
-      cast (fun X => P (NonRec X :: As)) (svalP cAs.(hd))
-           (PNonRec (sval cAs.(hd)) As (arity_rec As cAs.(tl)))
-    | Rec i :: As    => fun cAs =>
-      PRec i As (arity_rec As cAs.(tl))
-    end.
-
-Lemma arity_ind (P : forall As, hlist' arg_class As -> Type)
-  (Pnil : P [::] tt)
-  (PNonRec : forall sX As cAs,
-      P As cAs -> P (NonRec (sort sX) :: As) (exist _ sX erefl ::: cAs))
-  (PRec : forall i As cAs,
-      P As cAs -> P (Rec i :: As) (tt ::: cAs))
-  As cAs : P As cAs.
-Proof.
-elim: As cAs=> [|[X|i] As IH] => /= [[]|[[xS e] cAs]|[[] cAs]] //.
-  by case: X / e cAs => ?; apply: PNonRec.
-by apply: PRec.
-Qed.
-
-End Signature.
-
-#[global]
-Hint Unfold type_of_arg : deriving.
-#[global]
-Hint Unfold type_of_arg_map : deriving.
-#[global]
-Hint Unfold is_rec : deriving.
-#[global]
-Hint Unfold arity : deriving.
-#[global]
-Hint Unfold signature : deriving.
-#[global]
-Hint Unfold declaration : deriving.
-#[global]
-Hint Unfold empty_decl : deriving.
-#[global]
-Hint Unfold add_arity : deriving.
-#[global]
-Hint Unfold add_arity_ind : deriving.
-#[global]
-Hint Unfold arg_class : deriving.
-#[global]
-Hint Unfold arg_inst_sort : deriving.
-#[global]
-Hint Unfold arg_inst_class : deriving.
-#[global]
-Hint Unfold arity_class : deriving.
-#[global]
-Hint Unfold arity_inst_sort : deriving.
-#[global]
-Hint Unfold arity_inst_class : deriving.
-#[global]
-Hint Unfold sig_class : deriving.
-#[global]
-Hint Unfold sig_inst_sort : deriving.
-#[global]
-Hint Unfold sig_inst_class : deriving.
-#[global]
-Hint Unfold untag_decl : deriving.
-#[global]
-Hint Unfold decl_inst_sort : deriving.
-#[global]
-Hint Unfold decl_inst_class : deriving.
-#[global]
-Hint Unfold NonRec_arg_inst : deriving.
-#[global]
-Hint Unfold Rec_arg_inst : deriving.
-#[global]
-Hint Unfold nth_fin_arg_inst : deriving.
-#[global]
-Hint Unfold nil_arity_inst : deriving.
-#[global]
-Hint Unfold cons_arity_inst : deriving.
-#[global]
-Hint Unfold nil_sig_inst : deriving.
-#[global]
-Hint Unfold cons_sig_inst : deriving.
-#[global]
-Hint Unfold nil_decl_tag : deriving.
-#[global]
-Hint Unfold cons_decl_tag : deriving.
-#[global]
-Hint Unfold nil_decl_inst : deriving.
-#[global]
-Hint Unfold cons_decl_inst : deriving.
-#[global]
-Hint Unfold arity_rec : deriving.
-
-Definition arg_class_map
-  n K1 K2 (sort1 : K1 -> Type) (sort2 : K2 -> Type)
-  (f : K1 -> K2) (p : forall cT, sort2 (f cT) = sort1 cT) (A : arg n) :
-  arg_class sort1 A -> arg_class sort2 A :=
-  match A with
-  | NonRec T => fun cT =>
-    PolyType.exist _
-      (f (PolyType.sval cT)) (p (PolyType.sval cT) * PolyType.svalP cT)
-  | Rec i    => fun _  => tt
-  end.
-
-#[global]
-Hint Unfold arg_class_map : deriving.
-
-Definition pack_decl_inst
-  n (D : declaration n) (Di : decl_inst n Equality.sort n)
-  & phant_id D (untag_decl (decl_inst_sort Di)) := Di.
-
-Unset Universe Polymorphism.
-
-Arguments add_arity_ind {n} P D i As j H1 H2.
-Arguments empty_decl {n}.
-Arguments arity_rec {n K} _ _ _ _ _.
 
 Module Ind.
 
@@ -386,6 +62,10 @@ Implicit Types (T S : fin n -> Type).
 
 Import PolyType.
 
+(** [Cidx D i] is the index type of the constructors of the [i]-th
+    inductive type — finite of size [size (D i)].  [args] gives the
+    arguments tuple as an [hlist'] over the [arg]s in [nth_fin Ci]. *)
+
 Definition Cidx D i := fin (size (D i)).
 Arguments Cidx : clear implicits.
 
@@ -395,6 +75,9 @@ Definition args D T i (j : Cidx D i) : Type :=
 Definition args_map D T S (f : T -F> S) i j (xs : @args D T i j) :
   args S j :=
   hmap' (type_of_arg_map f) xs.
+
+(** [constructors D T] : the family of constructors, one per
+    [(i, j) : (fin n, Cidx D i)], curried as an [hfun']. *)
 
 Definition constructors D T :=
   forall (Ti : fin n) (Ci : Cidx D Ti),
@@ -415,6 +98,11 @@ Definition add_cons D T (Cs : constructors D T) Ti As
       (fun Ci => if Ci is Some Ci then Cs Ti Ci else C)
       (Cs Ti').
 
+(** [rec_branch'] is the type of one recursor branch, expressed as a
+    nested function over the arity.  At each [NonRec] argument [X] we
+    abstract over an [X]; at each [Rec j] we abstract over both the
+    recursive subterm [T j] and the result of recursing on it [S j]. *)
+
 Fixpoint rec_branch' T S i As : Type :=
   match As with
   | NonRec X :: As => X          -> rec_branch' T S i As
@@ -425,9 +113,17 @@ Fixpoint rec_branch' T S i As : Type :=
 Definition rec_branch D T S i (j : Cidx D i) : Type :=
   rec_branch' T S i (nth_fin j).
 
+(** [recursor D T] is the type of the primitive recursor: an [hfun2]
+    taking one branch per [(i, j)] and returning, for each [i], a
+    function [T i -> S i]. *)
 
 Definition recursor D T :=
   forall S, hfun2 (@rec_branch D T S) (hlist1 (fun i => T i -> S i)).
+
+(** Conversion between [rec_branch'] (the curried per-arity branch shape)
+    and [hfun'] over [type_of_arg (T *F S)] (the branch shape used by
+    [IndF.rec]).  These are mutual inverses up to [hcurryK]/[hcurry];
+    [rec_branch_of_hfunK] expresses the round-trip identity. *)
 
 Fixpoint rec_branch'_of_hfun' T S i As :
   hfun' (type_of_arg (T *F S)) As (S i) -> rec_branch' T S i As :=
@@ -450,6 +146,10 @@ Coercion hfun'_of_rec_branch' : rec_branch' >-> hfun'.
 Lemma rec_branch_of_hfunK T S i As f xs :
   @rec_branch'_of_hfun' T S i As f xs = f xs.
 Proof. by elim: As f xs => [|[R|j] As IH] f //= [[x y] xs]. Qed.
+
+(** [recursor_eq] is the equational law: applied to a constructor [Cs i j],
+    the recursor returns the corresponding branch evaluated on the
+    arguments paired with their recursive results. *)
 
 Definition recursor_eq D T (Cs : constructors D T) (r : recursor D T) :=
   forall S,
@@ -474,6 +174,10 @@ Definition destructor_eq D T (Cs : constructors D T) (d : destructor D T) :=
   all_hlist  (fun xs : args T j                =>
     d S bs _ (Cs i j xs) = bs i j xs)))).
 
+(** A destructor can be constructed from a recursor by ignoring the
+    recursive results; we use this in [infer.v] to derive [case] from
+    the user-supplied [Scheme]-style recursor. *)
+
 Definition rec_of_des_branch D T S i (j : Cidx D i) (b : des_branch T S j) :
   rec_branch T S j :=
   rec_branch'_of_hfun' (hcurry (fun xs => b (args_map (fun _ => fst) xs))).
@@ -481,6 +185,10 @@ Definition rec_of_des_branch D T S i (j : Cidx D i) (b : des_branch T S j) :
 Definition destructor_of_recursor D T (r : recursor D T) : destructor D T :=
   fun S => hcurry2 (fun bs : hlist2 (@des_branch D T S) =>
     r S (hmap2 (@rec_of_des_branch D T S) bs)).
+
+(** [ind_branch'] is the per-arity shape of an induction-principle
+    branch: at each [NonRec R] we abstract over an [R]; at each [Rec j]
+    we abstract over the subterm and an induction-hypothesis [P j]. *)
 
 Fixpoint ind_branch' T (P : forall i, T i -> Type) i As :
   hfun' (type_of_arg T) As (T i) -> Type :=
@@ -498,6 +206,14 @@ Definition induction D T (Cs : constructors D T) :=
   hfun2 (@ind_branch D T P Cs) (hlist1 (fun i => forall x, P i x))).
 
 End Basic.
+
+(** ** [Ind.Def]: bundling the recursor/destructor data
+
+    [Ind.Def.class_of n sorts decl] is the record packaging the
+    constructors, the primitive [rec]/[case], their equations, and the
+    induction principle.  [Ind.Def.type] is its sigma counterpart, with
+    [n], [sorts], and [decl] existentially packed.  The user obtains an
+    [Ind.Def.type] via [[indDef for rect]] in [infer.v]. *)
 
 Module Def.
 
@@ -520,6 +236,12 @@ Record type := Pack {
 Unset Primitive Projections.
 
 End Def.
+
+(** ** [indType]: a single Coq type within a mutual block
+
+    [Ind.type] picks a specific carrier [T] out of an [Ind.Def.type] by
+    storing the index [i : fin (Def.n def)] and a transport [T = Def.sorts i].
+    [Ind.clone] is the [[indType of T]] resolver. *)
 
 Section ClassDef.
 
@@ -565,6 +287,16 @@ End Ind.
 Export Ind.Exports.
 
 Arguments Ind.Def.decl : clear implicits.
+
+(** ** [find_idx]: locating [T] within a mutual [Def.type]
+
+    [find_idx n Ts T i e] is a typeclass that asserts [T = Ts i] and
+    pinpoints the index [i].  The two [Hint Extern]s implement the search
+    by case-analysing on [n]: at [n.+1], either match the head ([Ts None])
+    or recurse on the tail ([fun i => Ts (Some i)]).
+
+    Used by [pack_indType] / [IndType T Ts] to canonically associate a
+    user type [T] with its position in a mutual block. *)
 
 Class find_idx n (Ts : fin n -> Type) (T : Type) i (e : T = Ts i) :=
   make_find_idx { }.
@@ -671,6 +403,20 @@ Hint Unfold find_idx_there : deriving.
 #[global]
 Hint Unfold pack_indType : deriving.
 
+(** ** [IndF]: a functor view of an [indType]
+
+    [Ind.Def] presents constructor application as nested [hfun']s; that
+    shape is convenient for stating [recursor_eq], but inconvenient for
+    user code that wants to talk about a single inductive value as
+    "the constructor tag plus the hlist of its arguments".  [IndF.fobj T i]
+    is exactly that record, with [Roll]/[unroll] as the round-trip with
+    the underlying [T i].
+
+    On top of this, [IndF.rec] / [IndF.case] are user-friendly recursor /
+    destructor combinators (taking a single function over [F T] rather
+    than an [hfun2] of branches), and [recE]/[caseE]/[indP]/[Roll_inj]
+    state the equational laws and induction principle. *)
+
 Module IndF.
 
 Section FunctorDef.
@@ -751,6 +497,11 @@ Definition rec_branches_of_fun S (body : F (T *F S) -F> S) :
 
 Definition rec S (body : F (T *F S) -F> S) :=
   @Ind.Def.rec _ _ _ T S (rec_branches_of_fun body).
+
+(** [lift_type]/[lift_typeE]/[lift_type_of] — bookkeeping that lets the
+    destructor [case] return a result type that depends on the index [i]
+    being matched, while still factoring through the index-uniform
+    [Ind.Def.case]. *)
 
 Definition lift_type R i : fin (Ind.Def.n T) -> Type :=
   fun j => if leq_fin i j is inl e then R else unit.
@@ -890,285 +641,3 @@ Hint Unfold IndF.des_branches_of_fun : deriving.
 Hint Unfold IndF.case : deriving.
 #[global]
 Hint Unfold IndF.unroll : deriving.
-
-Section InferInstances.
-
-Import PolyType.
-
-Class infer_arity
-  n (T : fin n -> Type) (P : forall i, T i -> Type)
-  (branchT : Type) (As : arity n) (i : fin n)
-  (C : hfun' (type_of_arg T) As (T i)) : Type.
-Arguments infer_arity : clear implicits.
-
-Instance infer_arity_end
-  n T P i (x : T i) :
-  infer_arity n T P (P i x) [::] i x.
-Defined.
-
-Instance infer_arity_rec
-  n Ts P j
-  (branchT : Ts j -> Type)
-  i (As : arity n)
-  (C : Ts j -> hfun' (type_of_arg Ts) As (Ts i))
-  (_ : forall x, infer_arity n Ts P (branchT x) As i (C x)) :
-  infer_arity n Ts P (forall x, P j x -> branchT x) (Rec j :: As) i C.
-Defined.
-
-Instance infer_arity_nonrec
-  n T P S
-  (branchT : S -> Type) i As (C : S -> hfun' (type_of_arg T) As (T i))
-  (_ : forall x, infer_arity n T P (branchT x) As i (C x)) :
-  infer_arity n T P (forall x, branchT x) (NonRec n S :: As) i C.
-Defined.
-
-Class infer_decl
-  n T (P : forall i, T i -> Type)
-  (elimT : Type) (D : declaration n) (Cs : Ind.constructors D T) : Type.
-Arguments infer_decl : clear implicits.
-
-Global Instance infer_decl_end n T P :
-  infer_decl n T P
-             (hlist1 (fun i => forall (x : T i), P i x))
-             empty_decl
-             (@Ind.empty_cons _ _).
-Defined.
-
-Global Instance infer_decl_cons n T P
-  (branchT : Type) Ti As C
-  (_ : infer_arity n T P branchT As Ti C)
-  (elimT : Type) D Cs
-  (_ : infer_decl n T P elimT D Cs)
-  : infer_decl n T P (branchT -> elimT) (add_arity D Ti As) (Ind.add_cons Cs C).
-Defined.
-
-Class read_rect (rectT : Type) (rect : rectT)
-  (n : nat) (Ts : fin n -> Type)
-  (rectT' : (forall i, Ts i -> Type) -> Type)
-  (rect' : forall Ps, rectT' Ps).
-Arguments read_rect : clear implicits.
-
-Global Instance read_rect_type
-  (T : Type) (rectT : (T -> Type) -> Type) (rect : forall P, rectT P)
-  n Ts rectT' rect'
-  (_ : forall P, read_rect (rectT P) (rect P) n Ts (rectT' P) (rect' P))
-  : read_rect (forall P, rectT P) rect n.+1
-              (fcons T Ts)
-              (fun Ps => rectT' (Ps None) (fun i => Ps (Some i)))
-              (fun Ps => rect' (Ps None) (fun i => Ps (Some i))) | 1.
-Defined.
-
-Global Instance read_rect_done rectT rect :
-  read_rect rectT rect 0 (fnil Type) (fun _ => rectT) (fun _ => rect) | 2.
-Defined.
-
-Class bless_rect
-  n Ts (D : declaration n) (Cs : Ind.constructors D Ts)
-  (rectT : (forall i, Ts i -> Type) -> Type)
-  (rect  : forall P, rectT P)
-  (rect' : Ind.recursor D Ts).
-Arguments bless_rect : clear implicits.
-
-Class infer_ind rectT (rect : rectT)
-  n Ts (D : declaration n) (Cs : Ind.constructors D Ts)
-  (rectT' : (forall i, Ts i -> Type) -> Type) (rect' : forall P, rectT' P)
-  (rect'' : Ind.recursor D Ts).
-Arguments infer_ind : clear implicits.
-
-Global Instance do_infer_ind rectT rect
-  n Ts rectT' rect'
-  (_ : read_rect rectT rect n Ts rectT' rect')
-  D Cs
-  (_ : forall P, infer_decl n Ts P (rectT' P) D Cs)
-  rect''
-  (_ : bless_rect n Ts D Cs rectT' rect' rect'')
-  : infer_ind rectT rect n Ts D Cs rectT' rect' rect''.
-Defined.
-
-End InferInstances.
-
-Arguments infer_arity : clear implicits.
-Arguments infer_decl : clear implicits.
-Arguments read_rect : clear implicits.
-Arguments bless_rect : clear implicits.
-Arguments infer_ind : clear implicits.
-
-#[global]
-Hint Unfold infer_arity_end : deriving.
-#[global]
-Hint Unfold infer_arity_rec : deriving.
-#[global]
-Hint Unfold infer_arity_nonrec : deriving.
-#[global]
-Hint Unfold infer_decl_end : deriving.
-#[global]
-Hint Unfold infer_decl_cons : deriving.
-#[global]
-Hint Unfold read_rect_type : deriving.
-#[global]
-Hint Unfold read_rect_done : deriving.
-#[global]
-Hint Unfold do_infer_ind : deriving.
-
-Ltac infer_arity :=
-  cbv beta;
-  match goal with
-  | |- infer_arity ?n ?Ts ?Ps (?Ps ?i ?x) _ _ _ =>
-    exact (@infer_arity_end n Ts Ps i x)
-  | |- infer_arity ?n ?Ts ?Ps (forall x, ?Ps ?j x -> @?branchT x) _ _ _ =>
-    eapply (@infer_arity_rec n Ts Ps j branchT)
-  | |- infer_arity ?n ?Ts ?Ps (forall x : ?S, @?branchT x) _ _ _ =>
-    eapply (@infer_arity_nonrec n Ts Ps S branchT)
-  end.
-
-#[global]
-Hint Extern 0 (infer_arity _ _ _ _ _ _ _) => infer_arity : typeclass_instances.
-
-Ltac infer_decl :=
-  cbv beta;
-  match goal with
-  | |- infer_decl ?n ?Ts ?Ps (?branchT -> ?rectT) _ _ =>
-    eapply (@infer_decl_cons n Ts Ps branchT _ _ _ _ rectT)
-  | |- infer_decl ?n ?Ts ?Ps _ _ _ =>
-    eapply (@infer_decl_end n Ts Ps)
-  end.
-
-#[global]
-Hint Extern 0 (infer_decl _ _ _ _ _ _) => infer_decl : typeclass_instances.
-
-Ltac bless_rect :=
-  cbv beta;
-  match goal with
-  | |- bless_rect ?n ?Ts ?D ?Cs ?rectT ?rect _ =>
-     exact (@Build_bless_rect n Ts D Cs rectT rect
-                             (fun P => rect (fun i _ => P i)))
-  end.
-
-#[global]
-Hint Extern 0 (bless_rect _ _ _ _ _ _ _) => bless_rect : typeclass_instances.
-
-Module IndEqType.
-
-Record type := Pack {
-  n         : nat;
-  sorts     : fin n -> Type;
-  decl      : declaration n;
-  eq_class  : forall i, Equality (sorts i);
-  ind_class : Ind.Def.class_of sorts decl;
-}.
-
-Definition indDef T := Ind.Def.Pack (ind_class T).
-
-Module Import Exports.
-Notation indEqType := type.
-Notation IndEqType := Pack.
-Coercion sorts : type >-> Funclass.
-Coercion indDef : type >-> Ind.Def.type.
-Canonical indDef.
-End Exports.
-
-End IndEqType.
-
-Export IndEqType.Exports.
-
-Section IndEqTypeInstances.
-Variables (T : indEqType) (i : fin (IndEqType.n T)).
-HB.instance Definition indEqType_eqType := IndEqType.eq_class i.
-End IndEqTypeInstances.
-
-#[global]
-Hint Unfold IndEqType.n : deriving.
-#[global]
-Hint Unfold IndEqType.sorts : deriving.
-#[global]
-Hint Unfold IndEqType.decl : deriving.
-#[global]
-Hint Unfold IndEqType.eq_class : deriving.
-#[global]
-Hint Unfold IndEqType.ind_class : deriving.
-#[global]
-Hint Unfold IndEqType.indDef : deriving.
-
-Module IndChoiceType.
-
-Record type := Pack {
-  n            : nat;
-  sorts        : fin n -> Type;
-  decl         : declaration n;
-  choice_class : forall i, Choice (sorts i);
-  ind_class    : Ind.Def.class_of sorts decl;
-}.
-
-Definition indDef T := Ind.Def.Pack (ind_class T).
-
-Module Import Exports.
-Notation indChoiceType := type.
-Notation IndChoiceType := Pack.
-Coercion sorts : type >-> Funclass.
-Coercion indDef : type >-> Ind.Def.type.
-Canonical indDef.
-End Exports.
-
-End IndChoiceType.
-
-Export IndChoiceType.Exports.
-
-#[global]
-Hint Unfold IndChoiceType.n : deriving.
-#[global]
-Hint Unfold IndChoiceType.sorts : deriving.
-#[global]
-Hint Unfold IndChoiceType.decl : deriving.
-#[global]
-Hint Unfold IndChoiceType.choice_class : deriving.
-#[global]
-Hint Unfold IndChoiceType.ind_class : deriving.
-#[global]
-Hint Unfold IndChoiceType.indDef : deriving.
-
-Section IndChoiceTypeInstances.
-Variables (T : indChoiceType) (i : fin (IndChoiceType.n T)).
-HB.instance Definition _ := IndChoiceType.choice_class i.
-End IndChoiceTypeInstances.
-
-Module IndCountType.
-
-Record type := Pack {
-  n           : nat;
-  sorts       : fin n -> Type;
-  decl        : declaration n;
-  count_class : forall i, Countable (sorts i);
-  ind_class   : Ind.Def.class_of sorts decl;
-}.
-
-Definition indDef T := Ind.Def.Pack (ind_class T).
-
-Module Import Exports.
-Notation indCountType := type.
-Notation IndCountType := Pack.
-Coercion sorts : type >-> Funclass.
-Coercion indDef : type >-> Ind.Def.type.
-Canonical indDef.
-End Exports.
-
-End IndCountType.
-
-Export IndCountType.Exports.
-
-Section IndCountTypeInstances.
-Variables (T : indCountType) (i : fin (IndCountType.n T)).
-HB.instance Definition _ := IndCountType.count_class i.
-End IndCountTypeInstances.
-
-#[global]
-Hint Unfold IndCountType.n : deriving.
-#[global]
-Hint Unfold IndCountType.sorts : deriving.
-#[global]
-Hint Unfold IndCountType.decl : deriving.
-#[global]
-Hint Unfold IndCountType.count_class : deriving.
-#[global]
-Hint Unfold IndCountType.ind_class : deriving.
-#[global]
-Hint Unfold IndCountType.indDef : deriving.

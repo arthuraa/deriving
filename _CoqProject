@@ -7,7 +7,10 @@
 -arg -w -arg -projection-no-head-constant
 
 theories/base.v
+theories/shape.v
+theories/lift_class.v
 theories/ind.v
+theories/ind_class.v
 theories/tactics.v
 theories/infer.v
 theories/instances.v

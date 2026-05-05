@@ -1,6 +1,6 @@
 TESTVFILES=$(wildcard tests/*.v)
 TESTVOFILES=$(TESTVFILES:.v=.vo)
-UNFOLDFILES = theories/ind.v theories/base.v
+UNFOLDFILES = theories/base.v theories/shape.v theories/lift_class.v theories/ind.v theories/ind_class.v
 
 include bench/bench.mk
 
