@@ -25,6 +25,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+(* Backwards compatibility for hint locality attributes *)
 Set Warnings "-unsupported-attributes".
 
 Open Scope deriving_scope.
