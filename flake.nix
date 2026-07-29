@@ -21,6 +21,7 @@
       # packages.default / checks.default.  Used by the overlay (to decide what
       # to override) and by perSystem (to populate packages and checks).
       coqVersions = [
+        "9_2"
         "9_1"
         "9_0"
         "8_20"
@@ -128,6 +129,11 @@
                         unset COQPATH
                       fi
                     '';
+                  propagatedBuildInputs = [
+                    final'.mathcomp.boot
+                    final'.mathcomp.order
+                    final'.stdlib
+                  ];
                   nativeCheckInputs = [
                     final.gnuplot
                     final'.coq.ocamlPackages.findlib
