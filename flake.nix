@@ -112,9 +112,21 @@
 
         overlays.default = final: prev:
           let
+            # Override a Rocq/Coq derivation, choosing the appropriate override
+            # function
+            overrideLibraryDerivation = f: drv:
+              drv.override (args:
+                if args ? mkRocqDerivation then {
+                  mkRocqDerivation = a:
+                    (args.mkRocqDerivation a).override f;
+                } else {
+                  mkCoqDerivation = a:
+                    (args.mkCoqDerivation a).override f;
+                });
+
             overrideDeriving = coqPackages:
               coqPackages.overrideScope (final': prev': {
-                deriving = prev'.lib.overrideCoqDerivation {
+                deriving = overrideLibraryDerivation {
                   version = ./.;
                   checkFlags = [ "VERBOSE=" ];
                   # The nixpkgs coq setup hook sets COQPATH for dependency
