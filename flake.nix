@@ -129,11 +129,6 @@
                         unset COQPATH
                       fi
                     '';
-                  propagatedBuildInputs = [
-                    final'.mathcomp.boot
-                    final'.mathcomp.order
-                    final'.stdlib
-                  ];
                   nativeCheckInputs = [
                     final.gnuplot
                     final'.coq.ocamlPackages.findlib
