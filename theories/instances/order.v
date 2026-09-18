@@ -36,14 +36,14 @@ Variable (sT : forall i, sig_class sort (D i)).
 
 Import IndF.
 
-Definition le_branch As (cAs : hlist' arg_class As) :
-  hlist' (type_of_arg (T *F (fun i => T i -> bool))) As ->
-  hlist' (type_of_arg T)                             As ->
+Definition le_branch As (cAs : hlist arg_class As) :
+  hlist (type_of_arg (T *F (fun i => T i -> bool))) As ->
+  hlist (type_of_arg T)                             As ->
   bool :=
   @arity_rec
     _ _ _
-   (fun a => hlist' (type_of_arg (T *F (fun i => T i -> bool))) a ->
-             hlist' (type_of_arg T) a ->
+   (fun a => hlist (type_of_arg (T *F (fun i => T i -> bool))) a ->
+             hlist (type_of_arg T) a ->
              bool)
     (fun _ _ => true)
     (fun R As rec x y =>
@@ -59,7 +59,7 @@ Definition le : forall i, T i -> T i -> bool :=
             le_branch
               (hnth (sT i) (constr args1))
               (args args1)
-              (cast (hlist' (type_of_arg T) \o @nth_fin _ _) e (args args2))
+              (cast (hlist (type_of_arg T) \o @nth_fin _ _) e (args args2))
           | inr b => ~~ b
           end)).
 

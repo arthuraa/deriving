@@ -25,12 +25,12 @@ Variable (sT : forall i, sig_class Equality.sort (Ind.Def.decl T i)).
 
 Import IndF.
 
-Definition eq_op_branch As (cAs : hlist' arg_class As) :
-  hlist' (type_of_arg (T *F (fun i => T i -> bool))) As ->
-  hlist' (type_of_arg T)                             As ->
-  bool                                                  ->
+Definition eq_op_branch As (cAs : hlist arg_class As) :
+  hlist (type_of_arg (T *F (fun i => T i -> bool))) As ->
+  hlist (type_of_arg T)                             As ->
+  bool                                                 ->
   bool :=
-  arity_rec _ (fun As => hlist' _ As -> hlist' _ As -> bool -> bool)
+  arity_rec _ (fun As => hlist _ As -> hlist _ As -> bool -> bool)
     (fun _ _ b => b)
     (fun R As rec x y b => rec x.(tl) y.(tl) (b && (x.(hd) == y.(hd))))
     (fun j As rec x y b => rec x.(tl) y.(tl) (b &&  x.(hd).2 y.(hd)))
@@ -45,7 +45,7 @@ Definition eq_op : forall i, T i -> T i -> bool :=
         eq_op_branch
           (hnth (sT i) (constr args1))
           (args args1)
-          (cast (hlist' (type_of_arg T) \o @nth_fin _ _) e (args args2))
+          (cast (hlist (type_of_arg T) \o @nth_fin _ _) e (args args2))
           true
       | inr _ => false
       end)).
@@ -59,14 +59,14 @@ case le: (leq_fin yC xC)=> [e|b]; last first.
   constructor=> /Roll_inj /= [] e _.
   by move: le; rewrite e leq_finii.
 case: xC / e xargs {le} => /= xargs.
-apply/(@iffP (hmap' (type_of_arg_map (fun=> tag)) xargs = yargs)); first last.
+apply/(@iffP (hmap (type_of_arg_map (fun=> tag)) xargs = yargs)); first last.
 - by move=> /Roll_inj /IndF.inj.
 - by move=> <-.
 apply/(iffP idP)=> [H|<-]; last first.
   elim/arity_ind: {yC} _ / (hnth _ _) xargs {yargs}=> //= [|j] S As cAs.
     move=> /= IH [x xargs]; rewrite /= eqxx; exact: IH.
   move=> [[x xP] xargs] /=; rewrite (introT (xP _)) //; exact: cAs.
-suffices [//]: true /\ hmap' (type_of_arg_map (fun=> tag)) xargs = yargs.
+suffices [//]: true /\ hmap (type_of_arg_map (fun=> tag)) xargs = yargs.
 elim/arity_ind: {yC} _ / (hnth _ _) xargs yargs true H.
 - by move=> [] [].
 - move=> S As cAs IH /= [x xargs] [y yargs] /= b /IH.
