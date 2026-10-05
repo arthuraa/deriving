@@ -84,9 +84,9 @@ In such cases, it is a good idea to keep the instance opaque (e.g. defined with
 
 Deriving has been tested against the following dependencies:
 
-- Coq 8.17 -- Rocq 9.1
+- Coq 8.17 -- Rocq 9.2
 
-- `coq-mathcomp-ssreflect` 2.2.0 -- 2.5.0
+- `coq-mathcomp-ssreflect` 2.2.0 -- `rocq-mathcomp-ssreflect` 2.6.0
 
 ## Installation
 
