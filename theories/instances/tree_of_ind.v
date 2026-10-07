@@ -12,6 +12,48 @@ Unset Printing Implicit Defensive.
 
 Open Scope deriving_scope.
 
+Section OuterHsum.
+
+Fixpoint outer_hsum k : (fin k -> Type) -> Type :=
+  match k with
+  | 0    => fun _  => void
+  | k.+1 => fun T_ => (T_ None + @outer_hsum k (fun i => T_ (Some i)))%type
+  end.
+
+Fixpoint outer_hin k : forall (T_ : fin k -> Type) (i : fin k),
+  T_ i -> outer_hsum T_ :=
+  match k with
+  | 0 => fun _ i => match i with end
+  | k.+1 => fun T_ i =>
+    match i return T_ i -> outer_hsum T_ with
+    | None => fun x => inl x
+    | Some j => fun x => inr (@outer_hin k (fun i => T_ (Some i)) j x)
+    end
+  end.
+
+Fixpoint outer_hproj k : forall (T_ : fin k -> Type) (i : fin k),
+  outer_hsum T_ -> option (T_ i) :=
+  match k with
+  | 0 => fun _ i => match i with end
+  | k.+1 => fun T_ i =>
+    match i return outer_hsum T_ -> option (T_ i) with
+    | None => fun x => match x with inl y => Some y | inr _ => None end
+    | Some j => fun x => match x with
+                         | inl _ => None
+                         | inr y => @outer_hproj k (fun i => T_ (Some i)) j y
+                         end
+    end
+  end.
+
+Lemma outer_hinK k (T_ : fin k -> Type) i x :
+  outer_hproj i (@outer_hin k T_ i x) = Some x.
+Proof.
+elim: k T_ i x => [|k IH] T_; first by case.
+by case=> [j|] x //=; rewrite IH.
+Qed.
+
+End OuterHsum.
+
 Section TreeOfInd.
 
 Variables (T : indDef).
@@ -23,22 +65,28 @@ Import PolyType.
 Import IndF.
 
 Definition ind_arg :=
-  hsum (fun i => hsum' (hsum' (type_of_arg (fun=> void))) (D i)).
+  outer_hsum (fun i : fin n =>
+    hsum (fun a : arity n => hsum (type_of_arg (fun=> void)) a) (D i)).
 
 Definition mk_ind_arg i (j : Ind.Cidx D i) (k : fin (size (nth_fin j))) :
   type_of_arg (fun=> void) (nth_fin k) -> ind_arg :=
-  fun x => hin (hin (hin x)).
+  fun x =>
+    @outer_hin n (fun i : fin n =>
+                    hsum (fun a : arity n => hsum (type_of_arg (fun=> void)) a)
+                         (D i)) i
+      (@hin _ (fun a => hsum (type_of_arg (fun=> void)) a) (D i) j
+        (@hin _ (type_of_arg (fun=> void)) (nth_fin j) k x)).
 
 Definition proj_ind_arg
   i (j : Ind.Cidx D i) (k : fin (size (nth_fin j))) (x : ind_arg) :
   option (type_of_arg (fun=> void) (nth_fin k)) :=
-  if hproj i x is Some x then
+  if outer_hproj i x is Some x then
     if hproj j x is Some x then hproj k x
     else None
   else None.
 
 Lemma mk_ind_argK i j k : pcancel (@mk_ind_arg i j k) (@proj_ind_arg i j k).
-Proof. by move=> x; rewrite /proj_ind_arg !hinK. Qed.
+Proof. by move=> x; rewrite /proj_ind_arg outer_hinK !hinK. Qed.
 
 Let wrap i (j : Ind.Cidx D i) (k : fin (size (nth_fin j))) :
   type_of_arg (fun=> tree ind_arg) (nth_fin k) -> tree ind_arg :=
@@ -55,7 +103,7 @@ Definition tree_of_coq_ind : forall i, T i -> tree ind_arg :=
          let j := constr x in
          Node (nat_of_fin j)
            (list_of_seq (seq_of_hlist (@wrap i j)
-              (hmap' (type_of_arg_map (fun=> snd)) (args x))))).
+              (hmap (type_of_arg_map (fun=> snd)) (args x))))).
 
 Fixpoint coq_ind_of_tree i (x : tree ind_arg) : option (T i) :=
   match x with
@@ -78,9 +126,9 @@ Lemma tree_of_coq_indK i : pcancel (@tree_of_coq_ind i) (@coq_ind_of_tree i).
 Proof.
 elim/indP: i / => i [j xs].
 rewrite /tree_of_coq_ind recE /= -/tree_of_coq_ind.
-rewrite nat_of_finK /hmap' !hmap_comp /=.
+rewrite nat_of_finK !hmap_comp /=.
 set xs' := hlist_of_seq _ _.
-suffices -> : xs' = Some (hmap' (type_of_arg_map (fun=> tag)) xs) by [].
+suffices -> : xs' = Some (hmap (type_of_arg_map (fun=> tag)) xs) by [].
 rewrite {}/xs' seq_of_list_map list_of_seqK hlist_of_seq_map /= /wrap.
 move: (@mk_ind_arg i j) (@proj_ind_arg i j) (@mk_ind_argK i j).
 elim: {j} (nth_fin j) xs=> //= - [S|i'] As IH /= xs C p CK.
