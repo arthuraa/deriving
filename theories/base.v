@@ -852,7 +852,8 @@ Fixpoint hlist_of_fun n : forall (T_ : fin n -> Type) (f : forall i, T_ i), hlis
   | n.+1 => fun T_ f => f None ::: hlist_of_fun (fun i => f (Some i))
   end.
 
-Lemma hnth_of_fun n T_ f i : @hlist_of_fun n T_ f i = f i.
+Lemma hnth_of_fun@{u +} n (T_ : fin n -> Type@{u}) f i :
+  @hlist_of_fun n T_ f i = f i.
 Proof.
 by elim: n T_ f i=> [?? []|n IH] T_ f /= [i|] //=; rewrite IH.
 Qed.
