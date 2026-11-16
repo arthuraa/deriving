@@ -9,13 +9,11 @@
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    nix-github-actions.url = "github:nix-community/nix-github-actions";
-    nix-github-actions.inputs.nixpkgs.follows = "nixpkgs";
     rocq-mcp.url = "github:arthuraa/rocq-mcp-flake";
     rocq-mcp.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = inputs@{ self, flake-parts, nixpkgs, nix-github-actions, rocq-mcp, ... }:
+  outputs = inputs@{ self, flake-parts, nixpkgs, rocq-mcp, ... }:
     let
       # Coq/Rocq package sets we test against.  The first entry is exposed as
       # packages.default / checks.default.  Used by the overlay (to decide what
@@ -98,17 +96,29 @@
         # agnostic ones like nixosModule and system-enumerating ones, although
         # those are more easily expressed in perSystem.
 
-        githubActions = nix-github-actions.lib.mkGithubMatrix {
-          checks =
+        # See github.com/actions/runner-images when these labels retire.
+        githubActions =
+          let
+            runners = {
+              x86_64-linux = "ubuntu-26.04";
+              aarch64-linux = "ubuntu-26.04-arm";
+              aarch64-darwin = "macos-26";
+            };
             # Drop the "default" check — it is an alias for one of
             # the versioned checks, and including it would build
             # the same derivation twice in CI.
-            builtins.mapAttrs
-              (_: checks: builtins.removeAttrs checks [ "default" ])
-              (nixpkgs.lib.getAttrs
-                [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ]
-                self.checks);
-        };
+            checkNames = system:
+              builtins.filter (name: name != "default")
+                (builtins.attrNames self.checks.${system});
+          in {
+            matrix.include = nixpkgs.lib.concatLists
+              (nixpkgs.lib.mapAttrsToList
+                (system: os: map (name: {
+                  inherit name system os;
+                  attr = "checks.${system}.\"${name}\"";
+                }) (checkNames system))
+                runners);
+          };
 
         overlays.default = final: prev:
           let
